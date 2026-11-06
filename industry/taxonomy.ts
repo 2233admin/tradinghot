@@ -8,61 +8,67 @@
  * 和相邻类别的边界在哪（总的归类原则写在 prompts/structure.md 里）。
  * commentary 标出评论类（教程、观点）：日报写过的事又有评论类的后续报道，只占一行快讯（报道它的信源够多时除外）。
  * 没归上类的资料在日报里放进第一个 key 为 industry 的类别所在的节（没有就放最后一节）。
- * tagColor 是飞书推送卡片里跟在标题后面的这一类小标签的颜色（飞书 text_tag 的颜色名）。
+ * tagColor 是飞书推送卡片里跟在标题后面的一类小标签的颜色（飞书 text_tag 的颜色名）。
  * feedLabel 是分类 RSS 标题里的名字（不写就用 label）。公开接口、RSS 和 MCP 里要把一类并进另一类发布，写在站点设置里（site/site.ts 的 PUBLIC_CATEGORIES）。
  */
 export const CATEGORIES = [
-  { key: "ai-models", tagColor: "indigo", label: "模型", feedLabel: "AI 模型", section: "模型发布/更新", guide: "模型本身的发布、版本、权重开放、能力或价格变化，以及既有榜单上的模型成绩。公布一次跑分不是发布新基准，也不是教程。" },
-  { key: "ai-products", tagColor: "turquoise", label: "产品", feedLabel: "AI 产品", section: "产品发布/更新", guide: "可使用的 AI 产品、功能、应用、工具、API、平台和工程组件的发布更新。模型厂商发布的推理框架、算子库、硬件适配组件仍是产品，不能因为厂商名归成模型。" },
-  { key: "industry", tagColor: "orange", label: "行业", feedLabel: "行业动态", section: "行业动态", guide: "已发生的公司经营、融资并购、人事、合作、诉讼、政策、真实安全事故及调查进展。新闻由当事人发帖、带有态度，也不因此变成观点。" },
-  { key: "paper", tagColor: "violet", label: "论文", feedLabel: "论文", section: "论文研究", guide: "以新研究方法、实验设计与发现为核心的论文、技术报告、新基准或研究数据集。系统性红队实验属于研究；既有榜单成绩归模型，真实事故的新闻调查归行业。" },
-  { key: "tip", tagColor: "green", label: "教程", section: "技巧与观点", guide: "读者可以照着使用的方法、提示词、工具用法、工程实践复盘与技术讲解。重点是可复用的做法；单纯发布工具归产品，只有态度和预测而无做法归观点。", commentary: true },
-  { key: "opinion", tagColor: "purple", label: "观点", section: "技巧与观点", guide: "重点是作者的解释、判断、主张、预测、评论或访谈观点。讨论市场不自动归行业，作者是名人不自动归观点。", commentary: true },
+  { key: "market", tagColor: "orange", label: "市场", feedLabel: "市场行情", section: "市场与资金", guide: "指数、成交额、资金流、涨跌家数与板块轮动、汇率与商品市场的联动、海外市场开盘收盘。主体是市场整体或一组成分股，不点名某一家公司；点名公司并以其为主体的归个股。" },
+  { key: "macro", tagColor: "blue", label: "宏观", feedLabel: "宏观与政策", section: "宏观与政策", guide: "央行与利率、通胀就业等经济数据、财政与产业政策、监管新规、地缘与海外央行事件对定价的影响。主体是政策、数据或监管机构，不是某家上市公司。" },
+  { key: "stock", tagColor: "turquoise", label: "个股", feedLabel: "个股与公司", section: "个股与公司", guide: "点名一家上市或拟上市公司的实质事件：财报与业绩预告、公告与问询、回购增减持、并购重组、IPO 与停复牌、监管处罚、重大合同订单。只有股价异动、没有公司自身消息的归市场。" },
+  { key: "industry", tagColor: "indigo", label: "行业", feedLabel: "行业与板块", section: "行业与板块", guide: "产业链与板块层面的变化：景气度、产品价格、产能与库存、销量与订单、供需缺口、政策对某个行业的影响、多家公司同向变动。点名了一家公司并以其为主体的归个股。没有归上类的资料也放在这一节。" },
+  { key: "quant", tagColor: "violet", label: "量化", feedLabel: "量化与策略", section: "量化与工具", guide: "量化策略与因子、组合与风控方法、回测与数据处理、交易工具与开源实现、量化机构与产品动态、监管对程序化交易的规定。面向普通读者的入门做法归教程。" },
+  { key: "tip", tagColor: "green", label: "教程", section: "观点与教程", guide: "读者可以照着做的方法：读财报、看估值、做筛选、控仓位与止损、使用行情或交易工具的步骤。重点是可复用的做法；只有看法没有做法归观点。", commentary: true },
+  { key: "opinion", tagColor: "purple", label: "观点", section: "观点与教程", guide: "分析师、基金经理、交易员或财经作者的解释、判断、预测、复盘与访谈。讨论行情不自动归市场，作者是名人不自动归观点。", commentary: true },
 ] as const satisfies ReadonlyArray<{ key: string; tagColor: string; label: string; feedLabel?: string; section: string; guide: string; commentary?: true }>;
 
 /**
- * 这个行业最受关注的一类发布（AI 行业是新模型）：日报报头的“N 个新模型”、改分类后修订已出的报告都按它数。
+ * 这个行业最受关注的一类发布：日报报头的“N 个…”、改分类后修订已出的报告都按它数。
  * category 是类别，tag 是标签，两者都对上才算；unit 接在数字后面。
  * 没有这样一类的行业设成 null，报头就不显示这个数。
+ * 股票站的“财报”分散在各家公司、也常由媒体转述，配不出一手名录下的稳定数字，所以不设。
  */
-export const RELEASE: { category: string; tag: string; unit: string } | null = { category: "ai-models", tag: "模型发布", unit: "个新模型" };
+export const RELEASE: { category: string; tag: string; unit: string } | null = null;
 
 /** 周报月报的总述可以直接写、不必在报道里找到出处的行业通用词（小写）。站名会自动算进去。 */
-export const PLAIN_TERMS: readonly string[] = ["ai", "api", "llm", "gpu", "agi", "ceo", "ipo"];
+export const PLAIN_TERMS: readonly string[] = ["a股", "港股", "美股", "etf", "ipo", "cpi", "ppi", "pmi", "gdp", "lpr", "mlf", "fomc", "fed", "csi", "q1", "q2", "q3", "q4"];
 
 /**
  * 内容理解一步给每篇资料判的“内容类型”（写在 prompts/content-understanding.md 里，改了类型要同步改那份提示词）。
  * 评分提示词（prompts/selection-score.md）按类型给五个维度不同的权重。
  */
-export const ITEM_TYPES = ["model_release", "product_launch", "tool_or_prompt", "research_paper", "industry_event", "opinion_analysis", "tutorial_explainer"] as const;
+export const ITEM_TYPES = ["market_move", "company_event", "macro_data", "research_report", "quant_method", "opinion_analysis", "tutorial_explainer"] as const;
 
 // ── 标签词表 ────────────────────────────────────────────────────────────────────────────
 
 /** 每篇资料的第一个标签必须是这些“分类标签”之一。 */
 export const CATEGORY_TAGS = [
-  "产品更新", "模型发布", "论文/研究", "开源/仓库", "教程/实践", "现象/趋势", "大佬观点", "评测/基准", "安全/对齐", "行业动态", "政策/监管",
-  "非AI/通用工具", "其他",
+  "行情异动", "公司事件", "财报", "宏观数据", "政策/监管", "研报/数据", "量化/策略", "工具/代码", "教程/实践", "观点/分析", "传闻/预期",
+  "非股票/通用", "其他",
 ] as const;
 
 /** 可选的主题标签。 */
 export const TOPIC_TAGS = [
-  "Agent", "编码", "推理", "多模态", "语音", "视频", "图像生成", "RAG", "端侧", "数据/训练", "搜索", "部署/工程", "开源生态", "具身智能", "MCP/工具调用",
+  "A股", "港股", "美股", "中概股", "ETF", "可转债", "期权", "期货", "商品", "汇率", "债券", "资金流", "板块轮动", "估值", "分红", "并购重组",
+  "量化因子", "回测", "高频交易", "风控", "仓位管理",
 ] as const;
 
 /** 可选的实体标签（公司、机构、平台）。 */
-export const ENTITY_TAGS = ["OpenAI", "Anthropic", "DeepSeek", "DeepMind", "Google", "Meta", "Microsoft", "xAI", "Hugging Face", "GitHub", "arXiv"] as const;
+export const ENTITY_TAGS = ["英伟达", "台积电", "苹果", "特斯拉", "微软", "腾讯", "阿里巴巴", "贵州茅台", "宁德时代", "比亚迪", "中芯国际", "寒武纪", "美联储"] as const;
 
 /** 模型常写的近义词，统一成词表里的写法。 */
 export const TAG_SYNONYMS: Readonly<Record<string, string>> = {
-  "教程/玩法": "教程/实践", "技巧/最佳实践": "教程/实践", "合作/生态": "行业动态", "融资/收购": "行业动态", "公司动态": "行业动态",
-  合作: "行业动态", 生态: "行业动态", 融资: "行业动态", 收购: "行业动态", 投资: "行业动态", 并购: "行业动态",
-  政策: "政策/监管", 监管: "政策/监管", 法规: "政策/监管", 安全: "安全/对齐", 对齐: "安全/对齐",
-  论文: "论文/研究", 研究: "论文/研究", paper: "论文/研究", papers: "论文/研究",
-  "open-source": "开源/仓库", 开源: "开源/仓库", 仓库: "开源/仓库", repo: "开源/仓库",
-  教程: "教程/实践", 玩法: "教程/实践", 指南: "教程/实践", 技巧: "教程/实践", 最佳实践: "教程/实践", 实践: "教程/实践",
-  产品: "产品更新", 更新: "产品更新", 发布: "模型发布", 模型: "模型发布", 趋势: "现象/趋势", 现象: "现象/趋势", 观点: "大佬观点",
-  视频生成: "视频", 非ai: "非AI/通用工具", "non-ai": "非AI/通用工具", 通用工具: "非AI/通用工具", 工程工具: "非AI/通用工具",
-  安全扫描: "非AI/通用工具", devops: "非AI/通用工具", 行业: "行业动态", 动态: "行业动态",
+  市场: "行情异动", 行情: "行情异动", 盘面: "行情异动", 涨跌: "行情异动", 指数: "行情异动", 资金面: "行情异动",
+  公司: "公司事件", 公告: "公司事件", 业绩: "财报", "业绩预告": "财报", 财报业绩: "财报", 定期报告: "财报", 年报: "财报", 季报: "财报",
+  并购: "公司事件", 重组: "公司事件", 回购: "公司事件", 增持: "公司事件", 减持: "公司事件", 上市: "公司事件", ipo: "公司事件", 停牌: "公司事件",
+  经济数据: "宏观数据", 央行: "宏观数据", 货币政策: "宏观数据", 通胀: "宏观数据", 利率: "宏观数据",
+  政策: "政策/监管", 监管: "政策/监管", 法规: "政策/监管", 处罚: "政策/监管",
+  研报: "研报/数据", 研究报告: "研报/数据", 研究: "研报/数据", 数据: "研报/数据", 测算: "研报/数据",
+  策略: "量化/策略", 因子: "量化/策略", 回测: "量化/策略", 量化: "量化/策略", 组合: "量化/策略", 模型: "量化/策略",
+  工具: "工具/代码", 开源: "工具/代码", 仓库: "工具/代码", 代码: "工具/代码", "open-source": "工具/代码",
+  教程: "教程/实践", 指南: "教程/实践", 方法: "教程/实践", 实操: "教程/实践", 技巧: "教程/实践", 最佳实践: "教程/实践",
+  观点: "观点/分析", 评论: "观点/分析", 解读: "观点/分析", 分析: "观点/分析", 访谈: "观点/分析",
+  传闻: "传闻/预期", 传言: "传闻/预期", 预期: "传闻/预期", 小作文: "传闻/预期",
+  非股票: "非股票/通用", "non-stock": "非股票/通用", 通用: "非股票/通用", 其他行业: "非股票/通用",
 };
 
 // ── 公司与主体 ──────────────────────────────────────────────────────────────────────────
@@ -74,24 +80,20 @@ export const TAG_SYNONYMS: Readonly<Record<string, string>> = {
  * 所有这些名字都用来认出说的是哪家公司，比如把事实的主体对到发布方。
  */
 export const ENTITIES: Record<string, { name: string; displayTag: string | null; aliases: string[]; orgNames?: string[]; otherNames?: string[] }> = {
-  "world-labs": { name: "World Labs", displayTag: null, aliases: ["World Labs"] },
-  "thinking-machines": { name: "Thinking Machines Lab", displayTag: null, aliases: ["Thinking Machines"] },
-  amd: { name: "AMD", displayTag: null, aliases: ["AMD", "Advanced Micro Devices"] },
-  openai: { name: "OpenAI", displayTag: "OpenAI", aliases: ["OpenAI", "ChatGPT", "Sora", "Codex", "GPT"], orgNames: ["OpenAI"], otherNames: ["OpenAI Developers"] },
-  anthropic: { name: "Anthropic", displayTag: "Anthropic", aliases: ["Anthropic", "Claude"], orgNames: ["Anthropic"], otherNames: ["Claude Code"] },
-  google: { name: "Google", displayTag: "Google", aliases: ["Google", "DeepMind", "Gemini", "谷歌"], orgNames: ["Google DeepMind", "Google Research", "Google", "DeepMind", "谷歌"], otherNames: ["Google AI", "Google Labs", "Google Cloud"] },
-  deepseek: { name: "DeepSeek", displayTag: "DeepSeek", aliases: ["DeepSeek", "深度求索"], orgNames: ["DeepSeek", "深度求索"] },
-  qwen: { name: "千问 Qwen", displayTag: null, aliases: ["Qwen", "通义", "阿里"], orgNames: ["通义千问", "通义实验室", "阿里巴巴", "阿里云", "阿里", "Qwen Team", "Qwen", "Alibaba"], otherNames: ["千问", "千问APP", "Alibaba Cloud"] },
-  kimi: { name: "月之暗面 / Kimi", displayTag: null, aliases: ["Kimi", "月之暗面", "Moonshot", "Kimi / 月之暗面"], orgNames: ["Moonshot AI", "月之暗面", "Kimi"] },
-  minimax: { name: "MiniMax", displayTag: null, aliases: ["MiniMax", "海螺"], orgNames: ["MiniMax", "稀宇科技"] },
-  zhipu: { name: "智谱 GLM", displayTag: null, aliases: ["智谱", "GLM", "Z.ai"], orgNames: ["智谱AI", "智谱", "Zhipu AI", "Z.ai"], otherNames: ["Zhipu"] },
-  xai: { name: "xAI", displayTag: "xAI", aliases: ["xAI", "Grok"], orgNames: ["SpaceX Super Intelligence", "SpaceXAI", "SpaceXSI", "xAI"], otherNames: ["Grok Bot"] },
-  meta: { name: "Meta", displayTag: "Meta", aliases: ["Meta", "Llama"], orgNames: ["Meta Superintelligence Labs", "Meta AI", "Meta"], otherNames: ["AI at Meta", "Muse"] },
-  microsoft: { name: "Microsoft", displayTag: "Microsoft", aliases: ["Microsoft", "微软", "Copilot"], orgNames: ["Microsoft Research", "Microsoft AI", "Microsoft", "微软"] },
-  nvidia: { name: "NVIDIA", displayTag: null, aliases: ["NVIDIA", "英伟达"], orgNames: ["NVIDIA", "英伟达"] },
-  "hugging-face": { name: "Hugging Face", displayTag: "Hugging Face", aliases: ["Hugging Face"], orgNames: ["Hugging Face", "HuggingFace"] },
-  cursor: { name: "Cursor", displayTag: null, aliases: ["Cursor", "Anysphere"], orgNames: ["Cursor"] },
-  openrouter: { name: "OpenRouter", displayTag: null, aliases: ["OpenRouter"], orgNames: ["OpenRouter"] },
+  nvidia: { name: "英伟达", displayTag: "英伟达", aliases: ["英伟达", "NVIDIA", "NVDA"], orgNames: ["NVIDIA", "英伟达"], otherNames: ["NVIDIA Newsroom"] },
+  tsmc: { name: "台积电", displayTag: "台积电", aliases: ["台积电", "TSMC", "台湾积体电路制造"], orgNames: ["台积电", "TSMC"], otherNames: ["TSMC News"] },
+  apple: { name: "苹果", displayTag: "苹果", aliases: ["苹果", "Apple", "AAPL"], orgNames: ["Apple", "苹果"] },
+  tesla: { name: "特斯拉", displayTag: "特斯拉", aliases: ["特斯拉", "Tesla", "TSLA"], orgNames: ["Tesla", "特斯拉"] },
+  microsoft: { name: "微软", displayTag: "微软", aliases: ["微软", "Microsoft", "MSFT"], orgNames: ["Microsoft", "微软"] },
+  tencent: { name: "腾讯", displayTag: "腾讯", aliases: ["腾讯", "Tencent", "0700", "00700"], orgNames: ["腾讯", "Tencent"], otherNames: ["腾讯控股"] },
+  alibaba: { name: "阿里巴巴", displayTag: "阿里巴巴", aliases: ["阿里巴巴", "阿里", "Alibaba", "BABA", "9988"], orgNames: ["阿里巴巴", "Alibaba", "Alibaba Group"], otherNames: ["阿里云"] },
+  moutai: { name: "贵州茅台", displayTag: "贵州茅台", aliases: ["贵州茅台", "茅台", "600519"], orgNames: ["贵州茅台", "茅台集团"] },
+  catl: { name: "宁德时代", displayTag: "宁德时代", aliases: ["宁德时代", "CATL", "300750"], orgNames: ["宁德时代", "CATL"] },
+  byd: { name: "比亚迪", displayTag: "比亚迪", aliases: ["比亚迪", "BYD", "002594"], orgNames: ["比亚迪", "BYD"] },
+  smic: { name: "中芯国际", displayTag: "中芯国际", aliases: ["中芯国际", "SMIC", "688981", "0981"], orgNames: ["中芯国际", "SMIC"] },
+  cambricon: { name: "寒武纪", displayTag: "寒武纪", aliases: ["寒武纪", "688256"], orgNames: ["寒武纪", "中科寒武纪"] },
+  fed: { name: "美联储", displayTag: "美联储", aliases: ["美联储", "Federal Reserve", "FOMC", "鲍威尔", "Powell"], orgNames: ["美联储", "Federal Reserve", "FOMC"] },
+  pboc: { name: "中国人民银行", displayTag: null, aliases: ["中国人民银行", "央行", "人民银行", "PBOC"], orgNames: ["中国人民银行", "人民银行", "PBOC"] },
 };
 
 /**
@@ -99,57 +101,36 @@ export const ENTITIES: Record<string, { name: string; displayTag: string | null;
  * 行业没有这个问题时可以留空数组。
  */
 export const IDENTITY_LEXICON: ReadonlyArray<{ id: string; name: string; patterns: RegExp[] }> = [
-  { id: "openai", name: "OpenAI", patterns: [/openai|chatgpt|\bgpt-?[o\d]|\bsora\b|\bcodex\b/i] },
-  { id: "anthropic", name: "Anthropic", patterns: [/anthropic|\bclaude\b/i, /\b(?:opus|sonnet|haiku)\s*\d+(?:[.\-]\d+)*\b/i, /\bfable\s*\d+(?:[.\-]\d+)*\b|\bmythos\b/i] },
-  { id: "google", name: "Google / Gemini", patterns: [/google|deepmind|\bgemini\b|notebooklm|\bveo\s?\d|\bAlphaFold\b|\bAMIE\b/i] },
-  { id: "deepseek", name: "DeepSeek", patterns: [/deepseek|深度求索/i] },
-  { id: "xai", name: "xAI / Grok", patterns: [/\bxai\b|\bgrok\b/i] },
-  { id: "meta", name: "Meta / Llama", patterns: [/\bMeta\b/, /\bmeta\s?ai\b|\bllama\b/i] },
-  { id: "microsoft", name: "Microsoft / Copilot", patterns: [/microsoft|copilot|微软/i] },
-  { id: "nvidia", name: "NVIDIA", patterns: [/nvidia|英伟达|\bnemotron\b|\bnemo\b|\bblackwell\b|\brubin(?:\s+ultra)?\b|\bcuda\b/i] },
-  { id: "qwen", name: "千问 Qwen", patterns: [/\bqwen|通义|千问/i] },
-  { id: "hugging-face", name: "Hugging Face", patterns: [/hugging\s?face/i] },
-  { id: "cursor", name: "Cursor", patterns: [/\bCursor\b/] },
-  { id: "kimi", name: "月之暗面 / Kimi", patterns: [/\bkimi\b|月之暗面|\bmoonshot\s?ai\b/i] },
-  { id: "openrouter", name: "OpenRouter", patterns: [/openrouter/i] },
-  { id: "minimax", name: "MiniMax", patterns: [/minimax/i] },
-  { id: "zhipu", name: "智谱 GLM", patterns: [/智谱|\bglm-?[4-9]/i] },
-  { id: "hunyuan", name: "腾讯混元", patterns: [/混元|hunyuan/i] },
-  { id: "doubao", name: "字节豆包", patterns: [/豆包|doubao|字节跳动|bytedance/i] },
-  { id: "mistral", name: "Mistral", patterns: [/mistral/i] },
-  { id: "perplexity", name: "Perplexity", patterns: [/\bPerplexity\b/] },
-  { id: "runway", name: "Runway", patterns: [/\brunway\b/i] },
-  { id: "suno", name: "Suno", patterns: [/\bsuno\b/i] },
-  { id: "midjourney", name: "Midjourney", patterns: [/midjourney/i] },
-  { id: "stability-ai", name: "Stability AI", patterns: [/stability\s?ai/i] },
-  { id: "elevenlabs", name: "ElevenLabs", patterns: [/eleven\s?labs/i] },
-  { id: "vllm", name: "vLLM", patterns: [/\bvllm\b/i] },
-  { id: "ollama", name: "Ollama", patterns: [/\bollama\b/i] },
-  { id: "windsurf", name: "Windsurf", patterns: [/windsurf/i] },
-  { id: "devin", name: "Devin", patterns: [/\bdevin\b/i] },
-  { id: "manus", name: "Manus", patterns: [/\bmanus\b/i] },
-  { id: "apple", name: "Apple AI", patterns: [/\bapple\s?(intelligence|silicon|ai)\b|苹果(智能|\s?AI)/i] },
-  { id: "amazon", name: "Amazon / AWS", patterns: [/amazon|\baws\b|亚马逊/i] },
-  { id: "baidu", name: "百度文心", patterns: [/百度|baidu|文心|\bernie\s?bot\b/i] },
+  { id: "nvidia", name: "英伟达", patterns: [/nvidia|英伟达|\bnvda\b/i] },
+  { id: "tsmc", name: "台积电", patterns: [/台积电|\btsmc\b/i] },
+  { id: "apple", name: "苹果", patterns: [/苹果|\bapple\b|\baapl\b/i] },
+  { id: "tesla", name: "特斯拉", patterns: [/特斯拉|\btesla\b|\btsla\b/i] },
+  { id: "microsoft", name: "微软", patterns: [/微软|\bmicrosoft\b|\bmsft\b/i] },
+  { id: "tencent", name: "腾讯", patterns: [/腾讯|\btencent\b|\b0700\b/i] },
+  { id: "alibaba", name: "阿里巴巴", patterns: [/阿里巴巴|阿里(?:云|巴巴|控股)?|\balibaba\b|\bbaba\b|\b9988\b/i] },
+  { id: "moutai", name: "贵州茅台", patterns: [/茅台|\bmoutai\b|\b600519\b/i] },
+  { id: "catl", name: "宁德时代", patterns: [/宁德时代|\bcatl\b|\b300750\b/i] },
+  { id: "byd", name: "比亚迪", patterns: [/比亚迪|\bbyd\b|\b002594\b/i] },
+  { id: "smic", name: "中芯国际", patterns: [/中芯国际|\bsmic\b|\b688981\b|\b0981\b/i] },
+  { id: "cambricon", name: "寒武纪", patterns: [/寒武纪|\bcambricon\b|\b688256\b/i] },
+  { id: "fed", name: "美联储", patterns: [/美联储|\bfed\b|\bfomc\b|鲍威尔|powell/i] },
+  { id: "pboc", name: "中国人民银行", patterns: [/中国人民银行|人民银行|\bpboc\b|中国央行/i] },
 ];
 
-/** 这些域名上的文章，发布方就是对应的公司（托管平台如 GitHub、arXiv 不算）。 */
+/** 这些域名上的文章，发布方就是对应的公司（托管平台如交易所信息披露页不算）。 */
 export const PUBLISHER_DOMAINS: ReadonlyArray<{ entityId: string; domains: readonly string[] }> = [
-  { entityId: "openai", domains: ["openai.com"] },
-  { entityId: "anthropic", domains: ["anthropic.com", "claude.com"] },
-  { entityId: "google", domains: ["deepmind.google", "ai.google", "blog.google"] },
-  { entityId: "deepseek", domains: ["deepseek.com"] },
-  { entityId: "xai", domains: ["x.ai"] },
-  { entityId: "meta", domains: ["ai.meta.com"] },
-  { entityId: "microsoft", domains: ["microsoft.com"] },
   { entityId: "nvidia", domains: ["nvidia.com"] },
-  { entityId: "qwen", domains: ["qwen.ai"] },
-  { entityId: "cursor", domains: ["cursor.com"] },
-  { entityId: "openrouter", domains: ["openrouter.ai"] },
+  { entityId: "apple", domains: ["apple.com"] },
+  { entityId: "tesla", domains: ["tesla.com"] },
+  { entityId: "microsoft", domains: ["microsoft.com"] },
+  { entityId: "tencent", domains: ["tencent.com"] },
+  { entityId: "alibaba", domains: ["alibabagroup.com"] },
+  { entityId: "catl", domains: ["catl.com"] },
+  { entityId: "byd", domains: ["bydglobal.com"] },
+  { entityId: "smic", domains: ["smics.com"] },
 ];
 
 /** 原文里的这些写法也算提到了对应公司。 */
 export const IDENTITY_CONTEXT_ALIASES: ReadonlyArray<{ entityId: string; pattern: RegExp }> = [
-  { entityId: "meta", pattern: /@AIatMeta\b/i },
-  { entityId: "zhipu", pattern: /\bZhipu(?:\s+AI\b|['’]s\b)/i },
+  { entityId: "fed", pattern: /@federalreserve\b/i },
 ];

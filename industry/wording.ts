@@ -2,4 +2,8 @@
 // 写作那一步写完中文标题、摘要和推荐理由后逐个查，用了就让模型只改这些地方一次（packages/backend/src/editorial/
 // analyze.ts 的 mendWording）。只列一眼就能判断的写法：拿不准的不列，否则会误改正常的词。空着就不查。
 
-export const READER_WORDING: ReadonlyArray<readonly [RegExp, string]> = [];
+export const READER_WORDING: ReadonlyArray<readonly [RegExp, string]> = [
+  [/必涨|稳赚|翻倍|闭眼买|无脑买|稳了/u, "不写荐股或保证收益的说法，直接写发生了什么"],
+  [/史诗级|王炸|炸裂|狂飙|逆天|封神/u, "不用夸张的说法，直接写发生了什么"],
+  [/建议买入|强烈推荐|上车|抄底信号/u, "不替读者做买卖决定，只写事实和已有的机构判断"],
+];

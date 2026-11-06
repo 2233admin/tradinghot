@@ -2,337 +2,293 @@
   "groups": [
     {
       "key": "company",
-      "name": "公司与模型",
-      "blurb": "按厂商追踪模型、产品与公司动态"
+      "name": "公司与机构",
+      "blurb": "按公司和央行追踪：财报、公告、产品与政策表态"
     },
     {
       "key": "field",
-      "name": "技术方向",
-      "blurb": "按技术领域深挖：Agent、多模态、具身智能……"
+      "name": "市场与方向",
+      "blurb": "按交易方向深挖：A股、港股、美股、期权、量化因子……"
     },
     {
       "key": "genre",
       "name": "内容类型",
-      "blurb": "按体裁浏览：论文、教程、观点、政策……"
+      "blurb": "按体裁浏览：公告、财报、数据、研报、观点、传闻……"
     }
   ],
   "topics": [
     {
-      "slug": "openai",
-      "name": "OpenAI / ChatGPT",
+      "slug": "nvidia",
+      "name": "英伟达",
       "group": "company",
-      "entityId": "openai",
-      "definition": "OpenAI 的 GPT 系列模型、ChatGPT 与 Sora 产品更新，以及公司战略与人事变化。"
+      "entityId": "nvidia",
+      "aliases": ["NVIDIA", "NVDA"],
+      "definition": "英伟达的财报、指引、数据中心与游戏业务、产品路线（GPU 与互联），以及它对供应链和算力板块的带动。"
     },
     {
-      "slug": "anthropic",
-      "name": "Anthropic / Claude",
+      "slug": "tsmc",
+      "name": "台积电",
       "group": "company",
-      "entityId": "anthropic",
-      "definition": "Anthropic 的 Claude 系列模型、Claude Code 更新，以及安全研究与公司动向。"
+      "entityId": "tsmc",
+      "aliases": ["TSMC"],
+      "definition": "台积电的月度营收、财报、产能利用率、先进制程进度与资本开支，以及海外扩产进展。"
     },
     {
-      "slug": "google",
-      "name": "Google / Gemini",
+      "slug": "apple",
+      "name": "苹果",
       "group": "company",
-      "entityId": "google",
-      "aliases": [
-        "DeepMind"
-      ],
-      "definition": "Google 与 DeepMind 的 Gemini 模型、Veo 视频生成、前沿研究与各条产品线的 AI 更新。"
+      "entityId": "apple",
+      "aliases": ["Apple", "AAPL"],
+      "definition": "苹果的财报、iPhone 与可穿戴销量、服务业务、供应链调整与中国市场表现。"
     },
     {
-      "slug": "deepseek",
-      "name": "DeepSeek",
+      "slug": "tesla",
+      "name": "特斯拉",
       "group": "company",
-      "entityId": "deepseek",
-      "definition": "DeepSeek（深度求索）的模型发布、开源权重、技术报告与 API 价格变化。"
-    },
-    {
-      "slug": "qwen",
-      "name": "千问 Qwen",
-      "group": "company",
-      "entityId": "qwen",
-      "definition": "阿里千问 Qwen 系列的模型发布与开源更新，从旗舰大模型到能装进手机的小模型。"
-    },
-    {
-      "slug": "kimi",
-      "name": "月之暗面 / Kimi",
-      "group": "company",
-      "entityId": "kimi",
-      "aliases": ["Kimi / 月之暗面"],
-      "definition": "月之暗面的 Kimi 产品更新、K 系列开源模型与长文本技术进展。"
-    },
-    {
-      "slug": "minimax",
-      "name": "MiniMax",
-      "group": "company",
-      "entityId": "minimax",
-      "definition": "MiniMax 的 M 系列大模型、语音与多模态能力，以及开源与商业化进展。"
-    },
-    {
-      "slug": "zhipu",
-      "name": "智谱 GLM",
-      "group": "company",
-      "entityId": "zhipu",
-      "definition": "智谱 GLM 系列模型的发布与开源更新，以及编程、推理能力和商业化进展。"
-    },
-    {
-      "slug": "xai",
-      "name": "xAI / Grok",
-      "group": "company",
-      "entityId": "xai",
-      "definition": "马斯克旗下 xAI 的 Grok 模型更新、算力集群建设与 X 平台整合。"
-    },
-    {
-      "slug": "meta",
-      "name": "Meta / Llama",
-      "group": "company",
-      "entityId": "meta",
-      "definition": "Meta 的 Llama 与 Muse 系列模型、超级智能实验室与 Meta AI 产品。"
+      "entityId": "tesla",
+      "aliases": ["Tesla", "TSLA"],
+      "definition": "特斯拉的交付与财报、毛利率、自动驾驶进展、新车型与产能，以及马斯克相关表态。"
     },
     {
       "slug": "microsoft",
-      "name": "Microsoft / Copilot",
+      "name": "微软",
       "group": "company",
       "entityId": "microsoft",
-      "definition": "微软的 Copilot 系列产品、Azure AI 云服务，以及与 OpenAI 的合作动向。"
+      "aliases": ["Microsoft", "MSFT"],
+      "definition": "微软的财报、云业务增速、资本开支与 AI 相关投入，以及产品和人事变化。"
     },
     {
-      "slug": "nvidia",
-      "name": "NVIDIA 英伟达",
+      "slug": "tencent",
+      "name": "腾讯",
       "group": "company",
-      "entityId": "nvidia",
-      "definition": "英伟达的 GPU 新品、CUDA 软件生态、机器人平台与 AI 算力供需。"
+      "entityId": "tencent",
+      "aliases": ["Tencent", "0700"],
+      "definition": "腾讯的财报、游戏与广告收入、回购与分红、视频号与支付业务进展。"
     },
     {
-      "slug": "hugging-face",
-      "name": "Hugging Face",
+      "slug": "alibaba",
+      "name": "阿里巴巴",
       "group": "company",
-      "entityId": "hugging-face",
-      "definition": "Hugging Face 社区的热门开源模型、数据集、工具与榜单变化。"
+      "entityId": "alibaba",
+      "aliases": ["Alibaba", "BABA", "9988"],
+      "definition": "阿里巴巴的财报、电商与云业务表现、回购与分拆进展，以及组织调整。"
     },
     {
-      "slug": "cursor",
-      "name": "Cursor",
+      "slug": "moutai",
+      "name": "贵州茅台",
       "group": "company",
-      "entityId": "cursor",
-      "definition": "Cursor（Anysphere）的编辑器与编码 Agent 更新、自研模型与定价变化。"
+      "entityId": "moutai",
+      "aliases": ["600519"],
+      "definition": "贵州茅台的财报、批价与动销、渠道和产品结构调整、分红与回购。"
     },
     {
-      "slug": "openrouter",
-      "name": "OpenRouter",
+      "slug": "catl",
+      "name": "宁德时代",
       "group": "company",
-      "entityId": "openrouter",
-      "definition": "OpenRouter 平台的新模型上架、价格变化与开发者调用量排行。"
+      "entityId": "catl",
+      "aliases": ["CATL", "300750"],
+      "definition": "宁德时代的财报、装机与市占率、储能业务、海外建厂与技术路线进展。"
     },
     {
-      "slug": "agent",
-      "name": "Agent 智能体",
+      "slug": "byd",
+      "name": "比亚迪",
+      "group": "company",
+      "entityId": "byd",
+      "aliases": ["BYD", "002594"],
+      "definition": "比亚迪的销量与财报、单车利润、海外市场与出海产能、价格策略。"
+    },
+    {
+      "slug": "smic",
+      "name": "中芯国际",
+      "group": "company",
+      "entityId": "smic",
+      "aliases": ["SMIC", "688981"],
+      "definition": "中芯国际的财报、产能利用率、成熟与先进制程进度、资本开支与设备采购。"
+    },
+    {
+      "slug": "cambricon",
+      "name": "寒武纪",
+      "group": "company",
+      "entityId": "cambricon",
+      "aliases": ["688256"],
+      "definition": "寒武纪的财报、订单与交付、产品迭代，以及算力板块的整体估值变化。"
+    },
+    {
+      "slug": "fed",
+      "name": "美联储",
+      "group": "company",
+      "entityId": "fed",
+      "aliases": ["Federal Reserve", "FOMC"],
+      "definition": "美联储的议息决定与点阵图、官员讲话、缩表进程，以及利率预期对各类资产的影响。"
+    },
+    {
+      "slug": "pboc",
+      "name": "中国人民银行",
+      "group": "company",
+      "entityId": "pboc",
+      "aliases": ["央行", "PBOC"],
+      "definition": "中国人民银行的降准降息、公开市场操作、LPR 报价、信贷数据与汇率管理表态。"
+    },
+    {
+      "slug": "a-shares",
+      "name": "A股",
       "group": "field",
-      "tags": [
-        "Agent"
-      ],
-      "definition": "能自己拆解任务、调用工具、一步步把事办完的 AI 智能体：Claude Code、Manus 等应用，各家 Agent 框架与评测。"
+      "tags": ["A股"],
+      "definition": "沪深两市的大盘、板块与个股动态，包括政策、资金面和市场情绪的变化。"
     },
     {
-      "slug": "coding",
-      "name": "AI 编码",
+      "slug": "hk-stocks",
+      "name": "港股",
       "group": "field",
-      "tags": [
-        "编码"
-      ],
-      "definition": "用 AI 写代码：编程助手、Vibe Coding、代码模型评测，以及开发方式的变化。"
+      "tags": ["港股"],
+      "definition": "港股的大盘、南向资金、中概与外资动向，以及恒生指数成分股的变化。"
     },
     {
-      "slug": "reasoning",
-      "name": "推理能力",
+      "slug": "us-stocks",
+      "name": "美股",
       "group": "field",
-      "tags": [
-        "推理"
-      ],
-      "definition": "让大模型先想再答的能力：思维链、推理模型，数学与逻辑评测上的突破和争议。"
+      "tags": ["美股"],
+      "definition": "美股的大盘、科技权重股、财报季与美联储政策对美股的影响。"
     },
     {
-      "slug": "multimodal",
-      "name": "多模态",
+      "slug": "etf",
+      "name": "ETF",
       "group": "field",
-      "tags": [
-        "多模态"
-      ],
-      "definition": "文字之外的能力：看懂图片、图文混合理解、音视频输入输出的模型与产品进展。"
+      "tags": ["ETF"],
+      "definition": "ETF 的发行、份额变化、资金净流入与产品创新，包括宽基、行业与跨境品种。"
     },
     {
-      "slug": "image-gen",
-      "name": "图像生成",
+      "slug": "convertibles",
+      "name": "可转债",
       "group": "field",
-      "tags": [
-        "图像生成"
-      ],
-      "definition": "AI 画图与修图：文生图模型更新、图像编辑能力与创作工具。"
+      "tags": ["可转债"],
+      "definition": "可转债的发行、上市、强赎与回售、转股溢价率与条款博弈。"
     },
     {
-      "slug": "video",
-      "name": "AI 视频",
+      "slug": "options",
+      "name": "期权",
       "group": "field",
-      "tags": [
-        "视频"
-      ],
-      "definition": "AI 生成和理解视频：文生视频模型、视频编辑工具，以及影视创作的新做法。"
+      "tags": ["期权"],
+      "definition": "期权与衍生品的成交、波动率、持仓变化，以及新品种和交易规则的调整。"
     },
     {
-      "slug": "voice",
-      "name": "语音与音频",
+      "slug": "commodities-fx",
+      "name": "商品与汇率",
       "group": "field",
-      "tags": [
-        "语音"
-      ],
-      "definition": "AI 语音与音频：语音合成、实时语音对话、音乐生成与音频理解的模型与产品。"
+      "tags": ["商品", "汇率"],
+      "definition": "原油、有色、贵金属与人民币汇率的走势，以及它们对相关板块和公司的传导。"
     },
     {
-      "slug": "embodied",
-      "name": "具身智能",
+      "slug": "fund-flows",
+      "name": "资金面",
       "group": "field",
-      "tags": [
-        "具身智能"
-      ],
-      "definition": "装进机器人身体里的 AI：人形机器人、具身基础模型，以及在真实环境里动手干活的能力。"
+      "tags": ["资金流"],
+      "definition": "北向与南向资金、两融余额、公募与私募仓位、回购与增持等资金动向。"
     },
     {
-      "slug": "on-device",
-      "name": "端侧 AI",
+      "slug": "sector-rotation",
+      "name": "板块轮动",
       "group": "field",
-      "tags": [
-        "端侧"
-      ],
-      "definition": "直接跑在手机、电脑等设备上的 AI：小模型、在本机运行模型的工具与端侧芯片。"
+      "tags": ["板块轮动"],
+      "definition": "行业与主题板块的强弱切换、领涨领跌板块，以及背后的政策和景气度变化。"
     },
     {
-      "slug": "open-source",
-      "name": "开源生态",
+      "slug": "quant-factors",
+      "name": "量化因子",
       "group": "field",
-      "tags": [
-        "开源生态",
-        "开源/仓库"
-      ],
-      "definition": "开放权重、能下载下来自己部署的模型，开源框架与 GitHub 上爆火的 AI 项目。"
+      "tags": ["量化因子"],
+      "definition": "因子研究、因子有效性衰减、多因子模型与选股组合的构建和检验。"
     },
     {
-      "slug": "engineering",
-      "name": "部署工程",
+      "slug": "backtesting",
+      "name": "回测与策略",
       "group": "field",
-      "tags": [
-        "部署/工程"
-      ],
-      "definition": "怎么把模型跑得更快更省钱：推理加速、显存与成本、服务部署与基础设施选型。"
+      "tags": ["回测"],
+      "definition": "回测方法、样本内外检验、策略实现与复现，包括过拟合与幸存者偏差的讨论。"
     },
     {
-      "slug": "data-training",
-      "name": "数据与训练",
+      "slug": "risk-control",
+      "name": "风控与仓位",
       "group": "field",
-      "tags": [
-        "数据/训练"
-      ],
-      "definition": "大模型是怎么练出来的：数据集构建、合成数据、预训练与后训练方法、算力与训练成本。"
+      "tags": ["风控", "仓位管理"],
+      "definition": "止损止盈、仓位与杠杆、回撤控制、组合再平衡等风险管理方法与实践。"
     },
     {
-      "slug": "safety",
-      "name": "安全对齐",
-      "group": "field",
-      "tags": [
-        "安全/对齐"
-      ],
-      "definition": "让 AI 可控、可信、不被滥用：越狱与防御、模型行为研究、安全评测与治理框架。"
-    },
-    {
-      "slug": "mcp",
-      "name": "MCP 与工具调用",
-      "group": "field",
-      "tags": [
-        "MCP/工具调用"
-      ],
-      "definition": "让 AI 连上外部软件和数据：MCP 协议、function calling 工具调用与各类工具集成。"
-    },
-    {
-      "slug": "model-releases",
-      "name": "模型发布",
+      "slug": "market-moves",
+      "name": "行情异动",
       "group": "genre",
-      "tags": [
-        "模型发布"
-      ],
-      "definition": "各家新模型的发布、开源与迭代：旗舰更新、开源权重放出、能力与价格变化。"
+      "tags": ["行情异动"],
+      "definition": "指数与板块的涨跌、成交和资金变化，以及盘中值得记录的异动。"
     },
     {
-      "slug": "product-updates",
-      "name": "产品更新",
+      "slug": "company-events",
+      "name": "公司事件",
       "group": "genre",
-      "tags": [
-        "产品更新"
-      ],
-      "definition": "AI 产品与应用的功能上新、改版与商业化——谁家的产品变强了、变贵了、能用了。"
+      "tags": ["公司事件"],
+      "definition": "上市公司公告：并购重组、回购增减持、停复牌、监管处罚与重大合同。"
     },
     {
-      "slug": "papers",
-      "name": "论文研究",
+      "slug": "earnings",
+      "name": "财报与业绩",
       "group": "genre",
-      "tags": [
-        "论文/研究"
-      ],
-      "definition": "值得读的 AI 论文与研究成果：架构创新、训练方法、能力测量与理论进展。"
+      "tags": ["财报"],
+      "definition": "财报、业绩预告与快报，以及营收利润、毛利率和指引的变化。"
     },
     {
-      "slug": "benchmarks",
-      "name": "评测基准",
+      "slug": "macro-data",
+      "name": "宏观数据",
       "group": "genre",
-      "tags": [
-        "评测/基准"
-      ],
-      "definition": "模型到底谁更强：Benchmark 评测成绩、评测方法的争议与排行榜变化。"
-    },
-    {
-      "slug": "tutorials",
-      "name": "教程实践",
-      "group": "genre",
-      "tags": [
-        "教程/实践"
-      ],
-      "definition": "拿来就能用的实操内容：提示词技巧、工作流搭建、工具用法与踩坑经验。"
-    },
-    {
-      "slug": "opinions",
-      "name": "大佬观点",
-      "group": "genre",
-      "tags": [
-        "大佬观点"
-      ],
-      "definition": "行业关键人物在想什么：创始人访谈、研究者论战与投资人判断。"
-    },
-    {
-      "slug": "trends",
-      "name": "现象与趋势",
-      "group": "genre",
-      "tags": [
-        "现象/趋势"
-      ],
-      "definition": "AI 正在改变什么：大家怎么用 AI、新能力的出现、对社会与市场格局的影响。"
-    },
-    {
-      "slug": "industry",
-      "name": "行业动态",
-      "group": "genre",
-      "tags": [
-        "行业动态"
-      ],
-      "definition": "AI 圈的商业大事：融资并购、人事变动、合作与竞争、政策与市场变化。"
+      "tags": ["宏观数据"],
+      "definition": "通胀、就业、PMI、GDP、信贷与社融等经济数据的公布和解读。"
     },
     {
       "slug": "policy",
       "name": "政策监管",
       "group": "genre",
-      "tags": [
-        "政策/监管"
-      ],
-      "definition": "AI 相关的政策法规与政府监管：立法进展、出口管制与全球治理。"
+      "tags": ["政策/监管"],
+      "definition": "货币政策、财政与产业政策、交易与信息披露监管规则的变化。"
+    },
+    {
+      "slug": "research-reports",
+      "name": "研报与数据",
+      "group": "genre",
+      "tags": ["研报/数据"],
+      "definition": "券商研报、行业数据与测算，包括目标价、盈利预测与产业链调研。"
+    },
+    {
+      "slug": "quant-strategy",
+      "name": "量化策略",
+      "group": "genre",
+      "tags": ["量化/策略"],
+      "definition": "策略逻辑、因子暴露、组合构建与实盘表现，以及量化机构的动态。"
+    },
+    {
+      "slug": "tools",
+      "name": "工具与代码",
+      "group": "genre",
+      "tags": ["工具/代码"],
+      "definition": "行情与交易工具、数据接口、开源库和可复现的代码实现。"
+    },
+    {
+      "slug": "tutorials",
+      "name": "教程实践",
+      "group": "genre",
+      "tags": ["教程/实践"],
+      "definition": "读财报、看估值、做筛选、控仓位等读者可以照着做的方法。"
+    },
+    {
+      "slug": "opinions",
+      "name": "观点分析",
+      "group": "genre",
+      "tags": ["观点/分析"],
+      "definition": "分析师、基金经理与交易员对市场、板块和个股的判断与复盘。"
+    },
+    {
+      "slug": "rumors",
+      "name": "传闻与预期",
+      "group": "genre",
+      "tags": ["传闻/预期"],
+      "definition": "尚未证实的传闻、市场预期与一致预期变化，阅读时需对照原文核实。"
     }
   ]
 }

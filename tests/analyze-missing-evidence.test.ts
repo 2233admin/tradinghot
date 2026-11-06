@@ -16,7 +16,7 @@ const provider = await stub((_hit, request) => {
   const output = step === "prefilter" ? { label, reason: "fixture" }
     : step === "score" ? { attentionScore: SELECTING_SCORE }
     : step === "structure" ? { scope: "unknown", category: "model", tags: [], subjects: [], fact: null }
-    : { itemType: "model_release", authorRole: "principal", titleZh: "模型发布", summaryZh: "来源确认模型发布。", bodyZh: "来源确认模型发布。", tags: [], editorialJudgment: "fixture" };
+    : { itemType: "company_event", authorRole: "principal", titleZh: "公司发布公告", summaryZh: "来源确认公司发布公告。", bodyZh: "来源确认公司发布公告。", tags: [], editorialJudgment: "fixture" };
   return { choices: [{ message: { content: JSON.stringify(output) } }] };
 });
 pointModels(provider.url);
