@@ -309,8 +309,8 @@ export const FEED_COPY = {
  * feedLabels：分类 RSS 标题里的名字，替换行业包里的 feedLabel（并进了别的类别时，名字常常也要跟着改）。
  */
 export const PUBLIC_CATEGORIES = {
-  merge: { tip: "opinion" },
-  feedLabels: { opinion: "观点与教程" },
+  merge: {},
+  feedLabels: {},
 } as const;
 
 /** “AI 日报”这类说法：行业词和名词之间，英文词加空格，中文词不加。 */

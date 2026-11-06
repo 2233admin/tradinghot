@@ -9,6 +9,10 @@
         "url": "https://flash-api.jin10.com/get_flash_list?channel=-8200&vip=1",
         "mode": "json_api",
         "headers": {
+          "accept": "application/json, text/plain, */*",
+          "referer": "https://www.jin10.com/",
+          "origin": "https://www.jin10.com",
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
           "x-app-id": "bVBF4FyRTn5NJF5n",
           "x-version": "1.0.0"
         },

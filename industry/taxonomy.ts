@@ -4,21 +4,28 @@
 
 /**
  * 网页上的类别（筛选栏、卡片角标、RSS 分类订阅）。key 是网址和接口里的身份，上线后不要改。
+ * 词表用金十适配器（OhMyOpenCLI 的 `adapters/jin10/_shared.js`）里的资产类别，key 与那里的名字一致；
+ * 一条消息命中多个类别时，按这里的先后顺序取第一个，与那个适配器 `ASSET_RULES` 的顺序相同。
  * section 是日报里的分节标题（几个类别可以共用一节，按这里的顺序排）；guide 告诉结构抽取模型这一类收什么、
  * 和相邻类别的边界在哪（总的归类原则写在 prompts/structure.md 里）。
- * commentary 标出评论类（教程、观点）：日报写过的事又有评论类的后续报道，只占一行快讯（报道它的信源够多时除外）。
- * 没归上类的资料在日报里放进第一个 key 为 industry 的类别所在的节（没有就放最后一节）。
+ * commentary 标出评论类：日报写过的事又有评论类的后续报道，只占一行快讯（报道它的信源够多时除外）。
+ * 没归上类的资料在日报里放进第一个 key 为 industry 的类别所在的节（没有就放最后一节，也就是「其他」）。
  * tagColor 是飞书推送卡片里跟在标题后面的一类小标签的颜色（飞书 text_tag 的颜色名）。
  * feedLabel 是分类 RSS 标题里的名字（不写就用 label）。公开接口、RSS 和 MCP 里要把一类并进另一类发布，写在站点设置里（site/site.ts 的 PUBLIC_CATEGORIES）。
  */
 export const CATEGORIES = [
-  { key: "market", tagColor: "orange", label: "市场", feedLabel: "市场行情", section: "市场与资金", guide: "指数、成交额、资金流、涨跌家数与板块轮动、汇率与商品市场的联动、海外市场开盘收盘。主体是市场整体或一组成分股，不点名某一家公司；点名公司并以其为主体的归个股。" },
-  { key: "macro", tagColor: "blue", label: "宏观", feedLabel: "宏观与政策", section: "宏观与政策", guide: "央行与利率、通胀就业等经济数据、财政与产业政策、监管新规、地缘与海外央行事件对定价的影响。主体是政策、数据或监管机构，不是某家上市公司。" },
-  { key: "stock", tagColor: "turquoise", label: "个股", feedLabel: "个股与公司", section: "个股与公司", guide: "点名一家上市或拟上市公司的实质事件：财报与业绩预告、公告与问询、回购增减持、并购重组、IPO 与停复牌、监管处罚、重大合同订单。只有股价异动、没有公司自身消息的归市场。" },
-  { key: "industry", tagColor: "indigo", label: "行业", feedLabel: "行业与板块", section: "行业与板块", guide: "产业链与板块层面的变化：景气度、产品价格、产能与库存、销量与订单、供需缺口、政策对某个行业的影响、多家公司同向变动。点名了一家公司并以其为主体的归个股。没有归上类的资料也放在这一节。" },
-  { key: "quant", tagColor: "violet", label: "量化", feedLabel: "量化与策略", section: "量化与工具", guide: "量化策略与因子、组合与风控方法、回测与数据处理、交易工具与开源实现、量化机构与产品动态、监管对程序化交易的规定。面向普通读者的入门做法归教程。" },
-  { key: "tip", tagColor: "green", label: "教程", section: "观点与教程", guide: "读者可以照着做的方法：读财报、看估值、做筛选、控仓位与止损、使用行情或交易工具的步骤。重点是可复用的做法；只有看法没有做法归观点。", commentary: true },
-  { key: "opinion", tagColor: "purple", label: "观点", section: "观点与教程", guide: "分析师、基金经理、交易员或财经作者的解释、判断、预测、复盘与访谈。讨论行情不自动归市场，作者是名人不自动归观点。", commentary: true },
+  { key: "equities_us", tagColor: "violet", label: "美股", feedLabel: "美股", section: "股市", guide: "美股大盘与个股：指数与成交、财报与指引、回购与增持、IPO 与停复牌、监管处罚。关键词：美股、纳斯达克、纳指、道指、标普、SPX、NASDAQ、NYSE；在美上市的公司（英伟达、苹果、特斯拉、微软）按美股归类。" },
+  { key: "equities_cn", tagColor: "wathet", label: "A股", feedLabel: "A股", section: "股市", guide: "沪深两市的市场整体与个股：指数与成交、政策与资金面、上市公司公告与财报、监管处罚、IPO 与停复牌。关键词：A股、上证、深成指、创业板、沪深、北向资金、科创板；茅台、宁德时代、比亚迪归 A股。" },
+  { key: "equities_hk", tagColor: "indigo", label: "港股", feedLabel: "港股", section: "股市", guide: "港股大盘与个股、南向资金、中概与外资动向、港股通与上市规则。关键词：港股、恒生、恒指、国企指数；腾讯等在港上市的公司按港股归类。" },
+  { key: "macro_data", tagColor: "blue", label: "宏观数据", feedLabel: "宏观数据", section: "宏观与利率", guide: "经济数据与统计口径的变化：CPI、PPI、GDP、PMI、非农、初请、失业率、通胀、零售销售、社融与信贷。只是评论数据、没有新数字的归其他。" },
+  { key: "bonds_rates", tagColor: "purple", label: "债券与利率", feedLabel: "债券与利率", section: "宏观与利率", guide: "国债与美债收益率、信用债与违约、可转债条款、央行与利率决议、降息加息、公开市场操作与流动性。关键词：美债、国债、收益率、利率、央行、美联储、FOMC、货币政策。" },
+  { key: "energy", tagColor: "orange", label: "能源", feedLabel: "能源与原油", section: "商品与汇率", guide: "原油、天然气、成品油与电力：价格、库存、产量、OPEC 与地缘扰动、EIA 与 API 数据。关键词：原油、WTI、布伦特、OPEC、欧佩克、天然气、油价、EIA。" },
+  { key: "precious_metals", tagColor: "green", label: "贵金属", feedLabel: "贵金属", section: "商品与汇率", guide: "黄金、白银、铂钯的价格与成交、ETF 持仓、央行购金、实际利率与避险情绪。关键词：黄金、白银、贵金属、金价、银价、铂、钯。铜、铝等工业金属归大宗商品。" },
+  { key: "commodities", tagColor: "turquoise", label: "大宗商品", feedLabel: "大宗商品", section: "商品与汇率", guide: "工业品与农产品：铜、铝、铁矿、螺纹钢、小麦、玉米、大豆的价格、库存、产量与需求。关键词：大宗商品、铜、铝、铁矿、螺纹、农产品。原油归能源，金银归贵金属。" },
+  { key: "crypto", tagColor: "carmine", label: "加密货币", feedLabel: "加密货币", section: "商品与汇率", guide: "比特币、以太坊与加密资产的价格、资金流、监管与交易所事件。关键词：比特币、以太坊、加密货币、BTC、ETH。" },
+  { key: "geopolitics", tagColor: "red", label: "地缘政治", feedLabel: "地缘政治", section: "地缘", guide: "影响定价的地缘事件：冲突与停火、制裁与禁运、选举与谈判、航运与能源通道。关键词：伊朗、以色列、俄乌、战争、制裁、霍尔木兹、黎巴嫩、停火、谈判。" },
+  { key: "fx", tagColor: "yellow", label: "外汇", feedLabel: "外汇与汇率", section: "商品与汇率", guide: "货币对与汇率：美元、欧元、英镑、日元、瑞郎、澳元、加元、纽元、离岸人民币、美元指数。关键词：DXY、外汇、汇率。落到某只股票或某个股市的新闻归对应市场。" },
+  { key: "other", tagColor: "neutral", label: "其他", feedLabel: "其他财经内容", section: "其他", guide: "不属于上面任何一类的内容：方法论与教程、量化与工具、行业研究、人物观点与访谈。量化内容归这里，但首标签必须是“量化/策略”或“工具/代码”，主题标签带上“量化因子”“回测”“风控”或“仓位管理”，主题页和标签筛选靠它们收集。没有归上类的资料也放在这一节。", commentary: true },
 ] as const satisfies ReadonlyArray<{ key: string; tagColor: string; label: string; feedLabel?: string; section: string; guide: string; commentary?: true }>;
 
 /**
@@ -48,8 +55,8 @@ export const CATEGORY_TAGS = [
 
 /** 可选的主题标签。 */
 export const TOPIC_TAGS = [
-  "A股", "港股", "美股", "中概股", "ETF", "可转债", "期权", "期货", "商品", "汇率", "债券", "资金流", "板块轮动", "估值", "分红", "并购重组",
-  "量化因子", "回测", "高频交易", "风控", "仓位管理",
+  "A股", "港股", "美股", "中概股", "ETF", "可转债", "期权", "期货", "商品", "汇率", "美元指数", "债券", "美债", "黄金", "白银", "原油", "铜",
+  "资金流", "板块轮动", "估值", "分红", "并购重组", "量化因子", "回测", "高频交易", "风控", "仓位管理",
 ] as const;
 
 /** 可选的实体标签（公司、机构、平台）。 */

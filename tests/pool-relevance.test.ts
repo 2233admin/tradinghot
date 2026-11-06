@@ -17,7 +17,7 @@ before(async () => {
 });
 
 async function add(suffix: string, direct: string, body: string, options: {
-  title?: string; age?: number; channel?: "news" | "x"; category?: "stock" | "quant"; tags?: string[];
+  title?: string; age?: number; channel?: "news" | "x"; category?: "equities_cn" | "bonds_rates"; tags?: string[];
   visibility?: string; eligible?: boolean; future?: boolean; noSearchRow?: boolean;
 } = {}) {
   const at = new Date(+now - (options.age ?? 60) * 1000);
@@ -63,11 +63,11 @@ test("company relevance retains tag-only candidates, boosts and unique totals", 
 });
 
 test("relevance retains combined filters and literal LIKE characters", async () => {
-  await add("filtered", "uv", "uv", { channel: "x", category: "quant", tags: [T] });
-  await add("wrong-channel", "uv", "uv", { category: "quant", tags: [T] });
+  await add("filtered", "uv", "uv", { channel: "x", category: "bonds_rates", tags: [T] });
+  await add("wrong-channel", "uv", "uv", { category: "bonds_rates", tags: [T] });
   await add("wrong-category", "uv", "uv", { channel: "x", tags: [T] });
-  await add("wrong-tag", "uv", "uv", { channel: "x", category: "quant" });
-  const filtered = await loadPool({ ...query("uv"), channel: "x", category: "quant", tag: T });
+  await add("wrong-tag", "uv", "uv", { channel: "x", category: "bonds_rates" });
+  const filtered = await loadPool({ ...query("uv"), channel: "x", category: "bonds_rates", tag: T });
   assert.deepEqual(filtered.items.map(item => item.id), [id("filtered")]);
   await add("literal", "qx%_\\z", "");
   await add("wildcard-lookalike", "qx-anything-z", "");
