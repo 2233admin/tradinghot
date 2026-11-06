@@ -105,6 +105,14 @@ const EditorialSettingsSchema = z
         tags: z.array(term(40)).max(30),
       })
       .strict(),
+    webai: z
+      .object({
+        enabled: z.boolean(),
+        sites: z.array(term(40)).max(10),
+        profile: z.string().trim().max(40).nullable(),
+        timeoutSeconds: z.number().int().min(30).max(600),
+      })
+      .strict(),
   })
   .strict();
 

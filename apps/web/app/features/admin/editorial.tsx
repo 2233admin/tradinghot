@@ -22,6 +22,10 @@ export function EditorialCard({ editorial, strategies }: Pick<AdminSettings, "ed
     lookbackHours: editorial.rules.lookbackHours === null ? "" : String(editorial.rules.lookbackHours),
     category: editorial.rules.category ?? "",
     tags: editorial.rules.tags.join("，"),
+    webaiEnabled: editorial.webai.enabled ? "true" : "false",
+    webaiSites: editorial.webai.sites.join("，"),
+    webaiProfile: editorial.webai.profile ?? "",
+    webaiTimeout: String(editorial.webai.timeoutSeconds),
   });
   const save = () =>
     run(
@@ -39,6 +43,12 @@ export function EditorialCard({ editorial, strategies }: Pick<AdminSettings, "ed
           lookbackHours: v.lookbackHours.trim() ? Number(v.lookbackHours) : null,
           category: v.category || null,
           tags: listOf(v.tags),
+        },
+        webai: {
+          enabled: v.webaiEnabled === "true",
+          sites: listOf(v.webaiSites),
+          profile: v.webaiProfile.trim() || null,
+          timeoutSeconds: Number(v.webaiTimeout) || 120,
         },
       },
       { label: "editorial", success: "筛选与写作设置已保存" },
@@ -92,6 +102,29 @@ export function EditorialCard({ editorial, strategies }: Pick<AdminSettings, "ed
         <Field label="标签" hint="规则选中的资料带上这些标签；逗号分隔">
           <Input value={v.tags} onChange={(e) => setV({ ...v, tags: e.target.value })} placeholder="量化，A股" />
         </Field>
+      </div>
+      <div className="mt-5 rounded-panel bg-bg-sunk/50 p-4 ring-1 ring-line">
+        <h3 className="text-[13px] font-semibold text-ink">网页 AI 清洗（opencli）</h3>
+        <p className="mt-1 text-[12px] leading-relaxed text-ink-3">
+          开启后，入选的资料会按顺序发给这些网页端免费模型，由它们写中文标题和摘要；只有依次尝试这些站点，失败的那个冷却 10 分钟。模型调用打开时「自动」不走这里。
+        </p>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <Field label="启用">
+            <Select value={v.webaiEnabled} onChange={(e) => setV({ ...v, webaiEnabled: e.target.value })}>
+              <option value="false">关闭</option>
+              <option value="true">开启</option>
+            </Select>
+          </Field>
+          <Field label="站点" hint="opencli 的站点名，逗号分隔">
+            <Input value={v.webaiSites} onChange={(e) => setV({ ...v, webaiSites: e.target.value })} placeholder="qwen，yuanbao，kimi" />
+          </Field>
+          <Field label="浏览器配置" hint="多个 Browser Bridge 同时连接时必填">
+            <Input value={v.webaiProfile} onChange={(e) => setV({ ...v, webaiProfile: e.target.value })} placeholder="qpsqtqvw" />
+          </Field>
+          <Field label="超时（秒）" hint="单条资料的等待上限">
+            <Input type="number" min={30} max={600} value={v.webaiTimeout} onChange={(e) => setV({ ...v, webaiTimeout: e.target.value })} />
+          </Field>
+        </div>
       </div>
     </Card>
   );
