@@ -31,6 +31,6 @@ export function matchSelectionRules(a: RuleInput, rules: SelectionRules, now = D
     const at = a.publishedAt ?? a.discoveredAt;
     if (!at || now - at.getTime() > rules.lookbackHours * 3600_000) return { selected: false, reason: `早于 ${rules.lookbackHours} 小时` };
   }
-  if (!rules.keywords.length && !rules.symbols.length && !rules.sources.length) return { selected: false, reason: "规则为空" };
+  if (!rules.keywords.length && !rules.symbols.length && !rules.sources.length) return { selected: true, reason: "未设置规则，全部收录" };
   return { selected: true, reason: `规则命中：${keyword ? `关键词「${keyword}」` : symbol ? `标的「${symbol}」` : `来源 ${source}`}` };
 }

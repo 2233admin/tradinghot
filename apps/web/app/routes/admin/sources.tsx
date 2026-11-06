@@ -1,9 +1,10 @@
 import { SITE } from "@aihot/site";
 import { Form, Link, useNavigate, useSearchParams } from "react-router";
 import type { Route } from "./+types/sources";
-import type { AdminSources } from "@aihot/contracts/admin";
+import type { AdminSettings, AdminSources } from "@aihot/contracts/admin";
 import { SELECTION } from "@aihot/industry/selection";
 import { adminGet } from "../../lib/admin.server";
+import { EditorialCard } from "../../features/admin/editorial";
 import { num } from "../../features/admin/format";
 import { HEALTH_LABEL, KIND_LABEL, MODE_LABEL } from "../../features/admin/labels";
 import { AdminPage, Badge, ButtonLink, Card, DataTable, Dot, FilterChips, healthTone, Input, Pager, Select, Stat, Time } from "../../features/admin/ui";
@@ -12,13 +13,17 @@ import { AdminPage, Badge, ButtonLink, Card, DataTable, Dot, FilterChips, health
 
 export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
-  return adminGet<AdminSources>(request, `/api/admin/sources${url.search}`);
+  const [data, settings] = await Promise.all([
+    adminGet<AdminSources>(request, `/api/admin/sources${url.search}`),
+    adminGet<AdminSettings>(request, "/api/admin/settings"),
+  ]);
+  return { ...data, editorial: settings.editorial, strategies: settings.strategies };
 }
 
 export const meta: Route.MetaFunction = () => [{ title: `信源 · ${SITE.name} 后台` }];
 
 export default function Sources({ loaderData }: Route.ComponentProps) {
-  const { rows, totals, page, useLabels } = loaderData;
+  const { rows, totals, page, useLabels, editorial, strategies } = loaderData;
   const [sp] = useSearchParams();
   const navigate = useNavigate();
   const pick = (param: string, value: string) => {
@@ -34,6 +39,7 @@ export default function Sources({ loaderData }: Route.ComponentProps) {
       subtitle="列表按健康度排序：失败的在最前。点进详情可以预览抓取、手动采集、调整频率与参与方式。"
       actions={<ButtonLink to="/admin/sources/new" tone="primary">新建信源</ButtonLink>}
     >
+      <EditorialCard editorial={editorial} strategies={strategies} />
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="全部" value={num(totals.total)} />
         <Stat label="启用" value={num(totals.enabled)} />
