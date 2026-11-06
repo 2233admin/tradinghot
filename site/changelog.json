@@ -1,6 +1,15 @@
 {
-  "latestVersion": "2026-11-07T05:40",
+  "latestVersion": "2026-11-07T06:05",
   "releases": [
+    {
+      "date": "2026-11-07",
+      "time": "06:05",
+      "kind": "修复",
+      "title": "X 信源恢复采集",
+      "body": [
+        "没有 SocialData 付费 key 时，X 账号改用本机 opencli 的浏览器会话读取，First Squawk、Tier10k、Walter Bloomberg、Kobeissi、Unusual Whales、ZeroHedge、Charlie Bilello 七个账号已恢复，数据源页状态从“不稳定”变回“正常”。"
+      ]
+    },
     {
       "date": "2026-11-07",
       "time": "05:40",

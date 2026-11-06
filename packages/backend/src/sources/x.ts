@@ -178,7 +178,7 @@ export async function readXSearch(base: string, opts: { lastId: string | null; b
       break;
     }
     pages += 1;
-    receiptIds.add(res.receiptId);
+    if (res.receiptId !== null) receiptIds.add(res.receiptId);
     all.push(...res.tweets);
     if (!lastId || !res.nextCursor || res.tweets.length === 0) break;
     if (pages >= MAX_PAGES) {
@@ -210,7 +210,7 @@ export async function readXSearch(base: string, opts: { lastId: string | null; b
       break;
     }
     backlogPages += 1;
-    receiptIds.add(res.receiptId);
+    if (res.receiptId !== null) receiptIds.add(res.receiptId);
     all.push(...res.tweets);
     if (!res.nextCursor || res.tweets.length === 0) backlog.shift();
     else stretch.next = res.nextCursor;
