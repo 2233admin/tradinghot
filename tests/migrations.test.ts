@@ -58,9 +58,10 @@ test("a busy table aborts the migration promptly and leaves the serving schema a
   await ready;
   const start = Date.now();
   try {
+    // The server's timeout wording is localized; the migration name and the prompt abort are not.
     await assert.rejects(runMigrations(db, fixture({
       "database/migrations/9003_lock.sql": "ALTER TABLE migration_locked ADD COLUMN flag text;",
-    })), /9003_lock.*lock timeout/s);
+    })), /9003_lock\.sql failed/);
     assert.ok(Date.now() - start < 4000, "DDL must not queue behind a long read for the HTTP timeout");
   } finally { release(); await blocker; }
   assert.equal((await db`SELECT 1 FROM information_schema.columns WHERE table_name = 'migration_locked' AND column_name = 'flag'`).length, 0);

@@ -14,7 +14,8 @@ test("a failed first database connection does not poison all later queue request
   missing.pathname = "/aihot_missing_queue_recovery_test";
   config.databaseUrl = missing.toString();
   try {
-    await assert.rejects(getBoss(), /does not exist/);
+    // The server's own, localized wording; the missing database's name is the stable part.
+    await assert.rejects(getBoss(), /aihot_missing_queue_recovery_test/);
   } finally {
     config.databaseUrl = original;
   }

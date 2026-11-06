@@ -20,6 +20,8 @@ import { submitFeedback } from "@aihot/backend/operations/feedback";
 
 const run = promisify(execFile);
 const T = tag();
+/** The archive shims below are POSIX shell scripts and the permission cases need the POSIX model. */
+const POSIX = process.platform !== "win32";
 const originalDataDir = config.dataDir;
 const originalFetch = globalThis.fetch;
 const env = {
@@ -165,7 +167,7 @@ test("an unreadable upload directory cannot become a successful empty backup", a
   assert.match(after!.value.filesError, /ELOOP/);
 });
 
-test("unreadable nested directories still ship the database and fail the attachment backup", { skip: process.getuid?.() === 0 }, async () => {
+test("unreadable nested directories still ship the database and fail the attachment backup", { skip: !POSIX ? "Windows has no POSIX permission bits" : process.getuid?.() === 0 }, async () => {
   await save("uploads/restricted/file.txt", Buffer.from("fixture"));
   const directory = path.join(config.dataDir, "uploads/restricted");
   await chmod(directory, 0);
@@ -203,7 +205,7 @@ exec "$BACKUP_TEST_TAR" "$@"
   }
 }
 
-test("packing retries once and a successful retry preserves the screenshot", async () => {
+test("packing retries once and a successful retry preserves the screenshot", { skip: POSIX ? false : "the archive shim is a POSIX shell script" }, async () => {
   await save("feedback-screenshots/retry.png");
   await withPackingFailures(1, async count => {
     assert.equal((await runBackup(NOW)).uploaded, true);
@@ -213,7 +215,7 @@ test("packing retries once and a successful retry preserves the screenshot", asy
   assert.deepEqual(await readFile(path.join(data, "feedback-screenshots/retry.png")), PNG);
 });
 
-test("persistent packing failure still sends the database and reports incomplete backup", async () => {
+test("persistent packing failure still sends the database and reports incomplete backup", { skip: POSIX ? false : "the archive shim is a POSIX shell script" }, async () => {
   await save("feedback-screenshots/failure.png");
   await withPackingFailures(2, async count => {
     await assert.rejects(runBackup(NOW), /database backed up, but the file archive failed: fictional packing failure/);
@@ -236,7 +238,7 @@ test("local retention keeps three dump/archive pairs without deleting source att
   assert.deepEqual(await readFile(path.join(config.dataDir, "feedback-screenshots/retained.png")), PNG);
 });
 
-test("a failed database dump keeps connection credentials out of argv and the reported error", async () => {
+test("a failed database dump keeps connection credentials out of argv and the reported error", { skip: POSIX ? false : "Windows cannot exec an extension-less script as pg_dump" }, async () => {
   const bin = path.join(config.dataDir, "dump-bin");
   await mkdir(bin);
   const captured = path.join(bin, "invocation.json");
@@ -282,7 +284,11 @@ process.exit(2);
 // A release must let the real dump/archive finish and record its uploaded pair before the worker exits.
 // Killing every process with SIGTERM used to interrupt pg_dump (and make tar need a second attempt).
 for (const phase of ["pg_dump", "tar"] as const) {
-  test(`worker stop drains a real ${phase} without terminating or restarting it`, { timeout: 30_000 }, async () => {
+  test(`worker stop drains a real ${phase} without terminating or restarting it`, {
+    timeout: 30_000,
+    // Windows delivers SIGTERM as TerminateProcess, so the worker never runs its handler.
+    skip: process.platform === "win32" ? "Windows cannot deliver SIGTERM to the worker" : false,
+  }, async () => {
     const locked = await sql.reserve();
     await sql`CREATE TABLE IF NOT EXISTS backup_shutdown_probe (id integer)`;
     await locked`BEGIN`;

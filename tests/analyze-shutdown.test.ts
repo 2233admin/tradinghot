@@ -12,6 +12,8 @@ import { upsertMaterial } from "@aihot/backend/content/materials";
 
 const T = tag();
 const SOURCE = `test-analyze-stop-${T}`;
+/** Windows delivers SIGTERM as TerminateProcess, so the spawned worker never runs its handler. */
+const SIGNALS = process.platform !== "win32";
 let active: {
   calls: AnalysisStep[];
   scoreAsked: ReturnType<typeof gate<void>>;
@@ -89,7 +91,7 @@ after(async () => {
   await provider.close(); await stopBoss(); await closeDb();
 });
 
-test("SIGTERM during the final paid writing call still commits the complete analysis and publication", async () => {
+test("SIGTERM during the final paid writing call still commits the complete analysis and publication", { skip: SIGNALS ? false : "Windows cannot deliver SIGTERM to the worker" }, async () => {
   active = { calls: [], scoreAsked: gate(), structureAsked: gate(), scoreAnswer: gate(), structureAnswer: gate(), writingAsked: gate(), writingAnswer: gate(), failScore: false };
   active.scoreAnswer.open(); active.structureAnswer.open();
   const queue = `test.analyze-stop-${T}-final`;
@@ -113,7 +115,7 @@ test("SIGTERM during the final paid writing call still commits the complete anal
   assert.equal((await sql`SELECT 1 FROM receipts WHERE subject=${`article:${articleId}@1`} AND status='completed'`).length, 5);
 });
 
-for (const failScore of [false, true]) test(`SIGTERM during ${failScore ? "failed" : "successful"} first score drains slower structure and leaves a retryable job`, async () => {
+for (const failScore of [false, true]) test(`SIGTERM during ${failScore ? "failed" : "successful"} first score drains slower structure and leaves a retryable job`, { skip: SIGNALS ? false : "Windows cannot deliver SIGTERM to the worker" }, async () => {
   active = { calls: [], scoreAsked: gate(), structureAsked: gate(), scoreAnswer: gate(), structureAnswer: gate(), failScore };
   const queue = `test.analyze-stop-${T}-${failScore}`;
   const boss = await getBoss();

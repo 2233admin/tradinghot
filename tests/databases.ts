@@ -7,6 +7,7 @@
 // *.standalone.test.ts need no database copy; npm run test:standalone runs them without a database.
 import "./setup.ts";
 import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -17,7 +18,9 @@ import postgres from "postgres";
 const template = new URL(process.env.DATABASE_URL!);
 const name = decodeURIComponent(template.pathname.slice(1));
 const suffix = name.slice(name.lastIndexOf("_") + 1);
-const copyPattern = `^${name.replace(/\W/g, "\\$&")}_f[0-9]+_${suffix}$`;
+// A file's copy carries a random token besides its pid: Windows reuses pids quickly, and a copy left
+// by the previous owner would otherwise make CREATE DATABASE fail with "already exists".
+const copyPattern = `^${name.replace(/\W/g, "\\$&")}_f[0-9]+_[0-9a-f]{8}_${suffix}$`;
 
 function urlOf(database: string) {
   const url = new URL(template);
@@ -64,7 +67,7 @@ if (process.env.NODE_TEST_CONTEXT && isMainThread) {
   if (process.argv[1]?.endsWith(".standalone.test.ts")) {
     await import("./standalone.ts");
   } else {
-    const copy = `${name}_f${process.pid}_${suffix}`;
+    const copy = `${name}_f${process.pid}_${randomUUID().slice(0, 8)}_${suffix}`;
     await onServer((db) => db`CREATE DATABASE ${db(copy)} TEMPLATE ${db(name)}`);
     process.env.DATABASE_URL = urlOf(copy);
   }

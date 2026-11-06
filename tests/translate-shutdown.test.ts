@@ -9,6 +9,8 @@ import { publishArticle } from '@aihot/backend/publication/publish';
 
 const T = tag();
 const SOURCE = `test-translate-stop-${T}`;
+/** Windows delivers SIGTERM as TerminateProcess, so the spawned worker never runs its handler. */
+const SIGNALS = process.platform !== 'win32';
 let active: { asked: ReturnType<typeof gate<void>>; hold: ReturnType<typeof gate<void>>; calls: number; misaligned: boolean; refused?: boolean };
 const provider = await stub(async (_hit, req) => {
   const { segments } = JSON.parse(JSON.parse(req.body).messages[1].content) as { segments: string[] };
@@ -50,7 +52,7 @@ before(async () => {
 });
 after(async () => { await provider.close(); await stopBoss(); await closeDb(); });
 
-for (const misaligned of [false, true]) test(`SIGTERM finishes the sent ${misaligned ? 'misaligned' : 'normal'} batch and resumes from its receipt`, async () => {
+for (const misaligned of [false, true]) test(`SIGTERM finishes the sent ${misaligned ? 'misaligned' : 'normal'} batch and resumes from its receipt`, { skip: SIGNALS ? false : 'Windows cannot deliver SIGTERM to the worker' }, async () => {
   active = { asked: gate(), hold: gate(), calls: 0, misaligned };
   const first = misaligned ? `First paragraph ${T}.` : `First paragraph ${T}. ${'English text '.repeat(170)}`;
   const second = misaligned ? `Second paragraph ${T}.` : `Second paragraph ${T}. ${'More English '.repeat(170)}`;
@@ -81,7 +83,7 @@ for (const misaligned of [false, true]) test(`SIGTERM finishes the sent ${misali
   assert.ok(finished.every((receipt) => receipt.status === 'completed'), 'all batches covered by the committed translation complete after resume');
 });
 
-test('a batch the provider refuses after SIGTERM is an interruption, not a translation attempt', async () => {
+test('a batch the provider refuses after SIGTERM is an interruption, not a translation attempt', { skip: SIGNALS ? false : 'Windows cannot deliver SIGTERM to the worker' }, async () => {
   active = { asked: gate(), hold: gate(), calls: 0, misaligned: false, refused: true };
   const { articleId } = await upsertMaterial({ sourceId: SOURCE, url: `https://example.org/translation-shutdown-${T}/refused`, title: `Refused ${T}`, bodyHtml: `<p>Refused paragraph ${T}.</p><p>Another refused paragraph ${T}.</p>`, bodyText: `Refused paragraph ${T}. Another refused paragraph ${T}.`, bodyStatus: 'ok', language: 'en', via: 'fetch', publishedAt: new Date(), discoveredAt: new Date(Date.now() + 86_400_000) });
   await sql`INSERT INTO analyses (article_id,input_revision,origin,relevance,category,title_zh,summary_zh,reason_zh,score,selected)
