@@ -376,10 +376,29 @@ export interface AdminBudget {
   used_hour: number;
 }
 
+/** The site's editorial strategies and the rule filter's terms (settings: editorial.strategy). */
+export interface AdminEditorialSettings {
+  selection: string;
+  writing: string;
+  rules: {
+    keywords: string[];
+    excludeKeywords: string[];
+    sources: string[];
+    excludeSources: string[];
+    symbols: string[];
+    lookbackHours: number | null;
+    category: string | null;
+    tags: string[];
+  };
+}
+
 export interface AdminSettings {
   contact: { wechatQr: string | null; feishuQr: string | null };
   targets: AdminNotifyTarget[];
   budgets: AdminBudget[];
+  editorial: AdminEditorialSettings;
+  /** The registered strategies the admin may choose from. */
+  strategies: { selection: Array<{ id: string; label: string }>; writing: Array<{ id: string; label: string }> };
 }
 
 // Models and evaluation

@@ -31,6 +31,8 @@ import {
 } from "./writing.ts";
 import { CATEGORY_GUIDE, CATEGORY_TAGS, ENTITIES, ENTITY_TAGS, ITEM_TYPES, normalizeTags, TOPIC_TAGS } from "./vocabulary.ts";
 import { promptText, promptVersion } from "./prompts.ts";
+import { editorialSettings, type SelectionRules } from "./config.ts";
+import { matchSelectionRules } from "./rules.ts";
 import { originalPostCopy } from "../content/posts.ts";
 import { wordingProblems } from "./wording.ts";
 
@@ -213,6 +215,8 @@ export interface AnalysisRun {
     reused: boolean;
   } | null;
   structure: (ReturnType<typeof normalizeStructure> & { model: string; receiptId: number; reused: boolean }) | null;
+  /** A rule judgement (selection strategy "rules"); the model scores are absent then. */
+  rule: { selected: boolean; reason: string; category: string | null; tags: string[] } | null;
 }
 
 const isContentFilter = (error: unknown) => failureKind(error) === "refused" && /contentFilter|"1301"/.test((error as Error).message);
@@ -476,13 +480,107 @@ export function scoresSelect(scores: AnalysisRun["scores"], threshold = scores?.
   return sum !== null && threshold !== null && sum >= threshold * SCORE_CALLS;
 }
 
-/** Runs the steps on the material as it is (or reuses their receipts) without writing business results. */
-export async function runAnalysis(a: AnalyzeInputArticle, opts: StepOpts = {}): Promise<AnalysisRun> {
-  checkAnalysisRunning();
-  // Missing article text waits for a later revision, before any paid step; displayable original posts keep their judgement.
-  if (awaitsMaterial(a)) return { prefilter: null, scores: null, writing: null, structure: null };
+/** What a selection strategy returns: the judgement and the model steps it ran (none for rules). */
+export interface SelectionDecision {
+  selected: boolean;
+  /** Worth the richer understanding copy. */
+  near: boolean;
+  /** The prefilter blocked the material: nothing is written. */
+  blocked: boolean;
+  reason: string;
+  prefilter: AnalysisRun["prefilter"];
+  scores: AnalysisRun["scores"];
+  rule: AnalysisRun["rule"];
+}
+
+/** What a writing strategy returns: the reader-facing copy and the structure beside it. */
+export interface WritingDecision {
+  writing: AnalysisRun["writing"];
+  structure: AnalysisRun["structure"];
+}
+
+/** How material is judged. The site picks one by id (editorial/config.ts); modules register more. */
+export interface SelectionStrategy {
+  id: string;
+  label: string;
+  decide(a: AnalyzeInputArticle, opts: StepOpts, rules: SelectionRules): Promise<SelectionDecision>;
+}
+
+/** How a judgement becomes the reader-facing copy. */
+export interface WritingStrategy {
+  id: string;
+  label: string;
+  write(a: AnalyzeInputArticle, decision: SelectionDecision, opts: StepOpts): Promise<WritingDecision>;
+}
+
+const selectionStrategies = new Map<string, SelectionStrategy>();
+const writingStrategies = new Map<string, WritingStrategy>();
+
+export function registerSelectionStrategy(strategy: SelectionStrategy): void {
+  selectionStrategies.set(strategy.id, strategy);
+}
+
+export function registerWritingStrategy(strategy: WritingStrategy): void {
+  writingStrategies.set(strategy.id, strategy);
+}
+
+export function registeredSelectionStrategies(): SelectionStrategy[] {
+  return [...selectionStrategies.values()];
+}
+
+export function registeredWritingStrategies(): WritingStrategy[] {
+  return [...writingStrategies.values()];
+}
+
+/** The model's judgement: prefilter, then two independent scores against the source's threshold. */
+async function decideByModel(a: AnalyzeInputArticle, opts: StepOpts, _rules: SelectionRules): Promise<SelectionDecision> {
   const prefilter = await runSelectionPrefilter(a, opts);
-  if (prefilter.label === "BLOCK") return { prefilter, scores: null, writing: null, structure: null };
+  if (prefilter.label === "BLOCK") return { selected: false, near: false, blocked: true, reason: prefilter.reason, prefilter, scores: null, rule: null };
+  const scores = await runSelectionScores(a, opts);
+  const sum = scoreSum(scores);
+  const selected = scoresSelect(scores);
+  return { selected, near: selected || (sum !== null && sum > UNDERSTAND_FLOOR * SCORE_CALLS), blocked: false, reason: "", prefilter, scores, rule: null };
+}
+
+/** The OpenAlice rule filter: no model call decides anything. */
+async function decideByRules(a: AnalyzeInputArticle, _opts: StepOpts, rules: SelectionRules): Promise<SelectionDecision> {
+  const match = matchSelectionRules(a, rules);
+  return {
+    selected: match.selected, near: match.selected, blocked: false, reason: match.reason, prefilter: null, scores: null,
+    rule: { selected: match.selected, reason: match.reason, category: rules.category, tags: rules.tags },
+  };
+}
+
+/** Structure and copy from the models, as the default pipeline writes them. */
+async function writeWithModel(a: AnalyzeInputArticle, decision: SelectionDecision, opts: StepOpts): Promise<WritingDecision> {
+  const original = originalPostCopy(a.xPost, a.url);
+  const structure = await runStructure(a, opts);
+  const writing = original
+    ? { kind: "verbatim" as const, model: null, titleZh: original.title, summaryZh: original.summary ?? "", reasonZh: null, receiptIds: [], reused: true }
+    : await mendWording(a, (decision.near ? await runUnderstand(a, opts) : null) ?? (await runSummarize(a, opts)), opts);
+  return { writing, structure };
+}
+
+/** The material's own title and opening text: readable without any model. */
+async function writeFromSource(a: AnalyzeInputArticle, decision: SelectionDecision): Promise<WritingDecision> {
+  const original = originalPostCopy(a.xPost, a.url);
+  const copy = (title: string, summary: string): WritingDecision => ({
+    writing: {
+      kind: "verbatim", model: null, titleZh: collapseWhitespace(title), summaryZh: collapseWhitespace(summary).slice(0, 200),
+      reasonZh: decision.selected ? decision.reason : null, receiptIds: [], reused: true,
+    },
+    structure: null,
+  });
+  return original ? copy(original.title, original.summary ?? "") : copy(a.title, a.bodyText ?? a.excerpt ?? "");
+}
+
+/**
+ * The default pipeline, unchanged: prefilter → scores → structure and copy, the structure call
+ * running beside the scores.
+ */
+async function runModelPipeline(a: AnalyzeInputArticle, opts: StepOpts): Promise<AnalysisRun> {
+  const prefilter = await runSelectionPrefilter(a, opts);
+  if (prefilter.label === "BLOCK") return { prefilter, scores: null, writing: null, structure: null, rule: null };
   const original = originalPostCopy(a.xPost, a.url);
   // The structure step needs nothing from the scores: it runs beside them.
   const structure = runStructure(a, opts).then((value) => ({ value }), (error: unknown) => ({ error }));
@@ -497,13 +595,38 @@ export async function runAnalysis(a: AnalyzeInputArticle, opts: StepOpts = {}): 
     const writing: NonNullable<AnalysisRun["writing"]> = original
       ? { kind: "verbatim", model: null, titleZh: original.title, summaryZh: original.summary ?? "", reasonZh: null, receiptIds: [], reused: true }
       : await mendWording(a, (near ? await runUnderstand(a, opts) : null) ?? (await runSummarize(a, opts)), opts);
-    return { prefilter, scores, writing, structure: s.value };
+    return { prefilter, scores, writing, structure: s.value, rule: null };
   } finally {
     // A score/writing error or deploy must not let the job finish while a paid structure request
     // still owns a response. It settles and stores its receipt before shutdown can close the DB.
     await structure;
   }
 }
+
+/** Any other pairing of strategies: decide first, then write, each one chosen by id. */
+async function runStrategyPipeline(a: AnalyzeInputArticle, selection: SelectionStrategy, writing: WritingStrategy, rules: SelectionRules, opts: StepOpts): Promise<AnalysisRun> {
+  const decision = await selection.decide(a, opts, rules);
+  if (decision.blocked) return { prefilter: decision.prefilter, scores: decision.scores, writing: null, structure: null, rule: decision.rule };
+  const copy = await writing.write(a, decision, opts);
+  return { prefilter: decision.prefilter, scores: decision.scores, ...copy, rule: decision.rule };
+}
+
+/** Runs the steps on the material as it is (or reuses their receipts) without writing business results. */
+export async function runAnalysis(a: AnalyzeInputArticle, opts: StepOpts = {}): Promise<AnalysisRun> {
+  checkAnalysisRunning();
+  // Missing article text waits for a later revision, before any paid step; displayable original posts keep their judgement.
+  if (awaitsMaterial(a)) return { prefilter: null, scores: null, writing: null, structure: null, rule: null };
+  const settings = await editorialSettings();
+  if (settings.selection === "model" && settings.writing === "model") return runModelPipeline(a, opts);
+  const selection = selectionStrategies.get(settings.selection) ?? selectionStrategies.get("model")!;
+  const writing = writingStrategies.get(settings.writing) ?? writingStrategies.get("model")!;
+  return runStrategyPipeline(a, selection, writing, settings.rules, opts);
+}
+
+registerSelectionStrategy({ id: "model", label: "模型评分（预筛 + 两次打分）", decide: decideByModel });
+registerSelectionStrategy({ id: "rules", label: "规则筛选（关键词 / 来源 / 标的 / 时间窗）", decide: decideByRules });
+registerWritingStrategy({ id: "model", label: "模型写作（结构 + 中文标题摘要）", write: writeWithModel });
+registerWritingStrategy({ id: "source", label: "原文写作（原标题 + 正文开头）", write: writeFromSource });
 
 /** One judgement from the steps: the selection rule, the reader-facing copy and the structure. */
 export function normalizeAnalysis(run: AnalysisRun) {
@@ -515,9 +638,10 @@ export function normalizeAnalysis(run: AnalysisRun) {
   const values = run.scores && !run.scores.refused ? run.scores.values : null;
   const score = shownScore(run.scores);
   const threshold = run.scores?.threshold ?? null;
-  const selected = relevance === "pass" && scoresSelect(run.scores);
+  const selected = relevance === "pass" && (run.rule ? run.rule.selected : scoresSelect(run.scores));
   const subjects = run.structure?.subjects ?? [];
   const tags = [...(run.structure?.tags ?? [])];
+  for (const tag of run.rule?.tags ?? []) if (!tags.includes(tag)) tags.push(tag);
   for (const s of subjects) {
     const display = ENTITIES[s]?.displayTag;
     if (display && !tags.includes(display)) tags.push(display);
@@ -530,7 +654,7 @@ export function normalizeAnalysis(run: AnalysisRun) {
     scoreModel: run.scores?.model ?? null,
     scoreRefused: run.scores?.refused ?? false,
     threshold,
-    category: run.structure?.category ?? null,
+    category: run.structure?.category ?? run.rule?.category ?? null,
     tags,
     subjects,
     titleZh,
@@ -546,6 +670,8 @@ export interface AnalyzeResult {
   stale: boolean;
   /** The article page is to be fetched first; nothing was committed. */
   needsBody?: boolean;
+  /** A rule judgement: the content job completes grouping itself instead of queueing the model. */
+  rule: boolean;
   output: ReturnType<typeof normalizeAnalysis> | null;
   receiptIds: number[];
   reused: boolean;
@@ -559,7 +685,7 @@ export async function analyzeArticle(articleId: string, opts: StepOpts = {}): Pr
   const input = await loadAnalyzeInput(articleId);
   if (!input) return null;
   // Its page first; extraction queues the analysis again (normally the queue already routed it there).
-  if (waitsForPage(input)) return { analysisId: null, stale: false, needsBody: true, output: null, receiptIds: [], reused: true };
+  if (waitsForPage(input)) return { analysisId: null, stale: false, needsBody: true, rule: false, output: null, receiptIds: [], reused: true };
   const run = await runAnalysis(input, opts);
   const out = normalizeAnalysis(run);
   const receiptIds = [
@@ -572,6 +698,7 @@ export async function analyzeArticle(articleId: string, opts: StepOpts = {}): Pr
     scores: out.scores, scoreModel: out.scoreModel, threshold: out.threshold, ...(out.scoreRefused ? { scoreRefused: true } : {}),
     ...(w ? { writer: w.kind, writerModel: w.model, itemType: w.itemType ?? null, authorRole: w.authorRole ?? null } : {}),
     ...(w?.identityGuard?.outcome === "fallback" ? { identityGuard: w.identityGuard } : {}),
+    ...(run.rule ? { rule: run.rule } : {}),
     scope: out.scope, fact: out.fact,
   };
   const committed = await sql.begin(async (tx) => {
@@ -580,7 +707,7 @@ export async function analyzeArticle(articleId: string, opts: StepOpts = {}): Pr
     const [row] = await tx<{ id: number }[]>`
       INSERT INTO analyses (article_id, input_revision, origin, model, prompt_version, receipt_ids, relevance, category, tags,
         subjects, title_zh, summary_zh, reason_zh, score, selected, output)
-      VALUES (${articleId}, ${input.revision}, 'model', ${w?.model ?? run.prefilter?.model ?? null}, ${ANALYZE_PROMPT_VERSION}, ${receiptIds},
+      VALUES (${articleId}, ${input.revision}, ${run.rule ? "rule" : "model"}, ${w?.model ?? run.prefilter?.model ?? null}, ${run.rule ? null : ANALYZE_PROMPT_VERSION}, ${receiptIds},
         ${out.relevance}, ${out.category}, ${out.tags}, ${out.subjects}, ${out.titleZh}, ${out.summaryZh}, ${out.reasonZh},
         ${out.score}, ${out.selected}, ${tx.json(detail as never)})
       RETURNING id`;
@@ -591,5 +718,5 @@ export async function analyzeArticle(articleId: string, opts: StepOpts = {}): Pr
     return { analysisId: row!.id, stale };
   });
   const reused = (run.prefilter?.reused ?? true) && (run.scores?.reused ?? true) && (w?.reused ?? true) && (run.structure?.reused ?? true);
-  return { analysisId: committed.analysisId, stale: committed.stale, output: out, receiptIds, reused };
+  return { analysisId: committed.analysisId, stale: committed.stale, rule: !!run.rule, output: out, receiptIds, reused };
 }

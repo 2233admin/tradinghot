@@ -1,15 +1,19 @@
 // Operator settings: about-page QR codes (replaced without a release), notification targets
 // (switching a group on records enabled_at so older content is never back-filled) and per-service
 // request budgets (the circuit breaker paid calls check before sending).
-import type { AdminBudget, AdminNotifyTarget, AdminSettings, BeforeJson } from "@aihot/contracts/admin";
+import type { AdminBudget, AdminEditorialSettings, AdminNotifyTarget, AdminSettings, BeforeJson } from "@aihot/contracts/admin";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
+import { z } from "zod";
+import { isCategoryKey } from "@aihot/contracts/taxonomy";
 import { config } from "../config.ts";
 import { sql } from "../db.ts";
 import { sha256 } from "../lib/ids.ts";
 import { loadContact, type ContactSettings } from "../site/contact.ts";
 import { audit } from "../audit.ts";
+import { clearEditorialSettings, editorialSettings } from "../editorial/config.ts";
+import { registeredSelectionStrategies, registeredWritingStrategies } from "../editorial/analyze.ts";
 
 const MAX_QR_BYTES = 2 * 1024 * 1024;
 
@@ -32,10 +36,16 @@ export async function replaceContactQr(input: { slot: keyof ContactSettings; dat
   return next;
 }
 
-/** The settings page: contact QR codes, content push targets and paid-service budgets. */
+/** The settings page: contact QR codes, content push targets, paid-service budgets and the editorial strategies. */
 export async function settingsOverview(): Promise<BeforeJson<AdminSettings>> {
-  const [contact, targets, budgets] = await Promise.all([loadContact(), listTargets(), listBudgets()]);
-  return { contact, targets, budgets };
+  const [contact, targets, budgets, editorial] = await Promise.all([loadContact(), listTargets(), listBudgets(), editorialSettings()]);
+  return {
+    contact, targets, budgets, editorial,
+    strategies: {
+      selection: registeredSelectionStrategies().map(({ id, label }) => ({ id, label })),
+      writing: registeredWritingStrategies().map(({ id, label }) => ({ id, label })),
+    },
+  };
 }
 
 export async function listTargets(): Promise<BeforeJson<AdminNotifyTarget>[]> {
@@ -75,4 +85,39 @@ export async function updateBudget(service: string, input: { perMinute: number; 
     RETURNING service, per_minute, per_hour, per_day`;
   await audit(actor, "budget.update", `budget:${service}`, input.reason, before ?? null, after);
   return after;
+}
+
+const term = (max: number) => z.string().trim().min(1).max(max);
+const sourceId = z.string().regex(/^[a-z0-9][a-z0-9_-]{1,79}$/, "信源 ID 只能用小写字母、数字、连字符和下划线");
+const EditorialSettingsSchema = z
+  .object({
+    selection: term(60),
+    writing: term(60),
+    rules: z
+      .object({
+        keywords: z.array(term(80)).max(200),
+        excludeKeywords: z.array(term(80)).max(200),
+        sources: z.array(sourceId).max(200),
+        excludeSources: z.array(sourceId).max(200),
+        symbols: z.array(term(40)).max(200),
+        lookbackHours: z.number().int().min(1).max(720).nullable(),
+        category: z.string().max(40).nullable().refine((v) => v === null || isCategoryKey(v), "不是行业分类"),
+        tags: z.array(term(40)).max(30),
+      })
+      .strict(),
+  })
+  .strict();
+
+/** Which registered strategies select and write, and the rule filter's terms; the change applies to the next analysis. */
+export async function updateEditorialSettings(input: unknown, actor: string): Promise<AdminEditorialSettings> {
+  const next = EditorialSettingsSchema.parse(input);
+  const bad = (message: string) => Object.assign(new Error(message), { statusCode: 400 });
+  if (!registeredSelectionStrategies().some((s) => s.id === next.selection)) throw bad(`没有筛选方式 ${next.selection}`);
+  if (!registeredWritingStrategies().some((s) => s.id === next.writing)) throw bad(`没有写作方式 ${next.writing}`);
+  const before = await editorialSettings();
+  await sql`INSERT INTO settings (key, value, updated_by) VALUES ('editorial.strategy', ${sql.json(next as never)}, ${actor})
+            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = now()`;
+  clearEditorialSettings();
+  await audit(actor, "settings.editorial", "settings:editorial.strategy", null, before, next);
+  return next;
 }
