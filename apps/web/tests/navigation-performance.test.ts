@@ -153,17 +153,17 @@ test('a press on a selected link preserves visited data and the next revisit sta
   page.on('request',request=>{if(request.url().includes('.data'))requests.push(request.url());});
   try{
     await visit(page,origin+'/');
-    await page.getByRole('link',{name:'市场',exact:true}).click();
-    await expect(page.getByRole('link',{name:'分类 market',exact:true})).toBeVisible();
-    await page.getByRole('link',{name:'市场',exact:true}).dispatchEvent('pointerdown',{button:0,pointerType:'mouse',isPrimary:true});
+    await page.getByRole('link',{name:'美股',exact:true}).click();
+    await expect(page.getByRole('link',{name:'分类 equities_us',exact:true})).toBeVisible();
+    await page.getByRole('link',{name:'美股',exact:true}).dispatchEvent('pointerdown',{button:0,pointerType:'mouse',isPrimary:true});
     await page.waitForTimeout(150);
-    await page.getByRole('link',{name:'个股',exact:true}).click();
-    await expect(page.getByRole('link',{name:'分类 stock',exact:true})).toBeVisible();
-    await page.getByRole('link',{name:'个股',exact:true}).dispatchEvent('pointerdown',{button:0,pointerType:'mouse',isPrimary:true});
+    await page.getByRole('link',{name:'A股',exact:true}).click();
+    await expect(page.getByRole('link',{name:'分类 equities_cn',exact:true})).toBeVisible();
+    await page.getByRole('link',{name:'A股',exact:true}).dispatchEvent('pointerdown',{button:0,pointerType:'mouse',isPrimary:true});
     await page.waitForTimeout(150);
     const before=requests.length;
-    await page.getByRole('link',{name:'市场',exact:true}).click();
-    await expect(page.getByRole('link',{name:'分类 market',exact:true})).toBeVisible();
+    await page.getByRole('link',{name:'美股',exact:true}).click();
+    await expect(page.getByRole('link',{name:'分类 equities_us',exact:true})).toBeVisible();
     assert.deepEqual(requests.slice(before),[],'neither prefetch nor navigation may evict and reload a still-valid visited page');
   }finally{await context.close();}
 });
