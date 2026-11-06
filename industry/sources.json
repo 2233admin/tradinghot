@@ -432,6 +432,312 @@
       "tags": ["投研", "社区"],
       "site_fulltext": false,
       "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-ecb-press",
+      "name": "ECB · Press",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://www.ecb.europa.eu/rss/press.html",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T1",
+      "participation_mode": "editorial",
+      "interval_minutes": 180,
+      "tags": ["官方", "宏观"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-nyt-business",
+      "name": "NYT · Business",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": ["媒体", "财经"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-nyt-economy",
+      "name": "NYT · Economy",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://rss.nytimes.com/services/xml/rss/nyt/Economy.xml",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": ["媒体", "宏观"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-ft-home",
+      "name": "FT · Home",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://www.ft.com/rss/home",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": ["媒体", "财经"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-economist-finance",
+      "name": "The Economist · Finance",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://www.economist.com/finance-and-economics/rss.xml",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 180,
+      "tags": ["媒体", "宏观"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-cnbc-economy",
+      "name": "CNBC · Economy",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=20910258",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": ["媒体", "宏观"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-cnbc-finance",
+      "name": "CNBC · Finance",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": ["媒体", "财经"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-seeking-alpha",
+      "name": "Seeking Alpha",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://seekingalpha.com/feed.xml",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 180,
+      "tags": ["媒体", "观点"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-techcrunch",
+      "name": "TechCrunch",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://techcrunch.com/feed/",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 180,
+      "tags": ["科技"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-the-verge",
+      "name": "The Verge",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://www.theverge.com/rss/index.xml",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 180,
+      "tags": ["科技"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-ars-technica",
+      "name": "Ars Technica",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://feeds.arstechnica.com/arstechnica/index",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 180,
+      "tags": ["科技"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-scmp-business",
+      "name": "SCMP · Business",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://www.scmp.com/rss/91/feed",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": ["媒体", "亚洲"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-scmp-economy",
+      "name": "SCMP · Economy",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://www.scmp.com/rss/92/feed",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": ["媒体", "宏观"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-coindesk",
+      "name": "CoinDesk",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://www.coindesk.com/arc/outboundfeeds/rss/",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": ["加密"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-cointelegraph",
+      "name": "CoinTelegraph",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://cointelegraph.com/rss",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 180,
+      "tags": ["加密"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-the-block",
+      "name": "The Block",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://www.theblock.co/rss.xml",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 180,
+      "tags": ["加密"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-bitcoin-magazine",
+      "name": "Bitcoin Magazine",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://bitcoinmagazine.com/feed",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 180,
+      "tags": ["加密"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-decrypt",
+      "name": "Decrypt",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://decrypt.co/feed",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 180,
+      "tags": ["加密"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
     }
   ]
 }
