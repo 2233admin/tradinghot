@@ -20,7 +20,7 @@ const provider = await stub(async (_hit, request) => {
   }
   const content = step === "prefilter" ? { label: "PASS", reason: "local fixture" }
     : step === "score" ? { attentionScore: SELECTING_SCORE }
-    : step === "structure" ? { category: "stock", tags: [], subjects: [], scope: "single", fact: null }
+    : step === "structure" ? { category: "equities_cn", tags: [], subjects: [], scope: "single", fact: null }
     : { itemType: "company_event", authorRole: "principal", tags: ["公司事件"], editorialJudgment: "公司给出新指引", titleZh: "实验室公布季度业绩", summaryZh: "实验室公布季度业绩，并给出了收入与毛利率指引。" };
   return { choices: [{ message: { content: JSON.stringify(content) } }] };
 });

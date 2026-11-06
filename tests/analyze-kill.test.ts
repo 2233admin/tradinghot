@@ -27,7 +27,7 @@ const provider = await stub(async (_hit, request) => {
   }
   const content = step === "prefilter" ? { label: "PASS", reason: "company filing" }
     : step === "score" ? { attentionScore: SELECTING_SCORE }
-      : step === "structure" ? { category: "stock", tags: ["公司事件"], subjects: [], fact: { title: "公司发布公告" } }
+      : step === "structure" ? { category: "equities_cn", tags: ["公司事件"], subjects: [], fact: { title: "公司发布公告" } }
         : { itemType: "company_event", authorRole: "principal", tags: ["公司事件"], editorialJudgment: "公告给出了明确的业绩区间", titleZh: `公司发布公告 ${T}`, summaryZh: "公司发布公告并给出了收入与毛利率区间。" };
   return { id: `stub-${calls.length}`, choices: [{ message: { content: JSON.stringify(content) } }], usage: { prompt_tokens: 10, completion_tokens: 10, total_tokens: 20 } };
 });
