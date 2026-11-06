@@ -14,6 +14,7 @@ import { hotSearchLinks, loadHotStrip } from "@aihot/backend/publication/hot";
 import { loadChangelog, siteMeta } from "@aihot/backend/site/meta";
 import { loadContact, loadMakerAvatar } from "@aihot/backend/site/contact";
 import { loadSiteStats } from "@aihot/backend/site/stats";
+import { loadSourcePool } from "@aihot/backend/publication/sources";
 import { itemAvailability } from "@aihot/backend/publication/availability";
 import { listTopicSummaries, loadTopicPage, topicBrowseLinks } from "@aihot/backend/publication/topics";
 import { registerFeedback } from "./feedback.ts";
@@ -121,6 +122,10 @@ export function registerSite(app: FastifyInstance) {
 
   app.get("/api/site/stats", siteHandler(async (req, reply) => {
     return sendJsonWithEtag(req, reply, await loadSiteStats(), { etagPrefix: "stats", cacheControl: "public, max-age=300, s-maxage=300" });
+  }));
+
+  app.get("/api/site/sources", siteHandler(async (req, reply) => {
+    return sendJsonWithEtag(req, reply, await loadSourcePool(), { etagPrefix: "sources", cacheControl: "public, max-age=60, s-maxage=60" });
   }));
 
   app.get("/api/site/changelog", siteHandler(async (req, reply) => {

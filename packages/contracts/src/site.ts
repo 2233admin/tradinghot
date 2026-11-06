@@ -411,6 +411,27 @@ export interface SiteStats {
   latest: Array<{ id: string; title: string; source: string }>;
 }
 
+/** One source on the source pool page (/sources): what a reader may see, never its address, error or internal id. */
+export interface PublicSourceEntry {
+  /** The name readers see (publication/rules.ts publicSourceName). */
+  name: string;
+  /** rss, web_list, json_list, x_search, mp_account or external. */
+  kind: string;
+  /** Tier T1: the publisher itself. */
+  firstParty: boolean;
+  /** Its last collection outcome; a paused source is not listed. */
+  status: "ok" | "degraded" | "failing" | "unknown";
+  lastOkAt: string | null;
+  /** Articles it delivered in the last seven days. */
+  items7d: number;
+}
+
+/** Every source the site collects from and may name publicly, failing first. */
+export interface SourcePoolResponse {
+  counts: { total: number; ok: number; degraded: number; failing: number; unknown: number };
+  sources: PublicSourceEntry[];
+}
+
 export interface StoryFollowup {
   factId: string;
   representative: { id: string; title: string; source: { name: string }; timelineAt: string };
