@@ -92,15 +92,15 @@ test('SSR list and visited query variants return offline without another read',a
     await expect(page.getByRole('link',{name:'性能检查文章',exact:true})).toBeVisible({timeout:1500});
     await context.setOffline(false);
     await page.getByRole('button',{name:/^筛选/}).click();
-    await page.getByRole('link',{name:'市场',exact:true}).click();
-    await expect(page.getByRole('link',{name:'分类 market',exact:true})).toBeVisible();
+    await page.getByRole('link',{name:'美股',exact:true}).click();
+    await expect(page.getByRole('link',{name:'分类 equities_us',exact:true})).toBeVisible();
     await page.getByRole('button',{name:/^筛选/}).click();
-    await page.getByRole('link',{name:'个股',exact:true}).click();
-    await expect(page.getByRole('link',{name:'分类 stock',exact:true})).toBeVisible();
+    await page.getByRole('link',{name:'A股',exact:true}).click();
+    await expect(page.getByRole('link',{name:'分类 equities_cn',exact:true})).toBeVisible();
     await context.setOffline(true);
     await page.goBack();
-    await expect(page.getByRole('link',{name:'分类 market',exact:true})).toBeVisible({timeout:1500});
-    await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href',origin+'/?category=market');
+    await expect(page.getByRole('link',{name:'分类 equities_us',exact:true})).toBeVisible({timeout:1500});
+    await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href',origin+'/?category=equities_us');
   }finally{await context.close();}
 });
 
