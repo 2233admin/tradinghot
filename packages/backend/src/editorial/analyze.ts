@@ -34,6 +34,8 @@ import { CATEGORY_GUIDE, CATEGORY_TAGS, ENTITIES, ENTITY_TAGS, ITEM_TYPES, norma
 import { promptText, promptVersion } from "./prompts.ts";
 import { editorialSettings, type SelectionRules } from "./config.ts";
 import { matchSelectionRules } from "./rules.ts";
+import { buildWebCleanPrompt, parseWebCleanAnswer } from "./webai.ts";
+import { askWebAi } from "../providers/webai.ts";
 import { originalPostCopy } from "../content/posts.ts";
 import { wordingProblems } from "./wording.ts";
 
@@ -622,11 +624,36 @@ async function writeAuto(a: AnalyzeInputArticle, decision: SelectionDecision, op
   return config.modelCallsEnabled ? writeWithModel(a, decision, opts) : writeFromSource(a, decision);
 }
 
+/** The selected material cleaned by a free web chat UI; anything else keeps its own copy. */
+async function writeWithWebAi(a: AnalyzeInputArticle, decision: SelectionDecision, opts: StepOpts): Promise<WritingDecision> {
+  if (!decision.selected) return writeFromSource(a, decision);
+  const settings = await editorialSettings();
+  if (!settings.webai.enabled) return writeFromSource(a, decision);
+  try {
+    const answer = await askWebAi(buildWebCleanPrompt(a), {
+      sites: settings.webai.sites,
+      profile: settings.webai.profile,
+      timeoutSeconds: settings.webai.timeoutSeconds,
+    });
+    const copy = parseWebCleanAnswer(answer.text);
+    return {
+      writing: {
+        kind: "understand", model: `webai:${answer.site}`, titleZh: copy.title, summaryZh: copy.summary,
+        reasonZh: copy.reason ?? (decision.reason.startsWith("规则命中") ? decision.reason : null), receiptIds: [], reused: false,
+      },
+      structure: null,
+    };
+  } catch {
+    // A site that cannot answer must not stop the site from publishing: the material's own copy stands in.
+    return writeFromSource(a, decision);
+  }
+}
+
 /** The ids "auto" resolves to for this deployment; the admin shows the resolved behaviour by switching. */
-export function resolveStrategies(settings: { selection: string; writing: string }, modelCallsEnabled: boolean): { selection: string; writing: string } {
+export function resolveStrategies(settings: { selection: string; writing: string }, modelCallsEnabled: boolean, webAiReady = false): { selection: string; writing: string } {
   return {
     selection: settings.selection === "auto" ? (modelCallsEnabled ? "model" : "rules") : settings.selection,
-    writing: settings.writing === "auto" ? (modelCallsEnabled ? "model" : "source") : settings.writing,
+    writing: settings.writing === "auto" ? (modelCallsEnabled ? "model" : webAiReady ? "webai" : "source") : settings.writing,
   };
 }
 
@@ -637,7 +664,7 @@ export async function runAnalysis(a: AnalyzeInputArticle, opts: StepOpts = {}): 
   if (awaitsMaterial(a)) return { prefilter: null, scores: null, writing: null, structure: null, rule: null };
   const settings = await editorialSettings();
   // "auto" is the out-of-box default: a deployment without model calls still selects and publishes.
-  const { selection: selectionId, writing: writingId } = resolveStrategies(settings, config.modelCallsEnabled);
+  const { selection: selectionId, writing: writingId } = resolveStrategies(settings, config.modelCallsEnabled, settings.webai.enabled);
   if (selectionId === "model" && writingId === "model") return runModelPipeline(a, opts);
   const selection = selectionStrategies.get(selectionId) ?? selectionStrategies.get("model")!;
   const writing = writingStrategies.get(writingId) ?? writingStrategies.get("model")!;
@@ -648,6 +675,7 @@ registerSelectionStrategy({ id: "auto", label: "自动（有模型用模型评�
 registerSelectionStrategy({ id: "model", label: "模型评分（预筛 + 两次打分）", decide: decideByModel });
 registerSelectionStrategy({ id: "rules", label: "规则筛选（关键词 / 来源 / 标的 / 时间窗）", decide: decideByRules });
 registerWritingStrategy({ id: "auto", label: "自动（有模型用模型写作，没有用原文写作）", write: writeAuto });
+registerWritingStrategy({ id: "webai", label: "网页 AI 清洗（千问 / 元宝 / Kimi…）", write: writeWithWebAi });
 registerWritingStrategy({ id: "model", label: "模型写作（结构 + 中文标题摘要）", write: writeWithModel });
 registerWritingStrategy({ id: "source", label: "原文写作（原标题 + 正文开头）", write: writeFromSource });
 
@@ -707,9 +735,10 @@ export interface AnalyzeResult {
 export async function analyzeArticle(articleId: string, opts: StepOpts = {}): Promise<AnalyzeResult | null> {
   const input = await loadAnalyzeInput(articleId);
   if (!input) return null;
-  // Rules with the material's own copy need no page: the title and feed excerpt are enough.
-  const { selection, writing } = resolveStrategies(await editorialSettings(), config.modelCallsEnabled);
-  const ownCopy = selection === "rules" && writing === "source";
+  // Rules with the material's own copy (or a web AI) need no page: the title and feed excerpt are enough.
+  const settings = await editorialSettings();
+  const { selection, writing } = resolveStrategies(settings, config.modelCallsEnabled, settings.webai.enabled);
+  const ownCopy = selection === "rules" && (writing === "source" || writing === "webai");
   // Its page first; extraction queues the analysis again (normally the queue already routed it there).
   if (!ownCopy && waitsForPage(input)) return { analysisId: null, stale: false, needsBody: true, rule: false, output: null, receiptIds: [], reused: true };
   const run = await runAnalysis(input, opts);

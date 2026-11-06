@@ -390,6 +390,8 @@ export interface AdminEditorialSettings {
     category: string | null;
     tags: string[];
   };
+  /** Free web chat UIs driven through opencli. */
+  webai: { enabled: boolean; sites: string[]; profile: string | null; timeoutSeconds: number };
 }
 
 export interface AdminSettings {

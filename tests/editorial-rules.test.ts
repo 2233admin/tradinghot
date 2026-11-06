@@ -9,6 +9,8 @@ import { clearEditorialSettings } from "@aihot/backend/editorial/config";
 import { matchSelectionRules } from "@aihot/backend/editorial/rules";
 import { processArticle } from "@aihot/backend/jobs/content";
 import { resolveStrategies } from "@aihot/backend/editorial/analyze";
+import { buildWebCleanPrompt, parseWebCleanAnswer } from "@aihot/backend/editorial/webai";
+import { replyFrom } from "@aihot/backend/providers/webai";
 
 type MatchInput = Parameters<typeof matchSelectionRules>[0];
 const T = tag();
@@ -47,7 +49,23 @@ test("the rule filter matches keywords, symbols, sources and the lookback window
 test("auto follows whether model calls are on", () => {
   assert.deepEqual(resolveStrategies({ selection: "auto", writing: "auto" }, true), { selection: "model", writing: "model" });
   assert.deepEqual(resolveStrategies({ selection: "auto", writing: "auto" }, false), { selection: "rules", writing: "source" });
+  assert.deepEqual(resolveStrategies({ selection: "auto", writing: "auto" }, false, true), { selection: "rules", writing: "webai" });
   assert.deepEqual(resolveStrategies({ selection: "rules", writing: "source" }, true), { selection: "rules", writing: "source" });
+});
+
+test("the web AI prompt carries the material and the reply parser tolerates fences", () => {
+  const prompt = buildWebCleanPrompt({
+    id: "web-1", revision: 1, title: "US stocks fall", url: "https://example.com/a", author: null, publishedAt: new Date("2026-11-06T10:00:00Z"),
+    bodyText: "The S&P 500 fell 1.2% on Friday.", excerpt: null, xPost: null, media: [], source: { name: "Example News", kind: "rss", tier: "T2", firstParty: false },
+  });
+  assert.match(prompt, /Example News/);
+  assert.match(prompt, /S&P 500 fell 1\.2%/);
+  assert.deepEqual(parseWebCleanAnswer('好的：\n```json\n{"title":"美股走低","summary":"标普 500 下跌 1.2%。","reason":"关注市场情绪"}\n```'), {
+    title: "美股走低", summary: "标普 500 下跌 1.2%。", reason: "关注市场情绪",
+  });
+  assert.throws(() => parseWebCleanAnswer('{"title":"","summary":"x"}'), /标题或摘要为空/);
+  assert.deepEqual(replyFrom('[{"Role":"User","Text":"prompt"},{"Role":"Assistant","Text":"answer"}]'), "answer");
+  assert.equal(replyFrom('[{"Role":"User","Text":"prompt"}]'), null);
 });
 
 test("rules select and source writing publish with no model call", async () => {

@@ -22,18 +22,30 @@ export interface SelectionRules {
   tags: string[];
 }
 
+/** Free web chat UIs driven through opencli (providers/webai.ts). */
+export interface WebAiSettings {
+  enabled: boolean;
+  /** opencli site names, tried in rotation; e.g. qwen, yuanbao, kimi, doubao. */
+  sites: string[];
+  /** Browser Bridge profile (needed when more than one is connected). */
+  profile: string | null;
+  timeoutSeconds: number;
+}
+
 export interface EditorialSettings {
-  /** A registered selection strategy id ("model", "rules", or one a module registered). */
+  /** A registered selection strategy id ("auto", "model", "rules", or one a module registered). */
   selection: string;
   /** A registered writing strategy id. */
   writing: string;
   rules: SelectionRules;
+  webai: WebAiSettings;
 }
 
 export const DEFAULT_EDITORIAL_SETTINGS: EditorialSettings = {
   selection: "auto",
   writing: "auto",
   rules: { keywords: [], excludeKeywords: [], sources: [], excludeSources: [], symbols: [], lookbackHours: null, category: null, tags: [] },
+  webai: { enabled: false, sites: ["yuanbao"], profile: null, timeoutSeconds: 120 },
 };
 
 const CACHE_MS = 5_000;
@@ -52,6 +64,8 @@ export async function editorialSettings(): Promise<EditorialSettings> {
   const [row] = await sql<{ value: Partial<EditorialSettings> }[]>`SELECT value FROM settings WHERE key = 'editorial.strategy'`;
   const raw = row?.value ?? {};
   const rules = raw.rules ?? DEFAULT_EDITORIAL_SETTINGS.rules;
+  const webai = raw.webai ?? DEFAULT_EDITORIAL_SETTINGS.webai;
+  const sites = terms(webai.sites);
   const value: EditorialSettings = {
     selection: raw.selection || DEFAULT_EDITORIAL_SETTINGS.selection,
     writing: raw.writing || DEFAULT_EDITORIAL_SETTINGS.writing,
@@ -64,6 +78,12 @@ export async function editorialSettings(): Promise<EditorialSettings> {
       lookbackHours: typeof rules.lookbackHours === "number" && rules.lookbackHours > 0 ? rules.lookbackHours : null,
       category: typeof rules.category === "string" && rules.category ? rules.category : null,
       tags: terms(rules.tags),
+    },
+    webai: {
+      enabled: webai.enabled === true,
+      sites: sites.length ? sites : DEFAULT_EDITORIAL_SETTINGS.webai.sites,
+      profile: typeof webai.profile === "string" && webai.profile.trim() ? webai.profile.trim() : null,
+      timeoutSeconds: typeof webai.timeoutSeconds === "number" && webai.timeoutSeconds >= 30 ? Math.min(600, Math.floor(webai.timeoutSeconds)) : DEFAULT_EDITORIAL_SETTINGS.webai.timeoutSeconds,
     },
   };
   cache = { at: Date.now(), value };
