@@ -31,8 +31,8 @@ export interface EditorialSettings {
 }
 
 export const DEFAULT_EDITORIAL_SETTINGS: EditorialSettings = {
-  selection: "model",
-  writing: "model",
+  selection: "auto",
+  writing: "auto",
   rules: { keywords: [], excludeKeywords: [], sources: [], excludeSources: [], symbols: [], lookbackHours: null, category: null, tags: [] },
 };
 

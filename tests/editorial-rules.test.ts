@@ -8,6 +8,7 @@ import { stopBoss } from "@aihot/backend/jobs/queue";
 import { clearEditorialSettings } from "@aihot/backend/editorial/config";
 import { matchSelectionRules } from "@aihot/backend/editorial/rules";
 import { processArticle } from "@aihot/backend/jobs/content";
+import { resolveStrategies } from "@aihot/backend/editorial/analyze";
 
 type MatchInput = Parameters<typeof matchSelectionRules>[0];
 const T = tag();
@@ -40,7 +41,13 @@ test("the rule filter matches keywords, symbols, sources and the lookback window
   assert.equal(matchSelectionRules(material(), { ...rules, sources: ["other"] }).selected, false);
   assert.equal(matchSelectionRules(material({ source: { id: "other", name: "Other" } }), { ...rules, sources: ["other"] }).selected, true);
   assert.equal(matchSelectionRules(material({ publishedAt: new Date(Date.now() - 25 * 3600_000) }), rules).reason, "早于 24 小时");
-  assert.equal(matchSelectionRules(material(), { ...rules, keywords: [] }).reason, "规则为空");
+  assert.deepEqual(matchSelectionRules(material(), { ...rules, keywords: [] }), { selected: true, reason: "未设置规则，全部收录" });
+});
+
+test("auto follows whether model calls are on", () => {
+  assert.deepEqual(resolveStrategies({ selection: "auto", writing: "auto" }, true), { selection: "model", writing: "model" });
+  assert.deepEqual(resolveStrategies({ selection: "auto", writing: "auto" }, false), { selection: "rules", writing: "source" });
+  assert.deepEqual(resolveStrategies({ selection: "rules", writing: "source" }, true), { selection: "rules", writing: "source" });
 });
 
 test("rules select and source writing publish with no model call", async () => {

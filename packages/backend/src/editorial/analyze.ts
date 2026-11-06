@@ -17,6 +17,7 @@ import { CATEGORIES } from "@aihot/industry/taxonomy";
 import { SELECTION } from "@aihot/industry/selection";
 import { ITEM_COPY } from "@aihot/site";
 import { sql } from "../db.ts";
+import { config } from "../config.ts";
 import { chatJson, MODELS, type ContentPart } from "../providers/llm.ts";
 import { completeReceipt, failedReceiptId, failureKind } from "../providers/receipts.ts";
 import { collapseWhitespace } from "../lib/text.ts";
@@ -567,7 +568,7 @@ async function writeFromSource(a: AnalyzeInputArticle, decision: SelectionDecisi
   const copy = (title: string, summary: string): WritingDecision => ({
     writing: {
       kind: "verbatim", model: null, titleZh: collapseWhitespace(title), summaryZh: collapseWhitespace(summary).slice(0, 200),
-      reasonZh: decision.selected ? decision.reason : null, receiptIds: [], reused: true,
+      reasonZh: decision.reason.startsWith("规则命中") ? decision.reason : null, receiptIds: [], reused: true,
     },
     structure: null,
   });
@@ -611,20 +612,42 @@ async function runStrategyPipeline(a: AnalyzeInputArticle, selection: SelectionS
   return { prefilter: decision.prefilter, scores: decision.scores, ...copy, rule: decision.rule };
 }
 
+/** Automatic: the model when model calls are on, the rule filter when they are not. */
+async function decideAuto(a: AnalyzeInputArticle, opts: StepOpts, rules: SelectionRules): Promise<SelectionDecision> {
+  return config.modelCallsEnabled ? decideByModel(a, opts, rules) : decideByRules(a, opts, rules);
+}
+
+/** Automatic writing: the models when model calls are on, the material's own copy when they are not. */
+async function writeAuto(a: AnalyzeInputArticle, decision: SelectionDecision, opts: StepOpts): Promise<WritingDecision> {
+  return config.modelCallsEnabled ? writeWithModel(a, decision, opts) : writeFromSource(a, decision);
+}
+
+/** The ids "auto" resolves to for this deployment; the admin shows the resolved behaviour by switching. */
+export function resolveStrategies(settings: { selection: string; writing: string }, modelCallsEnabled: boolean): { selection: string; writing: string } {
+  return {
+    selection: settings.selection === "auto" ? (modelCallsEnabled ? "model" : "rules") : settings.selection,
+    writing: settings.writing === "auto" ? (modelCallsEnabled ? "model" : "source") : settings.writing,
+  };
+}
+
 /** Runs the steps on the material as it is (or reuses their receipts) without writing business results. */
 export async function runAnalysis(a: AnalyzeInputArticle, opts: StepOpts = {}): Promise<AnalysisRun> {
   checkAnalysisRunning();
   // Missing article text waits for a later revision, before any paid step; displayable original posts keep their judgement.
   if (awaitsMaterial(a)) return { prefilter: null, scores: null, writing: null, structure: null, rule: null };
   const settings = await editorialSettings();
-  if (settings.selection === "model" && settings.writing === "model") return runModelPipeline(a, opts);
-  const selection = selectionStrategies.get(settings.selection) ?? selectionStrategies.get("model")!;
-  const writing = writingStrategies.get(settings.writing) ?? writingStrategies.get("model")!;
+  // "auto" is the out-of-box default: a deployment without model calls still selects and publishes.
+  const { selection: selectionId, writing: writingId } = resolveStrategies(settings, config.modelCallsEnabled);
+  if (selectionId === "model" && writingId === "model") return runModelPipeline(a, opts);
+  const selection = selectionStrategies.get(selectionId) ?? selectionStrategies.get("model")!;
+  const writing = writingStrategies.get(writingId) ?? writingStrategies.get("model")!;
   return runStrategyPipeline(a, selection, writing, settings.rules, opts);
 }
 
+registerSelectionStrategy({ id: "auto", label: "自动（有模型用模型评分，没有用规则筛选）", decide: decideAuto });
 registerSelectionStrategy({ id: "model", label: "模型评分（预筛 + 两次打分）", decide: decideByModel });
 registerSelectionStrategy({ id: "rules", label: "规则筛选（关键词 / 来源 / 标的 / 时间窗）", decide: decideByRules });
+registerWritingStrategy({ id: "auto", label: "自动（有模型用模型写作，没有用原文写作）", write: writeAuto });
 registerWritingStrategy({ id: "model", label: "模型写作（结构 + 中文标题摘要）", write: writeWithModel });
 registerWritingStrategy({ id: "source", label: "原文写作（原标题 + 正文开头）", write: writeFromSource });
 
@@ -684,8 +707,11 @@ export interface AnalyzeResult {
 export async function analyzeArticle(articleId: string, opts: StepOpts = {}): Promise<AnalyzeResult | null> {
   const input = await loadAnalyzeInput(articleId);
   if (!input) return null;
+  // Rules with the material's own copy need no page: the title and feed excerpt are enough.
+  const { selection, writing } = resolveStrategies(await editorialSettings(), config.modelCallsEnabled);
+  const ownCopy = selection === "rules" && writing === "source";
   // Its page first; extraction queues the analysis again (normally the queue already routed it there).
-  if (waitsForPage(input)) return { analysisId: null, stale: false, needsBody: true, rule: false, output: null, receiptIds: [], reused: true };
+  if (!ownCopy && waitsForPage(input)) return { analysisId: null, stale: false, needsBody: true, rule: false, output: null, receiptIds: [], reused: true };
   const run = await runAnalysis(input, opts);
   const out = normalizeAnalysis(run);
   const receiptIds = [
