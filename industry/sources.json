@@ -206,7 +206,7 @@
       "name": "Quantified Strategies",
       "kind": "rss",
       "config": {
-        "feedUrl": "https://www.quantifiedstrategies.com/feed/",
+        "feedUrl": "https://www.quantifiedstrategies.com/feed/?post_type=post",
         "_aihot": {
           "initialBackfillLimit": 8
         }
@@ -320,6 +320,116 @@
       "participation_mode": "hot_signal",
       "interval_minutes": 60,
       "tags": ["X", "讨论"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-ce-xwzx",
+      "name": "中国经济网 · 国内",
+      "kind": "web_list",
+      "config": {
+        "url": "http://www.ce.cn/xwzx/gnsz/gdxw/",
+        "parseMode": "html",
+        "itemSelector": "ul.con > li",
+        "linkSelector": "span.f1 a",
+        "titleSelector": "span.f1 a",
+        "allowUrlPrefixes": ["http://www.ce.cn/xwzx/"],
+        "detail": {
+          "maxFetches": 20,
+          "publishedAtSelector": "span.time"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["财经", "媒体"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-simuwang-news",
+      "name": "私募排排网 · 资讯",
+      "kind": "json_list",
+      "config": {
+        "url": "https://sppwapi.simuwang.com/sun/news/list?page=1&size=30&channel_id=419&siteMark=1",
+        "mode": "json_api",
+        "headers": {
+          "accept": "application/json, text/plain, */*",
+          "referer": "https://www.simuwang.com/news/list-419.html",
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+        },
+        "itemsPath": "data.list",
+        "titlePaths": ["article_title"],
+        "summaryPaths": ["article_abstract"],
+        "urlTemplate": "https://www.simuwang.com/news/{article_id}.html",
+        "publishedAtPath": "article_timestamp",
+        "publishedAtUnit": "epoch_s",
+        "externalIdPath": "article_id",
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": ["私募", "财经"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-tgb-index",
+      "name": "淘股吧 · 首页帖子",
+      "kind": "json_list",
+      "config": {
+        "url": "https://www.tgb.cn/newIndex/getZh?pageNo=1",
+        "mode": "json_api",
+        "headers": {
+          "accept": "application/json, text/plain, */*",
+          "referer": "https://www.tgb.cn/",
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+        },
+        "itemsPath": "dto.list",
+        "titlePaths": ["subject"],
+        "summaryPaths": ["subinfo"],
+        "urlTemplate": "https://www.tgb.cn/a/{raw:newTopicID}",
+        "publishedAtPath": "postDate",
+        "publishedAtUnit": "epoch_ms",
+        "externalIdPath": "newTopicID",
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["论坛", "A股"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-jiuyangongshe",
+      "name": "韭研公社 · 社群",
+      "kind": "web_list",
+      "config": {
+        "url": "https://www.jiuyangongshe.com/",
+        "parseMode": "html",
+        "itemSelector": ".community-bar ul > li",
+        "linkSelector": ".html-text a",
+        "titleSelector": ".book-title",
+        "publishedAtSelector": ".fs13-ash",
+        "publishedAtUtcOffset": "+08:00",
+        "allowUrlPrefixes": ["https://www.jiuyangongshe.com/a/"],
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["投研", "社区"],
       "site_fulltext": false,
       "syndicate_fulltext": false
     }
