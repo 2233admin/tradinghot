@@ -198,7 +198,9 @@ http.createServer((req, res) => {
 
 `SomeAccount` 是占位用户名，换成你要关注的真实账号。`-filter:replies` 排除回复；`Latest` 按最新内容查找。
 
-在后端运行环境的 `.env` 配置 `SOCIALDATA_API_KEY`，重启 API（预览）和 worker（定时采集）后生效；不要把 key 写进信源 JSON 或提交到仓库。先在后台“设置 → 付费请求上限”检查 SocialData 额度，再按需预览。未配置 key 会报 `SOCIALDATA_API_KEY is not configured`；服务拒绝请求或预算熔断时看后台错误原因。预览可能有付费请求，本文不要求用真实服务验证，结果取决于账号和服务当时的返回。
+在后端运行环境的 `.env` 配置 `SOCIALDATA_API_KEY`，重启 API（预览）和 worker（定时采集）后生效；不要把 key 写进信源 JSON 或提交到仓库。先在后台“设置 → 付费请求上限”检查 SocialData 额度，再按需预览。未配置 key 时会改用浏览器回退（见下），不再报 `SOCIALDATA_API_KEY is not configured`；服务拒绝请求或预算熔断时看后台错误原因。预览可能有付费请求，本文不要求用真实服务验证，结果取决于账号和服务当时的返回。
+
+没有 `SOCIALDATA_API_KEY` 时，程序用本机 opencli 的 `twitter search`，借浏览器里已登录的 X 会话执行同样的查询，不产生付费请求。前提：Chrome 安装 OpenCLI 扩展并在 x.com 登录（`opencli twitter whoami` 能看到账号）；同时连着多个 Browser Bridge 配置时，在 `.env` 填 `X_OPENCLI_PROFILE=<profile>`（`opencli profile list` 查看），重启 API 与 worker。浏览器回退一次最多读 60 条、没有分页游标，靠每条信源的 `lastTweetId` 水位去重；X 长文（Article）正文仍要 SocialData 的 `getArticle`，没有 key 时正文只保留推文文本。配置 key 后自动回到付费接口。
 
 生产自动采集时，普通账号会被自动合并成一次搜索（每次最多二十几个账号），省请求数；单个信源的手动预览不是合并采集。
 

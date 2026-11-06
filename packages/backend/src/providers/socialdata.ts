@@ -2,6 +2,7 @@
 import { credential } from "../config.ts";
 import { guardedFetch } from "../lib/http-fetch.ts";
 import { assertAccepted, paidRequest, ProviderRejectedError, type CallOutcome, type ReceiptRequest, type ReceiptResult } from "./receipts.ts";
+import { searchTweetsInBrowser } from "./x-browser.ts";
 
 export interface SdUser {
   name: string;
@@ -39,7 +40,8 @@ export interface SdTweet {
 export interface SearchResult {
   tweets: SdTweet[];
   nextCursor: string | null;
-  receiptId: number;
+  /** The paid receipt; null when the browser fallback answered for free. */
+  receiptId: number | null;
   reused: boolean;
 }
 
@@ -87,6 +89,11 @@ const LOOKUP = { timeoutMs: 30_000, maxBytes: 4 * 1024 * 1024 };
  * bucket reuses the stored response instead of paying again.
  */
 export async function searchTweets(query: string, opts: { purpose: string; subject: string; window: string; type?: "Latest" | "Top"; cursor?: string | null }): Promise<SearchResult> {
+  // No paid key: read the same query through the logged-in X browser session.
+  if (!credential("collectors", "SOCIALDATA_API_KEY")) {
+    const tweets = await searchTweetsInBrowser({ query, limit: 60 });
+    return { tweets, nextCursor: null, receiptId: null, reused: false };
+  }
   const type = opts.type ?? "Latest";
   const sp = new URLSearchParams({ query, type });
   if (opts.cursor) sp.set("cursor", opts.cursor);

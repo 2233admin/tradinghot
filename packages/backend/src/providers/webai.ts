@@ -1,13 +1,8 @@
 // Free web chat UIs through opencli (Kimi, 千问, 元宝…): one natural prompt in, the assistant's
 // reply out. Calls are serialized and spaced so the site does not see a burst; a site that fails is
 // rested for a while, and the next configured site takes the request.
-import { execFile } from "node:child_process";
-import { existsSync } from "node:fs";
-import path from "node:path";
-import { promisify } from "node:util";
 import { z } from "zod";
-
-const run = promisify(execFile);
+import { openCliProfile, runOpenCli } from "./opencli.ts";
 
 /** One row of `opencli <site> ask -f json`: the prompt as a User row, the answer as an Assistant row. */
 const OpenCliRow = z.object({ Role: z.string().optional(), Text: z.string() }).passthrough();
@@ -37,17 +32,6 @@ let lastAskedAt = 0;
 /** The site that answered last: it goes first next time, so a broken one is not tried every request. */
 let preferred: string | null = null;
 
-/** opencli's own entry point, so the prompt is one argument and no shell parses it. */
-function openCli(): { command: string; base: string[] } {
-  const configured = process.env.OPENCLI_BIN;
-  if (configured) return /\.(c|m)?js$/.test(configured) ? { command: process.execPath, base: [configured] } : { command: configured, base: [] };
-  const npmRoot = process.env.APPDATA
-    ? path.join(process.env.APPDATA, "npm", "node_modules")
-    : path.join(path.dirname(path.dirname(process.execPath)), "lib", "node_modules");
-  const entry = path.join(npmRoot, "@jackwener", "opencli", "dist", "src", "main.js");
-  return existsSync(entry) ? { command: process.execPath, base: [entry] } : { command: "opencli", base: [] };
-}
-
 /** The assistant's text from opencli's JSON rows (User rows are the prompt itself). */
 export function replyFrom(stdout: string): string | null {
   let raw: unknown;
@@ -68,13 +52,11 @@ export function replyFrom(stdout: string): string | null {
 }
 
 async function callOpenCli(args: string[], timeoutMs: number): Promise<string> {
-  const { command, base } = openCli();
-  const { stdout } = await run(command, [...base, ...args], { timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024, windowsHide: true });
-  return stdout;
+  return runOpenCli(args, timeoutMs);
 }
 
 async function askOneSite(site: string, prompt: string, t: WebAiTransport): Promise<string> {
-  const common = [...(t.profile ? ["--profile", t.profile] : []), site];
+  const common = [...openCliProfile(t.profile), site];
   const timeoutMs = (t.timeoutSeconds + 60) * 1000;
   // The web composer keeps only the first line of what the adapter types, so the prompt goes in flat.
   const flatPrompt = prompt.replace(/\s+/g, " ").trim();
