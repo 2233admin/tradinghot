@@ -1,59 +1,32 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.png">
-    <img src="docs/assets/banner-light.png" alt="AIHOT：每个行业，都可以有自己的 AIHOT。很多条信源流进中间的精选，再分给法律、人力资源、金融等各个行业" width="100%">
-  </picture>
-</p>
+# 股市热点 · tradinghot
+
+盯 **A股、港股、美股与量化交易** 的行业热点站：从 18 个财经信源里挑出值得看的动态，把同一件事的多篇报道归成一个事件，每天 08:00 出一份日报。
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-176b75?style=flat-square" alt="MIT License"></a>
   <img src="https://img.shields.io/badge/Node.js-24-176b75?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js 24">
   <img src="https://img.shields.io/badge/PostgreSQL-17-176b75?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL 17">
   <img src="https://img.shields.io/badge/Docker-Compose-176b75?style=flat-square&logo=docker&logoColor=white" alt="Docker Compose">
-  <a href="https://aihot.news"><img src="https://img.shields.io/badge/%E7%BA%BF%E4%B8%8A%E5%8E%9F%E7%AB%99-aihot.news-202a30?style=flat-square" alt="线上原站 aihot.news"></a>
 </p>
 
-<p align="center">
-  <b>一个自己找热点、自己写日报的网站框架。</b><br>
-  把信源换成你的，把精选标准换成你的 KnowHow，它就是你的行业热点站。
-</p>
+## 这个站
 
-<p align="center">
-  <b>简体中文</b> · <a href="README.en.md">English</a>
-</p>
+| 项 | 当前值 |
+|---|---|
+| 站名与标识 | 股市热点 · `stockhot`（`site/site.ts` 的 `SITE.name`、`SITE.mcpPrefix`） |
+| 类别 | 市场、宏观、个股、行业、量化、教程、观点 |
+| 主题 | 37 个，分「公司与机构 / 市场与方向 / 内容形态」三组（`industry/topics.json`） |
+| 信源 | 18 个：金十数据快讯、新浪财经滚动、CNBC 两条、MarketWatch 两条、美联储 / 苹果 / 微软官方 RSS、Alpha Architect、Quantified Strategies、7 个 X 账号 |
+| 出刊 | 日报 08:00、周报周一 10:00、月报每月 1 日 10:30（北京时间，`EDITION_TIMES`） |
+| 立场 | 只做摘要和阅读索引，不荐股、不喊单、不给买卖建议；原文版权归各来源 |
 
-<p align="center">
-  <a href="#跑起来">跑起来</a> ·
-  <a href="docs/customize.md">改成你的行业</a> ·
-  <a href="#它是怎么工作的">它是怎么工作的</a> ·
-  <a href="#文档">文档</a> ·
-  <a href="https://github.com/KKKKhazix/AIHOT/discussions">社区交流</a>
-</p>
+当前状态：`npm run typecheck`、`npm test`、`node scripts/smoke.ts` 在本机和 GitHub Actions 上都通过；18 个信源实测可抓（金十快讯、新浪财经滚动各抓到几十条）。站内还没有内容——本地联调用的 `.env` 里模型密钥仍是占位值，填上真实的 `LLM_API_KEY`，采集、分析、成刊才会产出。
 
-<br>
+## 与上游的关系
 
-## 这是什么
+本站是开源引擎 [AIHOT](https://github.com/KKKKhazix/AIHOT)（MIT，作者 数字生命卡兹克）的定制实例。改动集中在 [`site/`](site/) 与 [`industry/`](industry/)：站名与文案、分类、标签、主题、提示词、入选门槛、信源名单；`apps/`、`packages/` 里的引擎逻辑没有动。
 
-[AIHOT](https://aihot.news) 是我做的一个 AI 热点网站。它每天从一批信源里收资料，用大模型先筛一遍、再独立打两次分，挑出真正值得看的，写成中文标题和摘要；把不同来源说的同一件事聚成一个事件，按有多少人在说排出热点；每天早上出一份日报。
-
-这个仓库是它的引擎和框架：网站、后台、精选流程、聚簇和热度算法，**所有提示词的原文和入选门槛**，都在这里。
-
-## 为什么开源
-
-这半年，很多做法律、做 HR、做金融、做贵金属的朋友问我，能不能也给他们的行业做一个。
-
-我做不了。我不懂你们的行业，不知道哪些信源有用，也不知道什么样的消息，对你们来说才叫热点。
-
-但你们懂。
-
-既然我没办法满足所有人，那就把火种交到大家自己手上。
-
-## 说在前面
-
-- **我不是专业的开发者。** 我是设计师出身，半年前还看不太懂代码。这套代码是我和 AI 一起重写的，比以前干净了很多，但一定还有写得不好的地方。发现问题欢迎提 Issue，我不一定能很快回复，先说声抱歉。
-- **这是 AIHOT 的引擎。** 它和 AIHOT 线上跑的是同一份引擎代码，同步时直接从线上导出，不是精心打磨的通用框架。以后 AIHOT 的更新，我会尽量同步过来，但没法保证每一次都同步。模型榜、Codex 重置监控、主题页的大事记这些只对 AI 行业有意义的功能，可安装的 Agent Skill 文件，以及 AIHOT 自己的运营工具，只留在 AIHOT 上；开源版给 Agent 的入口是 MCP 和站点上的 `/agent` 页面。
-- **里面没有 AIHOT 的信源名单和运营数据。** 仓库带了 18 个公开的海外 AI 资讯源做示范，够你跑起来看效果；真正的信源，要换成你自己行业的。
-- **请不要用 AIHOT 的名字和 Logo。** 换上你自己的名字，它就是你的站。
+下面这些章节讲的采集、预筛、两次评分、写作、聚簇、热点与成刊，是这套引擎做的事，本站原样使用。
 
 ## 它是怎么工作的
 
@@ -71,7 +44,7 @@
   <img src="docs/assets/cluster-light.png" alt="五个来源的报道聚成一个事件，事件进入当前热点榜" width="100%">
 </picture>
 
-同一件事，官网发一篇、媒体转十篇、X 上吵一天，读者只需要看到一次。AIHOT 把它们聚成一个**事件**：先用标题摘要的向量（没配向量服务时比文字重合度）在最近两周里找候选，再让模型判断是同一件事、后续进展，还是两件事；拿不准的合并，写入前再让模型复核一遍（复核可以单独换一家模型，设 `GROUP_REVIEW_MODEL`）。
+同一件事，官网发一篇、媒体转十篇、X 上吵一天，读者只需要看到一次。本站把它们聚成一个**事件**：先用标题摘要的向量（没配向量服务时比文字重合度）在最近两周里找候选，再让模型判断是同一件事、后续进展，还是两件事；拿不准的合并，写入前再让模型复核一遍（复核可以单独换一家模型，设 `GROUP_REVIEW_MODEL`）。
 
 **热度**按事件算，不按文章算：48 小时内，每个独立来源只算一次，24 小时减半。重复抓取不会多算，一家媒体发十篇也只算一次，所以排在前面的，是真正有很多人在说的事。
 
@@ -81,6 +54,8 @@
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/perf-dark.png">
   <img src="docs/assets/perf-light.png" alt="AIHOT 线上实测：页面中位数 10 毫秒，95% 在 50 毫秒内；接口中位数 6 毫秒，95% 在 12 毫秒内；文章页 95% 在 14 毫秒内" width="100%">
 </picture>
+
+这组数字来自上游 AIHOT 线上站点：同一份引擎、同一套缓存策略，本站还没有单独压测过。
 
 ## 你会得到什么
 
@@ -108,15 +83,13 @@
 
 ## 跑起来
 
-想创建自己的独立站点，可以先点 [Use this template](https://github.com/KKKKhazix/AIHOT/generate)，再克隆你生成的仓库。想持续合并上游更新或贡献代码，建议先 Fork。下面的命令适合直接试用。
-
 需要 [Docker](https://docs.docker.com/get-started/get-docker/)、[Node.js 24](https://nodejs.org/en/download)（运行 `init-env` 生成配置要用），和一个 OpenAI 兼容的模型 API Key（DeepSeek、千问、智谱都可以）。
 
 `init-env` 默认按 DeepSeek 配置。用千问、智谱等别家，照 `.env.example` 里的例子改 `.env` 的 `LLM_BASE_URL`、`LLM_MODEL` 和 `LLM_EXTRA_JSON`；用推理模型（先想再答）时，还要设 `LLM_REASONING_TOKENS` 给推理留出输出额度。
 
 ```bash
-git clone https://github.com/KKKKhazix/AIHOT.git myhot
-cd myhot
+git clone https://github.com/2233admin/tradinghot.git
+cd tradinghot
 node scripts/init-env.ts --llm-key <你的模型 API Key>
 docker compose up -d --build
 ```
@@ -168,20 +141,10 @@ docker compose up -d --build
 
 ## 交流与贡献
 
-部署和使用问题到 [问答区](https://github.com/KKKKhazix/AIHOT/discussions/categories/q-a)，新想法到 [想法交流区](https://github.com/KKKKhazix/AIHOT/discussions/categories/ideas)，欢迎在 [作品展示区](https://github.com/KKKKhazix/AIHOT/discussions/categories/show-and-tell) 分享你做出的行业热点站。
+功能建议和 Bug 走本仓库的 [Issues](https://github.com/2233admin/tradinghot/issues)。引擎本身的问题可以在上游 [AIHOT 的问答区](https://github.com/KKKKhazix/AIHOT/discussions/categories/q-a) 找答案。
 
-发现 Bug 或有明确的功能建议，可以 [提交 Issue](https://github.com/KKKKhazix/AIHOT/issues/new/choose)。准备改代码前，先看 [贡献说明](CONTRIBUTING.md)；安全漏洞请走 [私密报告入口](SECURITY.md)。
-
-## 最后
-
-AIHOT 曾经只是我无数个深夜里，一个很小、很小的念头。
-
-我不知道它会被改成什么样子，会走到多远的地方。但这可能就是开源最浪漫的地方。
-
-剩下的路，就交给你们了。
-
-<p align="right">—— 数字生命卡兹克</p>
+准备改代码前先看 [贡献说明](CONTRIBUTING.md)；安全漏洞请走 [私密报告入口](SECURITY.md)。
 
 ## 许可
 
-代码使用 [MIT 许可证](LICENSE)。AIHOT 的名字和 Logo 不在许可范围内。字体有自己的许可，见 [NOTICE](NOTICE)。
+代码使用 [MIT 许可证](LICENSE)。引擎由 [AIHOT](https://github.com/KKKKhazix/AIHOT)（数字生命卡兹克）开发和发布；AIHOT 的名字和 Logo 不在许可范围内，本站使用自己的站名与标识。字体有自己的许可，见 [NOTICE](NOTICE)。
