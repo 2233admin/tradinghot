@@ -73,7 +73,8 @@ async function extractSavedFiles() {
   await writeFile(archivePath, archive);
   const data = path.join(destination, "data");
   await mkdir(data);
-  await run("tar", ["-xzf", archivePath, "-C", data]);
+  // Relative argv again: GNU tar reads an absolute Windows path as a remote host.
+  await run("tar", ["-xzf", "files.tar.gz", "-C", "data"], { cwd: destination });
   return { destination, data };
 }
 

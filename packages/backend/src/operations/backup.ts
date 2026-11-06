@@ -120,7 +120,11 @@ export async function runBackup(now = new Date()) {
       if ((await readdir(path.join(config.dataDir, d), { recursive: true, withFileTypes: true })).some(entry => !entry.isDirectory())) kept.push(d);
     }
     if (kept.length) {
-      const pack = () => run("tar", ["-czf", files, "-C", config.dataDir, ...kept]);
+      // tar's -f argument is parsed for a `host:` prefix by GNU tar, so an absolute Windows path
+      // ("C:\…") is read as a remote host. Both names are relative to the data directory, which is
+      // the working directory: members stay `uploads/…` on every platform.
+      const archive = path.relative(config.dataDir, files).split(path.sep).join("/");
+      const pack = () => run("tar", ["-czf", archive, ...kept], { cwd: config.dataDir });
       await pack().catch(() => pack());
     }
   } catch (error: unknown) {

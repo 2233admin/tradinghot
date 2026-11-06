@@ -67,7 +67,7 @@ for (const route of ["direct", "proxy"] as const) {
         for (const socket of sockets) socket.destroy();
         await Promise.all([origin, proxy].map(server => new Promise(resolve => server.close(resolve))));
       }
-      console.log(JSON.stringify({ results, requests })); process.exit(0);
+      console.log(JSON.stringify({ results, requests }));
     `], {
       cwd: new URL("../", import.meta.url), timeout: 20000,
       env: { ...process.env, EGRESS_PROXY_URL: "", ALLOW_PRIVATE_NETWORK_FETCH: "false", TEST_HEADER_ROUTE: route },
