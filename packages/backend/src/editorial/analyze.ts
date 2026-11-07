@@ -745,10 +745,10 @@ export async function runAnalysis(a: AnalyzeInputArticle, opts: StepOpts = {}): 
 }
 
 registerSelectionStrategy({ id: "auto", label: "自动（有模型用模型评分，没有用分词筛选）", decide: decideAuto });
-registerSelectionStrategy({ id: "model", label: "模型评分（预筛 + 两次打分）", decide: decideByModel });
+registerSelectionStrategy({ id: "model", label: "模型筛选（预筛 + 两次打分）", decide: decideByModel });
 registerSelectionStrategy({ id: "rules", label: "规则筛选（关键词 / 来源 / 标的 / 时间窗）", decide: decideByRules });
-registerSelectionStrategy({ id: "segment", label: "分词筛选（主体 / 事件 / 动作评分，高分进精选）", decide: decideBySegment });
-registerSelectionStrategy({ id: "webai", label: "网页 AI 评分（分词、评分与精选，慢）", decide: decideByWebAi });
+registerSelectionStrategy({ id: "segment", label: "规则筛选（分词 / 关键词）", decide: decideBySegment });
+registerSelectionStrategy({ id: "webai", label: "网页 AI 筛选（免费网页模型，慢）", decide: decideByWebAi });
 registerWritingStrategy({ id: "auto", label: "自动（有模型用模型写作，没有用原文写作）", write: writeAuto });
 registerWritingStrategy({ id: "webai", label: "网页 AI 清洗（千问 / 元宝 / Kimi…）", write: writeWithWebAi });
 registerWritingStrategy({ id: "model", label: "模型写作（结构 + 中文标题摘要）", write: writeWithModel });

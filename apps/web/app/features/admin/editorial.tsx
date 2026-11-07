@@ -9,6 +9,13 @@ import { Button, Card, Field, Input, Select, Textarea } from "./ui";
 /** Splits a comma-, Chinese-comma- or newline-separated list into its terms. */
 const listOf = (value: string) => value.split(/[,，\n]/).map((t) => t.trim()).filter(Boolean);
 
+/** The three ways to decide 精选; ids match the engine's registered selection strategies. */
+const SELECTION_MODES = [
+  { id: "model", label: "模型筛选", hint: "预筛 + 两次评分，需要模型额度" },
+  { id: "webai", label: "网页 AI 筛选", hint: "网页免费模型读关键词并打分，慢" },
+  { id: "segment", label: "规则筛选", hint: "本地分词词表，配合下面的关键词与来源" },
+] as const;
+
 export function EditorialCard({ editorial, strategies }: Pick<AdminSettings, "editorial" | "strategies">) {
   const { run, pending } = useAdminAction();
   const [v, setV] = useState({
@@ -60,13 +67,30 @@ export function EditorialCard({ editorial, strategies }: Pick<AdminSettings, "ed
       right={<Button tone="primary" busy={pending === "editorial"} onClick={() => void save()}>保存</Button>}
     >
       <p className="mb-4 text-[12.5px] leading-relaxed text-ink-3">
-        「自动」在模型调用关闭时改用规则筛选和原文写作，收到的资料照样能入选、能打开；规则为空表示不筛选。切换方式和规则都保存在库里，保存后对下一篇资料生效。
+        筛选方式三选一：模型筛选要模型额度；网页 AI 筛选走免费网页模型（慢，需要登录）；规则筛选用本地分词词表，不联网。规则字段只在规则筛选下生效，留空表示只按分词评分。保存后对下一篇资料生效。
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="筛选方式" hint="模型评分：预筛 + 两次打分；规则筛选：关键词 / 来源 / 标的 / 时间窗">
-          <Select value={v.selection} onChange={(e) => setV({ ...v, selection: e.target.value })}>
-            {strategies.selection.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-          </Select>
+        <Field label="筛选方式">
+          <div className="grid gap-2 sm:grid-cols-3">
+            {SELECTION_MODES.map((mode) => {
+              const active = v.selection === mode.id;
+              return (
+                <button
+                  key={mode.id}
+                  type="button"
+                  onClick={() => setV({ ...v, selection: mode.id })}
+                  className={`rounded-control px-3 py-2 text-left ring-1 transition ${active ? "bg-accent/5 ring-accent" : "ring-line-strong hover:bg-bg-sunk"}`}
+                  aria-pressed={active}
+                >
+                  <span className="block text-[13px] font-medium text-ink">{mode.label}</span>
+                  <span className="mt-0.5 block text-[11px] leading-snug text-ink-3">{mode.hint}</span>
+                </button>
+              );
+            })}
+          </div>
+          {!SELECTION_MODES.some((mode) => mode.id === v.selection) ? (
+            <p className="mt-2 text-[11px] text-ink-3">当前保存的是「{v.selection}」；点上面任一方式会改为固定方式。</p>
+          ) : null}
         </Field>
         <Field label="写作方式" hint="原文写作：用原标题和正文开头，不调用模型">
           <Select value={v.writing} onChange={(e) => setV({ ...v, writing: e.target.value })}>
