@@ -48,8 +48,8 @@ test("the rule filter matches keywords, symbols, sources and the lookback window
 
 test("auto follows whether model calls are on", () => {
   assert.deepEqual(resolveStrategies({ selection: "auto", writing: "auto" }, true), { selection: "model", writing: "model" });
-  assert.deepEqual(resolveStrategies({ selection: "auto", writing: "auto" }, false), { selection: "rules", writing: "source" });
-  assert.deepEqual(resolveStrategies({ selection: "auto", writing: "auto" }, false, true), { selection: "rules", writing: "webai" });
+  assert.deepEqual(resolveStrategies({ selection: "auto", writing: "auto" }, false), { selection: "segment", writing: "source" });
+  assert.deepEqual(resolveStrategies({ selection: "auto", writing: "auto" }, false, true), { selection: "segment", writing: "webai" });
   assert.deepEqual(resolveStrategies({ selection: "rules", writing: "source" }, true), { selection: "rules", writing: "source" });
 });
 
