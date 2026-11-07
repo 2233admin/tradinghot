@@ -15,7 +15,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   return adminGet<AdminContentChain>(request, `/api/admin/content/${encodeURIComponent(params.id)}`);
 }
 
-export const meta: Route.MetaFunction = ({ loaderData }) => [{ title: `${loaderData?.publication?.title ?? loaderData?.article.title ?? "内容"} · ${SITE.name} 后台` }];
+export const meta: Route.MetaFunction = ({ loaderData }) => [{ title: `${loaderData?.publication?.title ?? loaderData?.article.title ?? "内容"} · ${SITE.name}` }];
 
 function Step({ title, meta, children, tone = "accent", last }: { title: ReactNode; meta?: ReactNode; children: ReactNode; tone?: "accent" | "muted" | "bad"; last?: boolean }) {
   const dot = tone === "bad" ? "bg-hot" : tone === "muted" ? "bg-ink-4" : "bg-accent";
@@ -72,7 +72,7 @@ export default function ContentItem({ loaderData }: Route.ComponentProps) {
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="font-mono text-[12px]">{a.id}</span>
           <span>·</span>
-          <Link className="hover:text-accent" to={`/admin/sources/${encodeURIComponent(a.source_id)}`}>{a.source_name}</Link>
+          <Link className="hover:text-accent" to={`/settings/sources/${encodeURIComponent(a.source_id)}`}>{a.source_name}</Link>
           <span>·</span>
           <a className="max-w-[420px] truncate hover:text-accent" href={a.url} target="_blank" rel="noreferrer">{a.url}</a>
           {p?.visibility !== "withdrawn" && p && (
@@ -107,7 +107,7 @@ export default function ContentItem({ loaderData }: Route.ComponentProps) {
         <Card title="处理链路">
           <ol className="pt-1">
             <Step title="信源" meta={`${KIND_LABEL[a.source_kind] ?? a.source_kind} · ${String(a.tier).replace("_", ".")} · ${MODE_LABEL[a.participation_mode] ?? a.participation_mode}`}>
-              <Link className="text-ink hover:text-accent" to={`/admin/sources/${encodeURIComponent(a.source_id)}`}>{a.source_name}</Link>
+              <Link className="text-ink hover:text-accent" to={`/settings/sources/${encodeURIComponent(a.source_id)}`}>{a.source_name}</Link>
               <span className="text-ink-4"> · 站内全文 {a.site_fulltext ? "允许" : "不允许"} · 对外全文 {a.syndicate_fulltext ? "允许" : "不允许"}</span>
             </Step>
             <Step title="发现" meta={`${c.discoveries.length} 次`}>

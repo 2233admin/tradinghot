@@ -13,7 +13,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   return adminGet<AdminSelectBenchCases>(request, `/api/admin/selectbench/${encodeURIComponent(params.runId)}${new URL(request.url).search}`);
 }
 
-export const meta: Route.MetaFunction = ({ loaderData }) => [{ title: `${loaderData?.run.label ?? "SelectBench"} · ${SITE.name} 后台` }];
+export const meta: Route.MetaFunction = ({ loaderData }) => [{ title: `${loaderData?.run.label ?? "SelectBench"} · ${SITE.name}` }];
 
 const GOLD: Record<string, [string, "accent" | "muted" | "info"]> = { select: ["应入选", "accent"], reject: ["不选", "muted"], either: ["两可", "info"] };
 
@@ -43,7 +43,7 @@ export default function SelectBenchRun({ loaderData: d }: Route.ComponentProps) 
   return (
     <AdminPage
       title={d.run.label}
-      subtitle={<>{bj(d.run.created_at, true)} · {d.run.split ?? "—"} · {num(d.run.sample_size)} 条 · 提示 {d.run.prompt_version ?? "未记录"} · <Link className="text-accent" to="/admin/selectbench">全部运行</Link></>}
+      subtitle={<>{bj(d.run.created_at, true)} · {d.run.split ?? "—"} · {num(d.run.sample_size)} 条 · 提示 {d.run.prompt_version ?? "未记录"} · <Link className="text-accent" to="/settings/selectbench">全部运行</Link></>}
     >
       <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {d.run.models.map((m) => {
