@@ -14,6 +14,7 @@ import { articleUtcOffset, readPublicationDate, type PublicationDate } from "../
 import type { SourceRow } from "../sources/types.ts";
 import { onlyXArticleLink, xArticleText } from "../sources/x.ts";
 import { sanitizeBody, trimLeadingWidgets, trimTrailingChrome } from "./sanitize.ts";
+import { browserHtml } from "../providers/browser.ts";
 import { contentHash, fillPublicationTime, reviseMaterial, updatePresentation, type MediaItem } from "./materials.ts";
 import { markdownBody } from "./markdown.ts";
 
@@ -167,10 +168,19 @@ export interface PageRules {
   acceptLanguage?: string;
   /** A source's text alternate, such as a commit's .patch; the article keeps its original URL. */
   bodyUrlSuffix?: string;
+  /**
+   * The source's own browser tab: pages behind a JavaScript challenge (a WAF slider, a page the site fills
+   * in after loading) cannot be fetched directly, but the tab that already answered the challenge can read
+   * them. Each article gets its own session so two extractions never drive the same tab.
+   */
+  browser?: { session?: string; profile?: string | null };
 }
 
 export const pageRules = (config: SourceRow["config"]): PageRules =>
-  ({ utcOffset: articleUtcOffset(config), preserve: config.detail?.preserve, acceptLanguage: config.acceptLanguage, bodyUrlSuffix: config.detail?.bodyUrlSuffix });
+  ({
+    utcOffset: articleUtcOffset(config), preserve: config.detail?.preserve, acceptLanguage: config.acceptLanguage, bodyUrlSuffix: config.detail?.bodyUrlSuffix,
+    ...(config.via === "opencli" ? { browser: { session: typeof config.session === "string" ? config.session : undefined, profile: typeof config.profile === "string" ? config.profile : null } } : {}),
+  });
 
 type Doc = ReturnType<typeof parseHTML>["document"];
 type El = NonNullable<ReturnType<Doc["querySelector"]>>;
@@ -482,6 +492,20 @@ export async function extractFromUrl(url: string, subject: string, rules: PageRu
   if (isVideoPageUrl(url)) return null;
   const target = new URL(url);
   if (rules.bodyUrlSuffix) target.pathname += rules.bodyUrlSuffix;
+  // The source's own tab answers the site's challenge; a failure here still leaves the direct read.
+  if (rules.browser) {
+    try {
+      const html = await browserHtml(target.href, {
+        profile: rules.browser.profile ?? null,
+        session: subject,
+        closeAfter: true,
+      });
+      const got = readable(html, target.href, rules);
+      if (got) return got;
+    } catch {
+      // fall through to the direct read and Jina
+    }
+  }
   try {
     const res = await guardedFetch(target.href, { headers: languageHeaders(rules.acceptLanguage), timeoutMs: 20_000, maxBytes: 16 * 1024 * 1024 });
     if (isVideoPageUrl(res.url)) return null;

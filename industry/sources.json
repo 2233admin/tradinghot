@@ -1262,6 +1262,193 @@
       "tags": ["官方", "政策"],
       "site_fulltext": false,
       "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-pbc-news",
+      "name": "中国人民银行 · 新闻",
+      "kind": "web_list",
+      "config": {
+        "url": "http://www.pbc.gov.cn/goutongjiaoliu/113456/113469/index.html",
+        "parseMode": "html",
+        "itemSelector": "td:has(font.newslist_style)",
+        "linkSelector": "font.newslist_style a",
+        "titleSelector": "font.newslist_style a",
+        "publishedAtSelector": "span.hui12",
+        "allowUrlPrefixes": ["http://www.pbc.gov.cn/goutongjiaoliu/"],
+        "_aihot": {
+          "initialBackfillLimit": 20
+        }
+      },
+      "tier": "T1",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": ["官方", "货币", "宏观"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-mof-news",
+      "name": "财政部 · 财政新闻",
+      "kind": "web_list",
+      "config": {
+        "url": "https://www.mof.gov.cn/zhengwuxinxi/caizhengxinwen/",
+        "parseMode": "html",
+        "itemSelector": "ul.xwfb_listbox > li",
+        "linkSelector": "a",
+        "titleSelector": "a",
+        "publishedAtSelector": "span",
+        "_aihot": {
+          "initialBackfillLimit": 20
+        }
+      },
+      "tier": "T1",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": ["官方", "财政", "宏观"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-csrc-news",
+      "name": "证监会 · 证监会要闻",
+      "kind": "web_list",
+      "config": {
+        "url": "http://www.csrc.gov.cn/csrc/c106311/common_list.shtml",
+        "via": "opencli",
+        "session": "cn-csrc-news",
+        "parseMode": "html",
+        "itemSelector": "li:has(span.date)",
+        "linkSelector": "a",
+        "titleSelector": "a",
+        "publishedAtSelector": "span.date",
+        "allowUrlPrefixes": ["http://www.csrc.gov.cn/csrc/c106311/"],
+        "_aihot": {
+          "initialBackfillLimit": 20
+        }
+      },
+      "tier": "T1",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": ["官方", "监管", "A股"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-gacc-news",
+      "name": "海关总署 · 要闻",
+      "kind": "web_list",
+      "config": {
+        "url": "http://www.customs.gov.cn/",
+        "via": "opencli",
+        "session": "cn-gacc-news",
+        "parseMode": "html",
+        "itemSelector": "ul.news_list li",
+        "linkSelector": "a[istitle]",
+        "titleSelector": "a[istitle]",
+        "publishedAtSelector": "span",
+        "allowUrlPrefixes": ["http://www.customs.gov.cn/customs/"],
+        "_aihot": {
+          "initialBackfillLimit": 20
+        }
+      },
+      "tier": "T1",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": ["官方", "外贸", "宏观"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-sse-announcements",
+      "name": "上交所 · 上市公司公告",
+      "kind": "json_list",
+      "config": {
+        "url": "http://www.cninfo.com.cn/new/hisAnnouncement/query",
+        "mode": "json_api",
+        "headers": {
+          "accept": "*/*",
+          "x-requested-with": "XMLHttpRequest",
+          "referer": "http://www.cninfo.com.cn/new/commonUrl/pageOfSearch?url=disclosure/list/search"
+        },
+        "bodyForm": {
+          "pageNum": "1",
+          "pageSize": "30",
+          "column": "sse",
+          "tabName": "fulltext",
+          "plate": "sh",
+          "stock": "",
+          "searchkey": "",
+          "secid": "",
+          "category": "",
+          "trade": "",
+          "seDate": "",
+          "sortName": "",
+          "sortType": "",
+          "isHLtitle": "true"
+        },
+        "itemsPath": "announcements",
+        "titlePaths": ["announcementTitle"],
+        "summaryTemplate": "{raw:secName}（{raw:secCode}）",
+        "publishedAtPath": "announcementTime",
+        "publishedAtUnit": "epoch_ms",
+        "externalIdPath": "announcementId",
+        "urlTemplate": "http://static.cninfo.com.cn/{raw:adjunctUrl}",
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T1",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["官方", "公告", "A股"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-szse-announcements",
+      "name": "深交所 · 上市公司公告",
+      "kind": "json_list",
+      "config": {
+        "url": "http://www.cninfo.com.cn/new/hisAnnouncement/query",
+        "mode": "json_api",
+        "headers": {
+          "accept": "*/*",
+          "x-requested-with": "XMLHttpRequest",
+          "referer": "http://www.cninfo.com.cn/new/commonUrl/pageOfSearch?url=disclosure/list/search"
+        },
+        "bodyForm": {
+          "pageNum": "1",
+          "pageSize": "30",
+          "column": "szse",
+          "tabName": "fulltext",
+          "plate": "sz",
+          "stock": "",
+          "searchkey": "",
+          "secid": "",
+          "category": "",
+          "trade": "",
+          "seDate": "",
+          "sortName": "",
+          "sortType": "",
+          "isHLtitle": "true"
+        },
+        "itemsPath": "announcements",
+        "titlePaths": ["announcementTitle"],
+        "summaryTemplate": "{raw:secName}（{raw:secCode}）",
+        "publishedAtPath": "announcementTime",
+        "publishedAtUnit": "epoch_ms",
+        "externalIdPath": "announcementId",
+        "urlTemplate": "http://static.cninfo.com.cn/{raw:adjunctUrl}",
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T1",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["官方", "公告", "A股"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
     }
   ]
 }
