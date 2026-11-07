@@ -93,7 +93,8 @@ export interface V1ItemPayload {
   title: string;
   originalTitle: string | null;
   summary: string | null;
-  source: { name: string };
+  /** `id` is the pool's public slug (/api/v1/sources), the one handle a client filters with. */
+  source: { name: string; id: string };
   links: { aihot: string; original: string };
   publishedAt: string | null;
   discoveredAt: string;
@@ -131,7 +132,7 @@ function round1(n: number | null): number | null {
 }
 
 export function v1Payload(p: {
-  articleId: string; title: string; originalTitle: string | null; summary: string | null; sourceName: string; url: string;
+  articleId: string; title: string; originalTitle: string | null; summary: string | null; sourceName: string; sourceId: string; url: string;
   publishedAt: Date | null; discoveredAt: Date; category: string | null; score: number | null; selected: boolean; reason: string | null;
 }): V1ItemPayload {
   const aihot = itemUrl(p.articleId);
@@ -140,7 +141,7 @@ export function v1Payload(p: {
     title: p.title,
     originalTitle: p.originalTitle,
     summary: p.summary,
-    source: { name: p.sourceName },
+    source: { name: p.sourceName, id: p.sourceId },
     links: { aihot, original: p.url },
     publishedAt: p.publishedAt ? p.publishedAt.toISOString() : null,
     discoveredAt: p.discoveredAt.toISOString(),
@@ -197,15 +198,15 @@ async function settleSeats(tx: Tx, factId: number | null, self: string | null, n
 async function syncLedger(tx: Tx, articleId: string, now: Date): Promise<"upsert" | "remove" | null> {
   const [p] = await tx<Array<{ selected: boolean; visibility: string; seat: boolean; title: string; original_title: string | null; summary: string | null;
     url: string; published_at: Date | null; discovered_at: Date; category: string | null; score: string | number | null; reason: string | null;
-    source_name: string }>>`
+    source_name: string; source_id: string }>>`
     SELECT p.selected, p.visibility, p.seat, p.title, p.original_title, p.summary, p.url, p.published_at, p.discovered_at, p.category,
-           p.score, p.reason, s.name AS source_name
+           p.score, p.reason, s.name AS source_name, s.id AS source_id
     FROM publications p JOIN sources s ON s.id = p.source_id WHERE p.article_id = ${articleId}`;
   if (!p) return null;
   const [state] = await tx<{ in_set: boolean; payload_hash: string | null }[]>`SELECT in_set, payload_hash FROM selected_state WHERE article_id = ${articleId}`;
   if (p.selected && p.visibility === "public" && p.seat) {
     const payload = v1Payload({
-      articleId, title: p.title, originalTitle: p.original_title, summary: p.summary, sourceName: p.source_name, url: p.url,
+      articleId, title: p.title, originalTitle: p.original_title, summary: p.summary, sourceName: p.source_name, sourceId: p.source_id, url: p.url,
       publishedAt: p.published_at, discoveredAt: p.discovered_at, category: p.category, score: p.score === null ? null : Number(p.score), selected: true, reason: p.reason,
     });
     const payloadHash = sha256(stableJson(payload));

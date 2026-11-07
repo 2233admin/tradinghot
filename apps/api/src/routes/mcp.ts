@@ -136,7 +136,7 @@ function registerTools(server: McpServer) {
       annotations: ANNOTATIONS,
     },
     safe(T.latest, async (args) => {
-      const query = { mode: args.mode, window: args.window, by: "timeline", category: args.category ?? null, q: null, limit: args.limit, cursor: null } as const;
+      const query = { mode: args.mode, window: args.window, by: "timeline", category: args.category ?? null, source: null, q: null, limit: args.limit, cursor: null } as const;
       const res = await recent(`items:${JSON.stringify(query)}`, () => v1Items(query));
       return ok(latestAnswer(res, { window: args.window, mode: args.mode, category: args.category ?? null, limit: args.limit }), { schemaVersion: 1, query: res.query, items: res.items });
     }),

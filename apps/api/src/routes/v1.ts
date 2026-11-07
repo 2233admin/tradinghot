@@ -6,6 +6,7 @@ import { config } from "@aihot/backend/config";
 import { InvalidCursorError } from "@aihot/backend/lib/cursor";
 import { SearchBusyError } from "@aihot/backend/publication/pool";
 import { selectedChanges, selectedSnapshot, SnapshotRequiredError, v1Items } from "@aihot/backend/publication/v1";
+import { loadSourcePool } from "@aihot/backend/publication/sources";
 import { resolveStory, v1HotTopics, v1Story } from "@aihot/backend/publication/stories";
 import { isPeriodKey, v1Dailies, v1Daily, v1Period, v1Periods } from "@aihot/backend/publication/reports";
 import { isValidDate } from "@aihot/contracts/time";
@@ -17,7 +18,8 @@ type Handler = (req: FastifyRequest, reply: FastifyReply) => Promise<unknown>;
 const op = (queryKeys: readonly string[], cacheControl: string) => ({ queryKeys, cacheControl });
 
 export const V1_OPERATIONS = {
-  items: op(["mode", "category", "window", "by", "q", "limit", "cursor"], "public, max-age=60, s-maxage=60, must-revalidate"),
+  items: op(["mode", "category", "window", "by", "source", "q", "limit", "cursor"], "public, max-age=60, s-maxage=60, must-revalidate"),
+  sources: op([], "public, max-age=60, s-maxage=60, must-revalidate"),
   hotTopics: op([], "public, max-age=60, s-maxage=60, must-revalidate"),
   storyByPublicId: op([], "public, max-age=60, s-maxage=60, must-revalidate"),
   dailies: op(["limit"], "public, max-age=60, s-maxage=60, must-revalidate"),
@@ -90,6 +92,11 @@ export function registerV1(app: FastifyInstance) {
     const window = enumParam(q.window, "window", ["24h", "7d"] as const, "7d");
     const by = enumParam(q.by, "by", ["timeline", "published"] as const, "timeline");
     const category = q.category === undefined ? null : enumParam<PublicApiCategoryKey>(q.category, "category", PUBLIC_API_CATEGORY_KEYS, PUBLIC_API_CATEGORY_KEYS[0]);
+    // The pool's public slug; an unknown one matches nothing, the same as any other filter.
+    const source = q.source === undefined ? null : q.source.trim();
+    if (source !== null && !/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(source)) {
+      throw new QueryError("source must be a source id from /api/v1/sources (1 to 80 letters, digits, '_' or '-').");
+    }
     let search: string | null = null;
     if (q.q !== undefined) {
       search = q.q.trim();
@@ -98,8 +105,14 @@ export function registerV1(app: FastifyInstance) {
     }
     const limit = intParam(q.limit, "limit", 1, 100, 50);
     if (q.cursor !== undefined && q.cursor.length === 0) throw new InvalidCursorError("empty cursor");
-    const body = await v1Items({ mode, window, by, category, q: search, limit, cursor: q.cursor ?? null });
+    const body = await v1Items({ mode, window, by, category, source, q: search, limit, cursor: q.cursor ?? null });
     return sendV1(req, reply, body, { etagPrefix: "v1-items", cacheControl: V1_OPERATIONS.items.cacheControl });
+  }));
+
+  app.get("/api/v1/sources", publicHandler(async (req, reply) => {
+    strictQuery(req, V1_OPERATIONS.sources.queryKeys);
+    const body = { schemaVersion: 1, ...await loadSourcePool() };
+    return sendV1(req, reply, body, { etagPrefix: "v1-sources", cacheControl: V1_OPERATIONS.sources.cacheControl });
   }));
 
   app.get("/api/v1/hot-topics", publicHandler(async (req, reply) => {
