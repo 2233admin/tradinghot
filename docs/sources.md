@@ -245,6 +245,24 @@ http.createServer((req, res) => {
 
 **查询**：新信源不需要单独接入搜索。条目发布后会进 `publications.search_text`（中文标题 + 摘要 + 信源名），站内搜索、`/api/site/pool?q=`、`/api/v1/items?q=`、`/api/v1/agent/search` 和 MCP 的 `search` 工具读的是同一份数据。中文按子串匹配，`多模态RAG` 会拆成 `多模态` 和 `rag` 两个词；两字词（如「豆粕」）在 trigram 索引上退化为扫描，条目量增长后要按查询计划再决定是否加短词索引。
 
+### 政府一手数据：部委的 RSS
+
+部委网站大多还在维护 RSS，而且是**事件第一次公开的地方**：媒体把 CPI、PMI、国务院文件写成稿子要晚几分钟到几十分钟，一手页面本身带权威数字和原文链接。已接的是：
+
+| 信源 | kind | 入口 | 单页容量 / 频率 |
+|---|---|---|---|
+| 国家统计局 · 数据发布 | `rss` | `www.stats.gov.cn/sj/zxfb/rss.xml` | 500 条全量 / 30 分钟 |
+| 国家统计局 · 数据解读 | `rss` | `www.stats.gov.cn/sj/sjjd/rss.xml` | 500 条全量 / 60 分钟 |
+| 中国政府网 · 原创推荐 | `rss` | `www.gov.cn/pushinfo/v150203/rss.xml` | 60 条 / 60 分钟 |
+
+三个要点：
+
+- **统计局的 feed 是全量存档，不是增量**：一次返回 500 条、约 2.1 MB，最早到 2024 年。所以必须靠 `_aihot.initialBackfillLimit`（这里设 30）限制首次导入，之后靠轮询按 URL 去重；不要指望列表长度本身是“这一轮的新内容”。它带 `ETag` 和 `Last-Modified`，内容没变时响应是 304，只有发布日才会真正下载那 2 MB。
+- **`pubDate` 是不带时区的北京时间**（`2026-11-04 09:30:00`）。`readPublicationDate` 在没有显式时区时按信源的 `publishedAtUtcOffset` 读，缺省就是 `+08:00`，所以这里不用写这个键；写成别的值会把每一条整体平移。中国政府网的 `pubDate` 是带 `GMT` 的 RFC 822，走另一条分支。两者的时区都由文字本身决定，不受运行机器时区影响。
+- **正文页有 JavaScript 反爬**：同一个地址，普通抓取会拿到 `<noscript>Please enable JavaScript…</noscript>` 的挑战页；采集器的 UA 能拿到真页面，但取到的正文开头带着页面自身的“2026/11/04 09:30 | Aa 字体：小 中 大”这一行。模型写作开着时这一行会被摘要改写掉；临时用 `writing=source` 时它会原样出现在摘要里，这不是解析错误。
+
+这些源按 `T1` 官方一手登记：入选门槛 60（`industry/selection.ts`），同一条新闻有多篇报道时优先当代表报道。政府文件属于公开信息，但站内仍按默认只展示摘要和原文链接（`site_fulltext: false`），需要全文展示时再逐源打开。
+
 ## 分级、参与方式与全文
 
 - **分级** `tier`：`T1` 官方一手（官网、官方博客、机构）、`T1_5` 官方账号与准官方创作者、`T2` 媒体与个人、`EXCLUDE_MP` 不参与精选。入选门槛按分级不同（`industry/selection.ts`）。

@@ -167,6 +167,17 @@ export function trimTrailingChrome(html: string): string {
 
 const collapse = (s: string) => s.replace(/\s+/g, " ").trim();
 
+/**
+ * The font-size widget some Chinese government portals print inside an article's first paragraph, right
+ * after the timestamp ("2026/11/04 09:30 | Aa 字体： 小 中 大 | 中国统计信息服务中心…"). It is page chrome,
+ * not the article's opening, and the date in it is already kept as the publication time.
+ */
+const LEADING_WIDGET = /^(?:\d{4}[/-]\d{1,2}[/-]\d{1,2}\s+\d{1,2}:\d{2}(?::\d{2})?\s*[|｜]\s*)?Aa\s*字体\s*[：:]\s*[^|｜]{0,40}[|｜]\s*/u;
+
+export function trimLeadingWidgets(text: string): string {
+  return text.replace(LEADING_WIDGET, "");
+}
+
 const OWN_PROXY = /^(?:https?:\/\/[^/?#]+)?\/api\/img-proxy\?/i;
 
 /**

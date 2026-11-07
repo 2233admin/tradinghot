@@ -74,7 +74,7 @@
       },
       "tier": "T2",
       "participation_mode": "editorial",
-      "interval_minutes": 60,
+      "interval_minutes": 180,
       "tags": ["媒体"],
       "site_fulltext": false,
       "syndicate_fulltext": false
@@ -91,7 +91,7 @@
       },
       "tier": "T2",
       "participation_mode": "editorial",
-      "interval_minutes": 60,
+      "interval_minutes": 180,
       "tags": ["媒体"],
       "site_fulltext": false,
       "syndicate_fulltext": false
@@ -108,7 +108,7 @@
       },
       "tier": "T2",
       "participation_mode": "editorial",
-      "interval_minutes": 60,
+      "interval_minutes": 180,
       "tags": ["媒体"],
       "site_fulltext": false,
       "syndicate_fulltext": false
@@ -125,7 +125,7 @@
       },
       "tier": "T2",
       "participation_mode": "editorial",
-      "interval_minutes": 60,
+      "interval_minutes": 180,
       "tags": ["媒体"],
       "site_fulltext": false,
       "syndicate_fulltext": false
@@ -1003,7 +1003,7 @@
       },
       "tier": "T2",
       "participation_mode": "editorial",
-      "interval_minutes": 120,
+      "interval_minutes": 240,
       "tags": ["媒体", "宏观"],
       "site_fulltext": false,
       "syndicate_fulltext": false
@@ -1020,7 +1020,7 @@
       },
       "tier": "T2",
       "participation_mode": "editorial",
-      "interval_minutes": 120,
+      "interval_minutes": 240,
       "tags": ["媒体", "财经"],
       "site_fulltext": false,
       "syndicate_fulltext": false
@@ -1209,6 +1209,57 @@
       "participation_mode": "editorial",
       "interval_minutes": 180,
       "tags": ["加密"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-nbs-release",
+      "name": "国家统计局 · 数据发布",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://www.stats.gov.cn/sj/zxfb/rss.xml",
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T1",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["官方", "宏观", "A股"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-nbs-interpretation",
+      "name": "国家统计局 · 数据解读",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://www.stats.gov.cn/sj/sjjd/rss.xml",
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T1",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": ["官方", "宏观", "解读"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-gov-policy",
+      "name": "中国政府网 · 原创推荐",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "http://www.gov.cn/pushinfo/v150203/rss.xml",
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T1",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": ["官方", "政策"],
       "site_fulltext": false,
       "syndicate_fulltext": false
     }

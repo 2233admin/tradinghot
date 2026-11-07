@@ -11,7 +11,7 @@ import http from "node:http";
 import { after, test } from "node:test";
 import { config } from "@aihot/backend/config";
 import { extractFromUrl, pageRules } from "@aihot/backend/content/extract";
-import { sanitizeBody, trimTrailingChrome } from "@aihot/backend/content/sanitize";
+import { sanitizeBody, trimLeadingWidgets, trimTrailingChrome } from "@aihot/backend/content/sanitize";
 import { unsupportedConfig } from "@aihot/backend/sources/config-keys";
 import { fetchDetail, fetchWebList, fromHtml, fromMarkdown } from "@aihot/backend/sources/web-list";
 import { fetchRss } from "@aihot/backend/sources/rss";
@@ -225,6 +225,17 @@ test("hidden page parts are dropped whole, and a news page's closing blocks are 
   const article = "<p>MongoDB’s shares dropped by more than 17%.</p><h2>Topics</h2><p>More on the deal.</p><p>Subscribe to our plan to get the API.</p>";
   assert.equal(trimTrailingChrome(`${article}<p>Topics</p><p>Subscribe for the industry’s biggest tech news</p><h2>Latest in AI</h2>`), article);
   assert.equal(trimTrailingChrome(article), article);
+});
+
+test("a portal's font-size widget is not the article's opening", () => {
+  const lead = "中国统计信息服务中心 卓创资讯 据对全国流通领域9大类50种重要生产资料市场价格的监测显示，17种产品价格上涨，28种下降，5种持平。";
+  assert.equal(trimLeadingWidgets(`2026/11/04 09:30 | Aa 字体： 小 中 大 | ${lead}`), lead);
+  assert.equal(trimLeadingWidgets(`Aa 字体：小 中 大| ${lead}`), lead);
+  // An opening that mentions the widget itself, or a date of its own, is the article's text and stays.
+  const mentions = `Aa 字体：小 中 大是这套模板的默认设置，${lead}`;
+  assert.equal(trimLeadingWidgets(mentions), mentions);
+  const dated = "2026年11月4日 17:37 记者 李明 报道";
+  assert.equal(trimLeadingWidgets(dated), dated);
 });
 
 test("noise words match whatever their case", () => {
