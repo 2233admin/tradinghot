@@ -76,7 +76,7 @@ export function latestAnswer(res: V1ItemsResult, q: LatestQuery): string {
 
 /** Editorial picks first; only when they have nothing is the whole public pool searched (as MCP always did). */
 export async function searchItems(q: string, window: AgentWindow, cat: PublicApiCategoryKey | null, limit: number, load = v1Items) {
-  const query = (mode: "selected" | "all") => ({ mode, window, by: "timeline" as const, category: cat, q, limit, cursor: null });
+  const query = (mode: "selected" | "all") => ({ mode, window, by: "timeline" as const, category: cat, source: null, q, limit, cursor: null });
   const picks = await load(query("selected"));
   if (picks.items.length) return { res: picks, expanded: false };
   return { res: await load(query("all")), expanded: true };

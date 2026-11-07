@@ -52,6 +52,15 @@
             }
           },
           {
+            "name": "source",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+            },
+            "description": "Only items from this source. Take the value from /api/v1/sources' id; an unknown id matches nothing rather than failing. The filter is part of the cursor, so a cursor from an unfiltered query is rejected here."
+          },
+          {
             "name": "window",
             "in": "query",
             "schema": {
@@ -236,6 +245,78 @@
                 "schema": {
                   "type": "integer",
                   "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sources": {
+      "get": {
+        "operationId": "sources",
+        "summary": "List the public source pool",
+        "description": "Every source the site collects from and may name publicly, with a stable id, its tags, whether it is first-party, its last collection outcome and its seven-day item count. Another client keeps its own source list from here and filters items with items?source=<id>. Sources that are disabled or isolated are absent; their items are not public either. Poll no faster than s-maxage and send If-None-Match.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ActorUserAgent"
+          },
+          {
+            "$ref": "#/components/parameters/IfNoneMatch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourcesResponse"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Machine-readable problem response.",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Support correlation identifier for this failed request.",
+                "schema": {
+                  "type": "string"
                 }
               }
             },
@@ -3407,6 +3488,116 @@
           }
         }
       },
+      "Source": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "firstParty",
+          "status",
+          "lastOkAt",
+          "items7d",
+          "tags"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable public id for the life of the source; pass it as items?source=."
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name for readers."
+          },
+          "kind": {
+            "type": "string",
+            "description": "How the source is read: rss, web_list, json_list, x_search, mp_account or external."
+          },
+          "firstParty": {
+            "type": "boolean",
+            "description": "Tier T1: the publisher itself, not a report about it."
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "degraded",
+              "failing",
+              "unknown"
+            ],
+            "description": "The last collection outcome; a disabled source is not listed."
+          },
+          "lastOkAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "items7d": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Articles this source delivered in the last seven days."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The source's own tags (industry, instrument, region)."
+          }
+        }
+      },
+      "SourcesResponse": {
+        "type": "object",
+        "required": [
+          "schemaVersion",
+          "counts",
+          "sources"
+        ],
+        "properties": {
+          "schemaVersion": {
+            "const": 1
+          },
+          "counts": {
+            "type": "object",
+            "required": [
+              "total",
+              "ok",
+              "degraded",
+              "failing",
+              "unknown"
+            ],
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "ok": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "degraded": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "failing": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "unknown": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            }
+          }
+        }
+      },
       "Item": {
         "type": "object",
         "required": [
@@ -3444,11 +3635,17 @@
           "source": {
             "type": "object",
             "required": [
-              "name"
+              "name",
+              "id"
             ],
             "properties": {
               "name": {
-                "type": "string"
+                "type": "string",
+                "description": "Display name for readers."
+              },
+              "id": {
+                "type": "string",
+                "description": "The source's public id, as listed by /api/v1/sources; stable for the life of the source. Pass it as items?source= to fetch only this source."
               }
             }
           },
@@ -3536,11 +3733,17 @@
           "source": {
             "type": "object",
             "required": [
-              "name"
+              "name",
+              "id"
             ],
             "properties": {
               "name": {
-                "type": "string"
+                "type": "string",
+                "description": "Display name for readers."
+              },
+              "id": {
+                "type": "string",
+                "description": "The source's public id, as listed by /api/v1/sources; stable for the life of the source. Pass it as items?source= to fetch only this source."
               }
             }
           },
@@ -3633,6 +3836,7 @@
               "mode",
               "category",
               "window",
+              "source",
               "q",
               "by",
               "ordering"
@@ -3654,6 +3858,13 @@
                   "{{categories}}"
                 ],
                 "description": "Current values: {{categoryList}}. Clients must tolerate future string values."
+              },
+              "source": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Echo of the source filter; null when every source is included."
               },
               "window": {
                 "type": "string",

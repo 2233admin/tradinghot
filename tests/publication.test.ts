@@ -624,7 +624,7 @@ test("browsing 全部动态 on every exit leaves out items below the floor, whic
   const pool = await loadPool({ channel: "all", category: null, tag: `${T}-floor`, now });
   assert.deepEqual(ours(pool.items.map((i) => i.id)), shown, "web list");
   assert.equal(pool.total, shown.length, "web page count");
-  const v1 = await v1Items({ mode: "all", window: "24h", by: "timeline", category: null, q: null, limit: 100, cursor: null }, now);
+  const v1 = await v1Items({ mode: "all", window: "24h", by: "timeline", category: null, source: null, q: null, limit: 100, cursor: null }, now);
   assert.deepEqual(ours(v1.items.map((i) => i.id)), shown, "v1 and MCP");
   const agent = await get("/api/v1/agent/latest?mode=all&limit=30");
   assert.equal(agent.status, 200);
@@ -634,6 +634,38 @@ test("browsing 全部动态 on every exit leaves out items below the floor, whic
 
   const found = await loadPool({ channel: "all", category: null, tag: `${T}-floor`, q: id("low"), now });
   assert.deepEqual(ours(found.items.map((i) => i.id)), [id("low")], "web search");
-  const searched = await v1Items({ mode: "all", window: "24h", by: "timeline", category: null, q: id("low"), limit: 100, cursor: null }, now);
+  const searched = await v1Items({ mode: "all", window: "24h", by: "timeline", category: null, source: null, q: id("low"), limit: 100, cursor: null }, now);
   assert.deepEqual(ours(searched.items.map((i) => i.id)), [id("low")], "v1 search");
+});
+
+test("items can be read for one source, and every side names it by its public id", async () => {
+  const other = `${SOURCE}-other`;
+  await sql`INSERT INTO sources (id, name, kind, tier, participation_mode, site_fulltext, syndicate_fulltext, next_fetch_at)
+            VALUES (${other}, 'Test publication other', 'rss', 'T1', 'editorial', true, false, '2100-01-01')`;
+  const minuteAgo = new Date(Date.now() - 60_000);
+  const { articleId } = await upsertMaterial({
+    sourceId: other, url: `https://example.com/${T}-other`, title: `OTHER-${T}`, bodyText: BODY, bodyHtml: `<p>${BODY}</p>`,
+    bodyStatus: "ok", via: "fetch", publishedAt: minuteAgo, discoveredAt: minuteAgo,
+  });
+  await sql`INSERT INTO analyses (article_id, input_revision, origin, relevance, category, title_zh, summary_zh, score, selected)
+            VALUES (${articleId}, 1, 'rule', 'pass', 'ai-models', ${`其他-${T}`}, ${`OTHER-SUMMARY-${T}`}, 90, true)`;
+  await publishArticle(articleId);
+  const now = new Date();
+
+  const mine = await v1Items({ mode: "all", window: "24h", by: "timeline", category: null, source: other, q: null, limit: 100, cursor: null }, now);
+  assert.deepEqual(mine.items.map((i) => i.id), [articleId], "one source only");
+  assert.equal(mine.items[0]!.source.id, other, "the item carries the pool's public id");
+  assert.equal(mine.query.source, other, "the answer echoes the filter");
+
+  const missing = await v1Items({ mode: "all", window: "24h", by: "timeline", category: null, source: `${other}-missing`, q: null, limit: 100, cursor: null }, now);
+  assert.equal(missing.items.length, 0, "an unknown source matches nothing");
+
+  const response = await get(`/api/v1/items?source=${other}&mode=all&limit=100`);
+  assert.equal(response.status, 200, response.body);
+  assert.deepEqual(JSON.parse(response.body).items.map((i: { source: { id: string } }) => i.source.id), [other]);
+
+  const sources = await get("/api/v1/sources");
+  assert.equal(sources.status, 200, sources.body);
+  const listed = JSON.parse(sources.body).sources.find((s: { id: string }) => s.id === other);
+  assert.deepEqual(Object.keys(listed ?? {}).sort(), ["firstParty", "id", "items7d", "kind", "lastOkAt", "name", "status", "tags"], "the pool lists the source by id");
 });

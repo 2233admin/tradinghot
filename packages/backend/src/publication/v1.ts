@@ -14,6 +14,8 @@ export interface V1ItemsQuery {
   window: "24h" | "7d";
   by: "timeline" | "published";
   category: PublicApiCategoryKey | null;
+  /** The pool's public slug (sources.id); null for every source. */
+  source: string | null;
   q: string | null;
   limit: number;
   cursor: string | null;
@@ -21,14 +23,14 @@ export interface V1ItemsQuery {
 
 export interface V1ItemsResult {
   schemaVersion: 1;
-  query: { mode: string; category: string | null; window: string; q: string | null; by: string; ordering: string };
+  query: { mode: string; category: string | null; window: string; source: string | null; q: string | null; by: string; ordering: string };
   items: V1ItemPayload[];
   page: { count: number; hasMore: boolean; nextCursor: string | null };
 }
 
 export function rowToV1(row: ApiItemRow): V1ItemPayload {
   return v1Payload({
-    articleId: row.id, title: row.title, originalTitle: row.original_title, summary: row.summary, sourceName: row.source_name,
+    articleId: row.id, title: row.title, originalTitle: row.original_title, summary: row.summary, sourceName: row.source_name, sourceId: row.source_id,
     url: row.url, publishedAt: row.published_at, discoveredAt: row.discovered_at, category: row.category,
     score: row.score === null ? null : Number(row.score), selected: row.selected, reason: row.reason,
   });
@@ -36,14 +38,14 @@ export function rowToV1(row: ApiItemRow): V1ItemPayload {
 
 /** Search callers across HTTP and tools share one read. */
 export const v1Items = sharedSearch(
-  (q: V1ItemsQuery) => JSON.stringify([q.mode, q.window, q.by, q.category, q.q, q.limit, q.cursor]),
+  (q: V1ItemsQuery) => JSON.stringify([q.mode, q.window, q.by, q.category, q.source, q.q, q.limit, q.cursor]),
   queryItems, (q) => !!q.q?.trim(),
 );
 
 async function queryItems(query: V1ItemsQuery, now: Date): Promise<V1ItemsResult> {
   const windowMs = query.window === "24h" ? 86400000 : 7 * 86400000;
   const windowStart = new Date(now.getTime() - windowMs);
-  const binding = queryBinding({ m: query.mode, w: query.window, b: query.by, c: query.category, q: query.q });
+  const binding = queryBinding({ m: query.mode, w: query.window, b: query.by, c: query.category, s: query.source, q: query.q });
   // by=timeline is the site's own order: a selected item at its reading-group anchor, anything else at its timeline time.
   const sortCol = query.by === "published" ? sql`coalesce(p.published_at, p.discovered_at)` : query.mode === "selected" ? sql`p.sort_at` : sql`p.timeline_at`;
   let after: { a: number; i: string } | null = null;
@@ -57,10 +59,11 @@ async function queryItems(query: V1ItemsQuery, now: Date): Promise<V1ItemsResult
   }
   const scope = query.mode === "selected" ? seatedCondition(now) : query.q ? listedCondition(now) : browsedCondition(now);
   const terms = query.q ? searchTerms(query.q) : [];
+  const sourceFilter = query.source ? sql`AND p.source_id = ${query.source}` : sql``;
 
   const run = (db: Db) => db<(ApiItemRow & { sort_at: Date })[]>`
     SELECT ${API_ITEM_COLUMNS}, ${sortCol} AS sort_at ${API_ITEM_FROM}
-    WHERE ${scope} ${publicCategoryCondition(query.category)} ${publicMatchCondition(terms)}
+    WHERE ${scope} ${publicCategoryCondition(query.category)} ${sourceFilter} ${publicMatchCondition(terms)}
       AND ${sortCol} >= ${windowStart} AND ${sortCol} <= ${now}
       ${after ? sql`AND (${sortCol}, p.article_id) < (${new Date(after.a)}, ${after.i})` : sql``}
     ORDER BY ${sortCol} DESC, p.article_id DESC
@@ -73,7 +76,7 @@ async function queryItems(query: V1ItemsQuery, now: Date): Promise<V1ItemsResult
   return {
     schemaVersion: 1,
     query: {
-      mode: query.mode, category: query.category, window: query.window, q: query.q, by: query.by,
+      mode: query.mode, category: query.category, window: query.window, source: query.source, q: query.q, by: query.by,
       ordering: query.by === "published" ? "publishedAtDesc" : "timelineDesc",
     },
     items: page.map(rowToV1),

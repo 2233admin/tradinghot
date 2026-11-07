@@ -411,8 +411,13 @@ export interface SiteStats {
   latest: Array<{ id: string; title: string; source: string }>;
 }
 
-/** One source on the source pool page (/sources): what a reader may see, never its address, error or internal id. */
+/**
+ * One source on the source pool page (/sources) and in /api/v1/sources: what a reader may see, never its
+ * address or error. `id` is the one stable handle another client correlates with /api/v1/items?source=.
+ */
 export interface PublicSourceEntry {
+  /** Stable public slug (the sources table's id, e.g. "cn-nbs-release"); items carry it back. */
+  id: string;
   /** The name readers see (publication/rules.ts publicSourceName). */
   name: string;
   /** rss, web_list, json_list, x_search, mp_account or external. */
@@ -424,6 +429,8 @@ export interface PublicSourceEntry {
   lastOkAt: string | null;
   /** Articles it delivered in the last seven days. */
   items7d: number;
+  /** The source's own tags (行业、品种、地区), as the operator set them. */
+  tags: string[];
 }
 
 /** Every source the site collects from and may name publicly, failing first. */

@@ -85,7 +85,7 @@ test('unfiltered single-term relevance combines direct/body scores and retains o
 });
 
 test('v1 search allows terms to match direct text and body, retaining time cursor order and public scope', async () => {
-  const query = { mode: 'all' as const, window: '7d' as const, by: 'timeline' as const, category: null, q: `${T} bodyonly`, limit: 40, cursor: null };
+  const query = { mode: 'all' as const, window: '7d' as const, by: 'timeline' as const, category: null, source: null, q: `${T} bodyonly`, limit: 40, cursor: null };
   const first = await v1Items(query, now);
   const expected = Array.from({ length: 40 }, (_, i) => id(2104 - i * 2));
   assert.deepEqual(first.items.map((i) => i.id), expected);
