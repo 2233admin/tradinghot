@@ -87,7 +87,7 @@
 入选的资料还可以交给网页端的免费模型写中文标题、摘要和推荐理由：一条要几十秒，但不用模型额度。
 
 - 后台「信源 → 筛选与写作 → 网页 AI 清洗」开启，站点按顺序尝试（默认元宝；元宝登录有效时能按提示词返回 JSON。千问的适配器对长提示词会超时，Kimi、DeepSeek 在网页改版后报“提交未验证 / 无法切换模型”，需要等 opencli 更新适配器后再加进列表）。写作方式选「自动」时，模型调用关闭且网页 AI 开启才会走这里；也可以直接选「网页 AI 清洗」。
-- 前提：Chrome 安装 OpenCLI 扩展并在对应站点登录；`opencli doctor` 显示 Daemon 和 Extension 正常。同时连接多个浏览器配置时，在后台填 Browser Bridge profile（`opencli profile list` 查看）。
+- 前提：Chrome 安装 OpenCLI 扩展并在对应站点登录；`opencli doctor` 显示 Daemon 和 Extension 正常。同时连接多个浏览器配置时，在后台填 Browser Bridge profile（`opencli profile list` 查看）。opencli 装在 npm 全局目录之外时，用 `.env` 里的 `OPENCLI_BIN` 指到它的入口（`main.js` 或可执行文件）。
 - 提示词在 `industry/prompts/web-clean.md`，要求只返回 JSON。网页输入框只保留第一行，程序会把换行压成空格再发送。
 - 请求串行，间隔至少 15 秒；某个站点失败（登录失效、页面改版、人机验证）后冷却 10 分钟，换下一个；上一个成功的站点下次先用。只有入选的资料会发出去。
 - 批量补清洗：`node --env-file=.env scripts/webai-clean.ts --limit 20`，只挑还没被网页 AI 写过的已入选条目；每条几十秒，按需分批跑。

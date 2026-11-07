@@ -165,17 +165,31 @@ export function fromHtml(html: string, base: string, source: SourceRow): Candida
     const titleEl = c.titleSelector ? (el.is(c.titleSelector) ? el : el.find(c.titleSelector).first()) : linkEl;
     const title = collapseWhitespace(titleEl.text() || linkEl.attr("title") || "");
     if (!title) continue;
+    // A listing that shows the teaser under the headline: the rules can judge it without reading the page.
+    const summaryEl = c.summarySelector ? (el.is(c.summarySelector) ? el : el.find(c.summarySelector).first()) : null;
+    const excerpt = summaryEl ? collapseWhitespace(summaryEl.text()).slice(0, 2000) : null;
     let date: PublicationDate = { publishedAt: null, publicationTime: null };
     if (c.publishedAtSelector) {
       const dateEl = el.find(c.publishedAtSelector).first();
       date = elementDate(dateEl, c.publishedAtUtcOffset);
+    }
+    // A listing that carries the time as an epoch in an attribute (data-time="1794017564") has no readable
+    // date text at all; the attribute value itself is the timestamp.
+    if (!date.publishedAt && c.publishedAtAttribute) {
+      const holder = c.publishedAtSelector ? el.find(c.publishedAtSelector).first() : el;
+      const raw = holder.attr(c.publishedAtAttribute) ?? el.attr(c.publishedAtAttribute);
+      const epoch = raw && /^\d{9,13}$/.test(raw.trim()) ? Number(raw.trim()) : null;
+      if (epoch) {
+        const at = new Date(epoch > 1e12 ? epoch : epoch * 1000);
+        date = { publishedAt: at, publicationTime: at.toISOString() };
+      }
     }
     if (!date.publishedAt && c.publishedAtRegex) {
       const m = new RegExp(c.publishedAtRegex).exec($.html(el));
       date = readPublicationDate(m?.[1], c.publishedAtUtcOffset);
     }
     seen.add(url);
-    out.push({ url, title, ...date });
+    out.push({ url, title, ...(excerpt ? { excerpt } : {}), ...date });
   }
   return out;
 }

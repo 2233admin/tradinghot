@@ -227,14 +227,18 @@ http.createServer((req, res) => {
 | 财新 · 最新 | `json_list` | `gateway.caixin.com/api/dataplatform/scroll/index`（`time` 是毫秒时间戳） | 20 条 / 60 分钟 |
 | 每日经济新闻 · 要闻 | `web_list` | `www.nbd.com.cn/columns/3/`，`li.u-news-title` | 列表 20 条 + 详情 20 页 / 30 分钟 |
 | 集思录 · 广场 | `web_list` | `www.jisilu.cn/explore`，`div.aw-question-list div.aw-item` | 列表 30 条 + 详情 30 页 / 30 分钟 |
+| 华尔街见闻 · 快讯 | `json_list` | `api-one.wallstcn.com/apiv1/content/lives?channel=global-channel`（`data.items`，`display_time` 秒） | 100 条 / 10 分钟 |
+| 智通财经 · 推荐 | `json_list` | `r.jina.ai` + `www.zhitongcaijing.com/content/recommend.html?data_type=1&page=1` | 20 条 / 30 分钟 |
+| 界面新闻 · 快讯 | `web_list` | `www.jiemian.com/lists/1324kb.html`，`data-time` 属性是秒级时间戳 | 列表 20 条 / 15 分钟 |
 | 东方财富 · 合作伙伴资讯 | `rss` | `rss.eastmoney.com/rss_partener.xml` | 按 feed / 30 分钟 |
 
-两类要点：
+三类要点：
 
 - **财联社的 URL 带签名**。`sign` 是 `md5(sha1(参数按字段名排序后拼成的查询串))`，参数固定（`app=CailianpressWeb&category=&last_time=&os=web&refresh_type=1&rn=50&sv=7.7.5`）时签名也不变，所以能整段写进配置。改动 `rn` 或其它参数必须重算签名；站点轮换 `sv` 或客户端 ID 时这个地址会返回签名错误，表现为采集失败、`last_error` 停在 `errno 10012`，重算签名即可恢复。
 - **列表页只取第一页**。采集器每次只请求配置里的那一个地址，没有翻页、没有历史归档；首次导入只回填 `_aihot.initialBackfillLimit` 条（默认 30），之后靠轮询去重。列表容量小于该频道的发帖速度就会漏条目，所以表格里给了单次上限：例如金十 15 分钟一轮、每轮约 20 条，超过这个速度的部分补不回来。需要更全的覆盖时，先量出该源在目标间隔内的峰值新增量，再调 `num` / `size` / `rn` 这类页大小参数，而不是简单缩短间隔。
+- **站点从本机网络不可达时，用 Jina 中转**。把列表或接口地址写成 `https://r.jina.ai/<原地址>`，三种 kind 都认：`web_list` 会向 Jina 要渲染后的 HTML（`parseMode: html` 时）或 Markdown，`json_list` 会把 Jina 取回的 JSON 正文照常按 `itemsPath` 解析。Jina 免费额度接受不带 key 的读，代码里 `JINA_API_KEY` 因此是可选的；配了 key 就走账号额度、按 token 计费。智通财经和证券时报的站点直连超时，智通就是靠这条路接进来的。代价是一次列表读取要经过第三方，`r.jina.ai` 本身不可达时该源会失败。
 
-**集思录和每经的列表没有摘要**，`web_list` 只靠标题过不了规则筛选（结果是“无正文无摘要”，分析停在 unknown）。两份配置都加上了 `detail`：集思录取 `div.markitup-box` 当摘要，每经用详情的 `"pubDate"` 字段补发布时间。`detail.maxFetches` 是每轮最多读几页详情，按列表长度和站点容忍度设，别设成整页全量。
+**列表里可以直接给摘要和时间**：`web_list` 新增两个可选项，`summarySelector` 把列表里已经显示在标题下的提要写进 `excerpt`，`publishedAtAttribute` 读元素属性里的秒/毫秒时间戳（界面用 `data-time="1794017564"`）。列表自带摘要时就不必再为每条抓详情页；集思录和每经的列表没有摘要，仍靠 `detail` 补：集思录取 `div.markitup-box` 当摘要，每经用详情的 `"pubDate"` 字段补发布时间。`detail.maxFetches` 是每轮最多读几页详情，按列表长度和站点容忍度设，别设成整页全量。
 
 **查询**：新信源不需要单独接入搜索。条目发布后会进 `publications.search_text`（中文标题 + 摘要 + 信源名），站内搜索、`/api/site/pool?q=`、`/api/v1/items?q=`、`/api/v1/agent/search` 和 MCP 的 `search` 工具读的是同一份数据。中文按子串匹配，`多模态RAG` 会拆成 `多模态` 和 `rag` 两个词；两字词（如「豆粕」）在 trigram 索引上退化为扫描，条目量增长后要按查询计划再决定是否加短词索引。
 

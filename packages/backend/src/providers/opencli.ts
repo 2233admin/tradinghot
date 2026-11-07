@@ -1,19 +1,29 @@
 // opencli runs the browser the user is already logged into. One entry point, no shell.
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
+import { credential } from "../config.ts";
 
 const run = promisify(execFile);
 
+/**
+ * Where npm installs global packages when it is not under the runtime: Windows keeps them in
+ * %APPDATA%\npm, other platforms beside the runtime's own library folder.
+ */
+function globalModuleRoot(): string {
+  const besideRuntime = path.join(path.dirname(path.dirname(process.execPath)), "lib", "node_modules");
+  if (process.platform !== "win32") return besideRuntime;
+  const appData = path.join(os.homedir(), "AppData", "Roaming");
+  return existsSync(path.join(appData, "npm", "node_modules")) ? path.join(appData, "npm", "node_modules") : besideRuntime;
+}
+
 /** opencli's own entry point, so arguments are not parsed by a shell. */
 export function openCli(): { command: string; base: string[] } {
-  const configured = process.env.OPENCLI_BIN;
+  const configured = credential("collectors", "OPENCLI_BIN");
   if (configured) return /\.(c|m)?js$/.test(configured) ? { command: process.execPath, base: [configured] } : { command: configured, base: [] };
-  const npmRoot = process.env.APPDATA
-    ? path.join(process.env.APPDATA, "npm", "node_modules")
-    : path.join(path.dirname(path.dirname(process.execPath)), "lib", "node_modules");
-  const entry = path.join(npmRoot, "@jackwener", "opencli", "dist", "src", "main.js");
+  const entry = path.join(globalModuleRoot(), "@jackwener", "opencli", "dist", "src", "main.js");
   return existsSync(entry) ? { command: process.execPath, base: [entry] } : { command: "opencli", base: [] };
 }
 
