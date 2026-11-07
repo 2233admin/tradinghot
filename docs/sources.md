@@ -263,6 +263,28 @@ http.createServer((req, res) => {
 
 这些源按 `T1` 官方一手登记：入选门槛 60（`industry/selection.ts`），同一条新闻有多篇报道时优先当代表报道。政府文件属于公开信息，但站内仍按默认只展示摘要和原文链接（`site_fulltext: false`），需要全文展示时再逐源打开。
 
+### 央行、财政部、证监会、海关总署与沪深交易所
+
+同样是一手披露，但这五家的页面各自挡住了普通抓取，接入方式分三种：
+
+| 信源 | kind | 入口 | 方式 |
+|---|---|---|---|
+| 中国人民银行 · 新闻 | `web_list` | `www.pbc.gov.cn/goutongjiaoliu/113456/113469/index.html` | 直连，`td:has(font.newslist_style)` + `span.hui12` |
+| 财政部 · 财政新闻 | `web_list` | `www.mof.gov.cn/zhengwuxinxi/caizhengxinwen/` | 直连，`ul.xwfb_listbox > li`，日期在 `span` |
+| 证监会 · 证监会要闻 | `web_list` | `www.csrc.gov.cn/csrc/c106311/common_list.shtml` | `via: opencli`，`li:has(span.date)` |
+| 海关总署 · 要闻 | `web_list` | `www.customs.gov.cn/` | `via: opencli`，`ul.news_list li` |
+| 上交所 · 上市公司公告 | `json_list` | `www.cninfo.com.cn/new/hisAnnouncement/query` | 表单 POST（`bodyForm`），`plate=sh` |
+| 深交所 · 上市公司公告 | `json_list` | 同上 | 表单 POST，`plate=sz` |
+
+四个坑：
+
+- **`via: opencli` 现在对 `web_list` 也生效，而且管到正文**。证监会是阿里云 WAF、海关总署是加速乐，直接 `fetch` 拿到的是滑块页或 412；把地址交给信源自己的浏览器标签页打开、再取 `document.documentElement.outerHTML`，才拿得到带日期的列表。同一个信源的文章正文也要走这条：`pageRules()` 见到 `via: opencli` 会给每篇文章单开一个会话（名字取 `article:<id>`），读完就 `browser <session> close`，既不会两个抓取抢同一个标签页，也不会留下几十个标签页。代价是一次抓取要驱动浏览器，证监会一轮 18 条约 22 秒，正文每篇再多几秒。**挑战脚本有时在等待窗口（约 20 秒）内没跑完**，那一条就记为 `unconfirmed`：标题和链接在库里，但没有正文，因此没有摘要、不进公开列表；下一轮采集按新条目重新试，不改写旧记录。
+- **证监会要闻的栏目号会变**：`c100028` 是旧栏目，页面上还挂着 2021 年的稿子；当前稿子在 `c106311`。接入前先在浏览器里看一眼“最新一条的日期”，别被静态列表骗了。
+- **沪深公告走巨潮资讯的表单接口**，不是 JSON：同一个接口用 JSON 提交会被忽略过滤条件（返回 36 万条），必须 `bodyForm` + `application/x-www-form-urlencoded`。`seDate` 留空表示“最新一页”，不用在配置里写死日期。`plate=sh`/`plate=sz` 才是沪深两市的切分条件（`column` 传什么都一样）；`category` 只有 `category_fxts_szsh`（风险提示）这类真编码会生效，写错编码等于不加过滤。
+- **公告链接是 PDF，正文不抓**。`json_list` 见到 `url` 以 `.pdf/.doc/.xls` 结尾时把 `bodyStatus` 记为 `none`：公告标题已经带公司名和事项，PDF 正文走 Jina 读取既慢又会失败（实测 30 条里只有 4 条读成）。摘要用 `summaryTemplate` 由字段拼成「证券名称（代码）」，卡片上至少能看出是哪家公司。这个字段只在 JSON 接口里生效。
+
+**体量提醒**：沪深公告合计每天约一千条，而这个采集器每次只取列表第一页。`pageSize=30`、30 分钟一轮，理论容量 1440 条/天，能覆盖日均量，但公告集中在 15:30–19:00 和 8:00–9:00，高峰时段会漏。要更细，就在后台给这两个源设 `selection_class: filings`（把入选门槛抬到 72），或者把 `pageSize` 加到 50（接口允许），别指望它覆盖全部公告。
+
 ## 分级、参与方式与全文
 
 - **分级** `tier`：`T1` 官方一手（官网、官方博客、机构）、`T1_5` 官方账号与准官方创作者、`T2` 媒体与个人、`EXCLUDE_MP` 不参与精选。入选门槛按分级不同（`industry/selection.ts`）。

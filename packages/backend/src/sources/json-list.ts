@@ -159,11 +159,17 @@ export async function fetchJsonList(source: SourceRow): Promise<Candidate[]> {
     const read = await jinaRead(jinaTarget, { purpose: "source_listing", subject: `source:${source.id}`, ...(embedded ? { format: "html" as const } : {}), perRead: true });
     text = read.markdown;
   } else {
+    // A form endpoint (cninfo's announcement search reads URL-encoded fields, not JSON) is sent as a form;
+    // anything with a body is a POST unless the source says otherwise.
+    const form = c.bodyForm as Record<string, string> | undefined;
+    const hasBody = !!form || !!c.bodyJson;
     text = requireOk(await fetchListing(url, {
       redirectPolicy: "same-origin",
-      method: c.method ?? "GET",
-      headers: c.bodyJson ? { ...headers, "content-type": "application/json" } : headers,
-      body: c.bodyJson ? JSON.stringify(c.bodyJson) : undefined,
+      method: c.method ?? (hasBody ? "POST" : "GET"),
+      headers: form
+        ? { ...headers, "content-type": "application/x-www-form-urlencoded; charset=UTF-8" }
+        : c.bodyJson ? { ...headers, "content-type": "application/json" } : headers,
+      body: form ? new URLSearchParams(form).toString() : c.bodyJson ? JSON.stringify(c.bodyJson) : undefined,
       timeoutMs: 25_000,
     })).text();
   }
@@ -188,8 +194,14 @@ export async function fetchJsonList(source: SourceRow): Promise<Candidate[]> {
     const url = (c.urlTemplate && renderTemplate(c.urlTemplate, item)) || (c.urlTemplateFallback && renderTemplate(c.urlTemplateFallback, item));
     if (!title || !url) continue;
     const externalId = c.externalIdPath ? getPath(item, c.externalIdPath) : null;
-    const summary = firstString(item, c.summaryPaths);
+    // A field the API only carries as separate parts (a stock's name and code) is composed here; a
+    // missing part leaves no summary rather than half of one.
+    const summary = firstString(item, c.summaryPaths)
+      ?? (c.summaryTemplate ? renderTemplate(c.summaryTemplate, item) : null);
     const summaryIsBody = !c.detail?.bodyUrlSuffix && c.summaryIsBody === true && !!summary;
+    // A link straight to a PDF or an office document has no page to read: the item keeps its title,
+    // summary and link, and no body is fetched for it.
+    const documentFile = /\.(?:pdf|docx?|xlsx?|pptx?|zip|rar|7z)(?:[?#]|$)/i.test(url);
     out.push({
       url,
       title: collapseWhitespace(stripTags(title)),
@@ -197,7 +209,7 @@ export async function fetchJsonList(source: SourceRow): Promise<Candidate[]> {
       ...toDate(getPath(item, c.publishedAtPath), c.publishedAtUnit, c.publishedAtUtcOffset),
       excerpt: summary ? collapseWhitespace(stripTags(summary)).slice(0, 2000) : null,
       bodyText: summaryIsBody ? stripTags(summary!) : null,
-      bodyStatus: summaryIsBody ? "ok" : "pending",
+      bodyStatus: documentFile ? "none" : summaryIsBody ? "ok" : "pending",
       raw: { externalId: externalId ?? null },
     });
   }
