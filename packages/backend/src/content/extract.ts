@@ -13,7 +13,7 @@ import { getArticle } from "../providers/socialdata.ts";
 import { articleUtcOffset, readPublicationDate, type PublicationDate } from "../sources/dates.ts";
 import type { SourceRow } from "../sources/types.ts";
 import { onlyXArticleLink, xArticleText } from "../sources/x.ts";
-import { sanitizeBody, trimTrailingChrome } from "./sanitize.ts";
+import { sanitizeBody, trimLeadingWidgets, trimTrailingChrome } from "./sanitize.ts";
 import { contentHash, fillPublicationTime, reviseMaterial, updatePresentation, type MediaItem } from "./materials.ts";
 import { markdownBody } from "./markdown.ts";
 
@@ -461,7 +461,7 @@ export function readableDocument(document: Doc, url: string, rules: PageRules = 
   const article = new Readability(document as unknown as ConstructorParameters<typeof Readability>[0], { charThreshold: MIN_BODY_CHARS, keepClasses: false }).parse();
   if (!article?.content) return null;
   const clean = trimTrailingChrome(sanitizeBody(article.content, url));
-  const text = stripTags(clean);
+  const text = trimLeadingWidgets(stripTags(clean));
   if (text.length < MIN_BODY_CHARS) return null;
   try { assertPageContent(article.title ?? "", text); }
   catch (error) {
