@@ -13,6 +13,8 @@ export interface TermGroup {
 export const RELEVANCE = {
   /** 达到这个分数才进精选；按本站一天的流量校准，不要照抄模型的 60/76。 */
   threshold: 45,
+  /** 网页 AI 评分（selection=webai）进精选的门槛；比词表分严格。 */
+  webaiThreshold: 60,
   /** 信源分级的底分：一手官方来源天然更值得看。 */
   baseByTier: { T1: 15, T1_5: 12, T2: 8 } as Record<string, number>,
   /** 主体：公司、指数、品种、机构。同一条只取命中过的不同 id。 */
