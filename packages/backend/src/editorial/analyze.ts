@@ -34,6 +34,7 @@ import { CATEGORY_GUIDE, CATEGORY_TAGS, ENTITIES, ENTITY_TAGS, ITEM_TYPES, norma
 import { promptText, promptVersion } from "./prompts.ts";
 import { editorialSettings, type SelectionRules } from "./config.ts";
 import { matchSelectionRules } from "./rules.ts";
+import { scoreMaterial, segmentReason } from "./segment.ts";
 import { buildWebCleanPrompt, parseWebCleanAnswer } from "./webai.ts";
 import { askWebAi } from "../providers/webai.ts";
 import { originalPostCopy } from "../content/posts.ts";
@@ -218,8 +219,8 @@ export interface AnalysisRun {
     reused: boolean;
   } | null;
   structure: (ReturnType<typeof normalizeStructure> & { model: string; receiptId: number; reused: boolean }) | null;
-  /** A rule judgement (selection strategy "rules"); the model scores are absent then. */
-  rule: { selected: boolean; reason: string; category: string | null; tags: string[] } | null;
+  /** A rule judgement (selection strategy "rules" or "segment"); the model scores are absent then. */
+  rule: { selected: boolean; reason: string; category: string | null; tags: string[]; score?: number } | null;
 }
 
 const isContentFilter = (error: unknown) => failureKind(error) === "refused" && /contentFilter|"1301"/.test((error as Error).message);
@@ -554,6 +555,23 @@ async function decideByRules(a: AnalyzeInputArticle, _opts: StepOpts, rules: Sel
   };
 }
 
+/**
+ * The site's segmentation score: entities, places, events and actions decide how relevant the
+ * material is. Explicit rules still win when the admin has set keywords, symbols or sources;
+ * otherwise the score against the industry threshold decides 精选.
+ */
+async function decideBySegment(a: AnalyzeInputArticle, _opts: StepOpts, rules: SelectionRules): Promise<SelectionDecision> {
+  if (rules.keywords.length || rules.symbols.length || rules.sources.length || rules.excludeKeywords.length || rules.excludeSources.length) {
+    return decideByRules(a, _opts, rules);
+  }
+  const result = scoreMaterial(a);
+  const reason = segmentReason(result);
+  return {
+    selected: result.selected, near: result.selected, blocked: false, reason, prefilter: null, scores: null,
+    rule: { selected: result.selected, reason, category: rules.category, tags: rules.tags, score: result.score },
+  };
+}
+
 /** Structure and copy from the models, as the default pipeline writes them. */
 async function writeWithModel(a: AnalyzeInputArticle, decision: SelectionDecision, opts: StepOpts): Promise<WritingDecision> {
   const original = originalPostCopy(a.xPost, a.url);
@@ -652,7 +670,7 @@ async function writeWithWebAi(a: AnalyzeInputArticle, decision: SelectionDecisio
 /** The ids "auto" resolves to for this deployment; the admin shows the resolved behaviour by switching. */
 export function resolveStrategies(settings: { selection: string; writing: string }, modelCallsEnabled: boolean, webAiReady = false): { selection: string; writing: string } {
   return {
-    selection: settings.selection === "auto" ? (modelCallsEnabled ? "model" : "rules") : settings.selection,
+    selection: settings.selection === "auto" ? (modelCallsEnabled ? "model" : "segment") : settings.selection,
     writing: settings.writing === "auto" ? (modelCallsEnabled ? "model" : webAiReady ? "webai" : "source") : settings.writing,
   };
 }
@@ -671,9 +689,10 @@ export async function runAnalysis(a: AnalyzeInputArticle, opts: StepOpts = {}): 
   return runStrategyPipeline(a, selection, writing, settings.rules, opts);
 }
 
-registerSelectionStrategy({ id: "auto", label: "自动（有模型用模型评分，没有用规则筛选）", decide: decideAuto });
+registerSelectionStrategy({ id: "auto", label: "自动（有模型用模型评分，没有用分词筛选）", decide: decideAuto });
 registerSelectionStrategy({ id: "model", label: "模型评分（预筛 + 两次打分）", decide: decideByModel });
 registerSelectionStrategy({ id: "rules", label: "规则筛选（关键词 / 来源 / 标的 / 时间窗）", decide: decideByRules });
+registerSelectionStrategy({ id: "segment", label: "分词筛选（主体 / 事件 / 动作评分，高分进精选）", decide: decideBySegment });
 registerWritingStrategy({ id: "auto", label: "自动（有模型用模型写作，没有用原文写作）", write: writeAuto });
 registerWritingStrategy({ id: "webai", label: "网页 AI 清洗（千问 / 元宝 / Kimi…）", write: writeWithWebAi });
 registerWritingStrategy({ id: "model", label: "模型写作（结构 + 中文标题摘要）", write: writeWithModel });
@@ -738,7 +757,7 @@ export async function analyzeArticle(articleId: string, opts: StepOpts = {}): Pr
   // Rules with the material's own copy (or a web AI) need no page: the title and feed excerpt are enough.
   const settings = await editorialSettings();
   const { selection, writing } = resolveStrategies(settings, config.modelCallsEnabled, settings.webai.enabled);
-  const ownCopy = selection === "rules" && (writing === "source" || writing === "webai");
+  const ownCopy = (selection === "rules" || selection === "segment") && (writing === "source" || writing === "webai");
   // Its page first; extraction queues the analysis again (normally the queue already routed it there).
   if (!ownCopy && waitsForPage(input)) return { analysisId: null, stale: false, needsBody: true, rule: false, output: null, receiptIds: [], reused: true };
   const run = await runAnalysis(input, opts);
