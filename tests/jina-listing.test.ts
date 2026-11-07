@@ -28,6 +28,12 @@ const jina = http.createServer((req, res) => {
     res.writeHead(200, { "content-type": "text/plain", "x-request-id": "nul-fixture", "x-usage-tokens": "100" });
     return void res.end("Title: 原文\n\nMarkdown Content:\n正文\0内容😀\n");
   }
+  if (req.url?.endsWith("/api/items")) {
+    res.writeHead(200, { "content-type": "text/plain" });
+    return void res.end(`Title: API\nURL Source: https://example.org/api/items\n\nMarkdown Content:\n${JSON.stringify({
+      data: [{ id: `api-${T}`, title: `API ${T}`, digest: "摘要", original_time: 1794017564 }],
+    })}`);
+  }
   if (req.headers["x-return-format"] === "html" && req.url?.endsWith("/articles")) {
     res.writeHead(200, { "content-type": "text/plain" });
     const items = [{ _key: "k1", slug: `embedded-${T}`, title: `Embedded ${T}`, publicationDate: "2026-09-24", tags: ["product"] }];
@@ -118,6 +124,25 @@ test("a JSON listing embedded in a page is read from Jina as rendered HTML", asy
   assert.equal(post?.url, `https://example.org/articles/embedded-${T}`);
   assert.equal(post?.published_at.toISOString(), "2026-09-23T16:00:00.000Z");
   assert.equal(post?.publication_time, "2026-09-24");
+  assert.equal((await sql`SELECT 1 FROM receipts WHERE subject = ${`source:${id}`} AND service = 'jina'`).length, 1);
+});
+
+test("a JSON API on a host we cannot reach is read through Jina and parsed as JSON", async () => {
+  const id = `${SOURCE}-api`;
+  await sql`INSERT INTO sources (id, name, kind, tier, participation_mode, next_fetch_at, config, cursor)
+    VALUES (${id}, 'Jina JSON API', 'json_list', 'T1', 'editorial', '2100-01-01',
+            ${sql.json({ url: "https://r.jina.ai/https://example.org/api/items", mode: "json_api", itemsPath: "data",
+              titlePaths: ["title"], summaryPaths: ["digest"], publishedAtPath: "original_time", publishedAtUnit: "epoch_s",
+              externalIdPath: "id", urlTemplate: "https://example.org/news/{id}" })},
+            ${sql.json({ initializedAt: "2026-09-01T00:00:00.000Z" })})`;
+  const run = await collectSource(id, { force: true });
+  assert.equal(run.status, "ok", run.error ?? "");
+  const [post] = await sql<{ title: string; url: string; excerpt: string; published_at: Date }[]>`
+    SELECT title, url, excerpt, published_at FROM articles WHERE source_id = ${id}`;
+  assert.equal(post?.title, `API ${T}`);
+  assert.equal(post?.url, `https://example.org/news/api-${T}`);
+  assert.equal(post?.excerpt, "摘要");
+  assert.equal(post?.published_at.toISOString(), "2026-11-07T02:12:44.000Z");
   assert.equal((await sql`SELECT 1 FROM receipts WHERE subject = ${`source:${id}`} AND service = 'jina'`).length, 1);
 });
 

@@ -652,6 +652,85 @@
       "syndicate_fulltext": false
     },
     {
+      "id": "cn-wallstreetcn-live",
+      "name": "华尔街见闻 · 快讯",
+      "kind": "json_list",
+      "config": {
+        "url": "https://api-one.wallstcn.com/apiv1/content/lives?channel=global-channel&limit=100",
+        "mode": "json_api",
+        "headers": {
+          "accept": "application/json",
+          "referer": "https://wallstreetcn.com/live/global",
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+        },
+        "itemsPath": "data.items",
+        "titlePaths": ["title", "content_text"],
+        "summaryPaths": ["content_text"],
+        "publishedAtPath": "display_time",
+        "publishedAtUnit": "epoch_s",
+        "externalIdPath": "id",
+        "urlTemplate": "{raw:uri}",
+        "_aihot": {
+          "initialBackfillLimit": 50
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 10,
+      "tags": ["快讯", "宏观"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-zhitong-recommend",
+      "name": "智通财经 · 推荐",
+      "kind": "json_list",
+      "config": {
+        "url": "https://r.jina.ai/https://www.zhitongcaijing.com/content/recommend.html?data_type=1&page=1",
+        "mode": "json_api",
+        "itemsPath": "data",
+        "titlePaths": ["title"],
+        "summaryPaths": ["digest"],
+        "publishedAtPath": "original_time",
+        "publishedAtUnit": "epoch_s",
+        "externalIdPath": "id",
+        "urlTemplate": "https://www.zhitongcaijing.com{raw:url}",
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["港股", "财经"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-jiemian-flash",
+      "name": "界面新闻 · 快讯",
+      "kind": "web_list",
+      "config": {
+        "url": "https://www.jiemian.com/lists/1324kb.html",
+        "parseMode": "html",
+        "itemSelector": ".columns-right-center__newsflash-item",
+        "linkSelector": "h4 a",
+        "titleSelector": "h4 a",
+        "summarySelector": ".columns-right-center__newsflash-content__summary",
+        "publishedAtAttribute": "data-time",
+        "allowUrlPrefixes": ["https://www.jiemian.com/article/"],
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 15,
+      "tags": ["快讯", "财经"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
       "id": "rss-ecb-press",
       "name": "ECB · Press",
       "kind": "rss",

@@ -25,8 +25,10 @@ export async function jinaRead(
   opts: { purpose: string; subject: string; format?: "markdown" | "html"; cacheToleranceSeconds?: number; perRead?: boolean; round?: string; removeSelector?: string },
 ): Promise<{ markdown: string; raw: string; receiptId: number }> {
   const key = credential("collectors", "JINA_API_KEY");
-  if (!key) throw new Error("JINA_API_KEY is not configured");
   const base = (credential("collectors", "JINA_BASE_URL") ?? "https://r.jina.ai").replace(/\/$/, "");
+  // Jina's free tier answers anonymous reads; a key lowers the rate limits and bills the account. Without
+  // one the read is still recorded, so the same budget and receipt rules apply.
+  const auth: Record<string, string> = key ? { authorization: `Bearer ${key}` } : {};
   // A listing whose freshness matters (xAI news) caps how old Jina's cached rendering may be.
   const tolerance: Record<string, string> = Number.isInteger(opts.cacheToleranceSeconds) && opts.cacheToleranceSeconds! >= 0 ? { "x-cache-tolerance": String(opts.cacheToleranceSeconds) } : {};
   const remove: Record<string, string> = opts.removeSelector ? { "x-remove-selector": opts.removeSelector } : {};
@@ -37,7 +39,7 @@ export async function jinaRead(
     { service: "jina", model: null, purpose: opts.purpose, subject: opts.subject, identity: { url: targetUrl, day, format: opts.format ?? "markdown", ...read, ...remove }, requestSummary: { url: targetUrl } },
     async () => {
       const res = await guardedFetch(`${base}/${targetUrl}`, {
-        headers: { authorization: `Bearer ${key}`, "x-return-format": opts.format ?? "markdown", accept: "text/plain", ...tolerance, ...remove },
+        headers: { ...auth, "x-return-format": opts.format ?? "markdown", accept: "text/plain", ...tolerance, ...remove },
         timeoutMs: 60_000,
         maxBytes: 6 * 1024 * 1024,
       });

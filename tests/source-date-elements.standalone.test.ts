@@ -24,6 +24,18 @@ after(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
 });
 
+test("a listing date held in an epoch attribute is the timestamp, and a teaser becomes the excerpt", () => {
+  const list = `<ul><li class="flash" data-time="1794017564">` +
+    `<h4><a href="/article/1">央行连续第24个月增持黄金</a></h4>` +
+    `<div class="summary">据央行，10月末黄金储备报7830万盎司。</div></li></ul>`;
+  const [item] = fromHtml(list, base, { config: {
+    url: base, itemSelector: "li.flash", linkSelector: "h4 a", titleSelector: "h4 a",
+    summarySelector: ".summary", publishedAtAttribute: "data-time",
+  } } as never);
+  assert.equal(item?.publishedAt?.toISOString(), "2026-11-07T02:12:44.000Z");
+  assert.equal(item?.excerpt, "据央行，10月末黄金储备报7830万盎司。");
+});
+
 test("a listing uses the visible date when its tooltip is not a publication date", () => {
   const items = fromHtml(html, base, { config: { url: base, itemSelector: "article", publishedAtSelector: "span[title^='Unix:']", publishedAtUtcOffset: "+00:00" } } as never);
   assert.equal(items[0]!.publishedAt?.toISOString(), "2026-09-11T00:00:00.000Z");
