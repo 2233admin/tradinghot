@@ -32,6 +32,7 @@ export default [
   route("topics/:slug/page/:page", "routes/topic.tsx", { id: "topic-page" }),
   route("about", "routes/about.tsx"),
   route("sources", "routes/sources.tsx"),
+  route("settings", "routes/settings.tsx"),
   route("terms", "routes/terms.tsx"),
   route("privacy", "routes/privacy.tsx"),
   route("changelog", "routes/changelog.tsx"),

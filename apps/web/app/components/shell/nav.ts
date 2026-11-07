@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { NAV, subjectAfter, withSubject } from "@aihot/site";
 import { webModules } from "../../site-modules";
 import {
-  IconBolt, IconBookmark, IconDoc, IconFlame, IconGrid, IconHeart, IconHistory, IconList, IconMessage, IconPlug, IconRss, IconUser,
+  IconBolt, IconBookmark, IconDoc, IconFlame, IconGrid, IconHeart, IconHistory, IconList, IconMessage, IconPlug, IconRss, IconSettings, IconUser,
 } from "../icons";
 
 export interface NavItem {
@@ -34,6 +34,7 @@ const SECTIONS: Array<{ title: string; items: NavItem[] }> = [
     items: [
       { to: "/agent", label: "Agent 接入", icon: IconPlug },
       { to: "/sources", label: "数据源", icon: IconRss },
+      { to: "/settings", label: "设置", icon: IconSettings },
       { to: "/about", label: "关于", icon: IconHeart },
       { to: "/changelog", label: "更新日志", icon: IconHistory, changelog: true },
       { to: "/feedback", label: "反馈", icon: IconMessage },
