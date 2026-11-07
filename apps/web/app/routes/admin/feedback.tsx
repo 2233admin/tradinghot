@@ -15,7 +15,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   return adminGet<AdminFeedback>(request, `/api/admin/feedback${new URL(request.url).search}`);
 }
 
-export const meta: Route.MetaFunction = () => [{ title: `反馈 · ${SITE.name} 后台` }];
+export const meta: Route.MetaFunction = () => [{ title: `反馈 · ${SITE.name}` }];
 
 const TONE: Record<string, "accent" | "warn" | "ok" | "muted"> = { new: "accent", triaged: "warn", replied: "ok", resolved: "ok", spam: "muted" };
 /** The pool's names, offered while naming a suggestion so the same idea keeps one name. */

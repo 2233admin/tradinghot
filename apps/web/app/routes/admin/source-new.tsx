@@ -8,7 +8,7 @@ import { bj } from "../../features/admin/format";
 import { KIND_LABEL, MODE_LABEL, SELECTION_CLASS_LABEL, TIER_LABEL } from "../../features/admin/labels";
 import { AdminPage, Button, Card, Empty, Field, Input, Select, Textarea } from "../../features/admin/ui";
 
-export const meta: Route.MetaFunction = () => [{ title: `新建信源 · ${SITE.name} 后台` }];
+export const meta: Route.MetaFunction = () => [{ title: `新建信源 · ${SITE.name}` }];
 
 const TEMPLATES: Record<string, Record<string, unknown>> = {
   rss: { feedUrl: "https://example.com/feed.xml" },
@@ -104,7 +104,7 @@ export default function NewSource() {
           </div>
           {duplicate && (
             <div className="mt-4 rounded-card bg-amber/10 px-4 py-3 text-[13px] text-ink-2 ring-1 ring-amber/25">
-              这个地址已经在监控：<Link className="font-medium text-accent" to={`/admin/sources/${encodeURIComponent(duplicate.id)}`}>{duplicate.name}</Link>（{duplicate.id}）。没有新建。
+              这个地址已经在监控：<Link className="font-medium text-accent" to={`/settings/sources/${encodeURIComponent(duplicate.id)}`}>{duplicate.name}</Link>（{duplicate.id}）。没有新建。
             </div>
           )}
           <div className="mt-5 flex justify-end gap-2">
@@ -133,7 +133,7 @@ export default function NewSource() {
                   { label: "create", revalidate: false },
                 );
                 if (!r) return;
-                if (r.created) navigate(`/admin/sources/${encodeURIComponent(r.source.id)}`);
+                if (r.created) navigate(`/settings/sources/${encodeURIComponent(r.source.id)}`);
                 else setDuplicate(r.duplicate);
               }}
             >

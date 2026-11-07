@@ -14,7 +14,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   return { q, rows };
 }
 
-export const meta: Route.MetaFunction = () => [{ title: `内容诊断 · ${SITE.name} 后台` }];
+export const meta: Route.MetaFunction = () => [{ title: `内容诊断 · ${SITE.name}` }];
 
 export default function Content({ loaderData }: Route.ComponentProps) {
   const { q, rows } = loaderData;
@@ -31,7 +31,7 @@ export default function Content({ loaderData }: Route.ComponentProps) {
           <DataTable
             rows={rows}
             rowKey={(r) => r.id}
-            onRowClick={(r) => navigate(`/admin/content/${r.id}`)}
+            onRowClick={(r) => navigate(`/settings/content/${r.id}`)}
             empty="没有找到。URL 会先规范化再比对；标题支持中英文片段。"
             columns={[
               {
@@ -39,7 +39,7 @@ export default function Content({ loaderData }: Route.ComponentProps) {
                 label: "标题",
                 render: (r) => (
                   <div className="min-w-[320px]">
-                    <Link to={`/admin/content/${r.id}`} className="font-medium text-ink hover:text-accent" onClick={(e) => e.stopPropagation()}>{r.title}</Link>
+                    <Link to={`/settings/content/${r.id}`} className="font-medium text-ink hover:text-accent" onClick={(e) => e.stopPropagation()}>{r.title}</Link>
                     <div className="font-mono text-[11.5px] text-ink-4">{r.id}</div>
                   </div>
                 ),

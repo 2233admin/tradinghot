@@ -15,7 +15,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   return adminGet<AdminModels>(request, `/api/admin/models?days=${encodeURIComponent(days)}`);
 }
 
-export const meta: Route.MetaFunction = () => [{ title: `模型与评测 · ${SITE.name} 后台` }];
+export const meta: Route.MetaFunction = () => [{ title: `模型与评测 · ${SITE.name}` }];
 
 const SOURCE_LABEL = { admin: "后台切换", env: "环境变量", default: "代码默认" } as const;
 
@@ -133,14 +133,14 @@ export default function ModelsAdmin({ loaderData: m }: Route.ComponentProps) {
             <Empty>还没有在后台切换过模型</Empty>
           )}
         </Card>
-        <Card title="同批样本对比（SelectBench）" right={<Link to="/admin/selectbench" className="text-accent">全部运行</Link>} pad={false}>
+        <Card title="同批样本对比（SelectBench）" right={<Link to="/settings/selectbench" className="text-accent">全部运行</Link>} pad={false}>
           {m.benches.length ? (
             <DataTable
               dense
               rows={m.benches}
               rowKey={(b) => b.id}
               columns={[
-                { key: "l", label: "运行", render: (b) => <Link to={`/admin/selectbench/${b.id}`} className="text-ink hover:text-accent">{b.label}</Link> },
+                { key: "l", label: "运行", render: (b) => <Link to={`/settings/selectbench/${b.id}`} className="text-ink hover:text-accent">{b.label}</Link> },
                 { key: "m", label: "模型", render: (b) => <span className="font-mono text-[11.5px] text-ink-3">{b.models.join("、")}</span> },
                 { key: "n", label: "样本", align: "right", render: (b) => num(b.sample_size) },
                 { key: "at", label: "时间", render: (b) => <span className="num whitespace-nowrap">{bj(b.created_at)}</span> },

@@ -14,7 +14,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   return adminGet<AdminRuns>(request, "/api/admin/runs");
 }
 
-export const meta: Route.MetaFunction = () => [{ title: `运行 · ${SITE.name} 后台` }];
+export const meta: Route.MetaFunction = () => [{ title: `运行 · ${SITE.name}` }];
 
 const STATE_LABEL: Record<string, string> = { created: "排队", retry: "等待重试", active: "执行中" };
 
@@ -31,7 +31,7 @@ export default function RunsAdmin({ loaderData }: Route.ComponentProps) {
 
   // Live view: refresh every 20 s while visible.
   useEffect(() => {
-    const t = setInterval(() => document.visibilityState === "visible" && refresh.state === "idle" && refresh.load("/admin/runs"), 20_000);
+    const t = setInterval(() => document.visibilityState === "visible" && refresh.state === "idle" && refresh.load("/settings/runs"), 20_000);
     return () => clearInterval(t);
   }, [refresh]);
 
@@ -59,7 +59,7 @@ export default function RunsAdmin({ loaderData }: Route.ComponentProps) {
         <Card className="mb-5" title="等待去重确认的精选" right={<span>{num(r.grouping.waiting)} 条等待 · {num(r.grouping.needsAttention)} 条超过 10 分钟</span>} pad={false} scrollable>
           <p className="px-4 py-3 text-[13px] text-ink-3">这些新闻已达到精选条件，确认是否重复后才会进入精选。最多展示等待最久的 30 条。</p>
           <DataTable dense rows={r.grouping.items} rowKey={(item) => item.articleId} columns={[
-            { key: "title", label: "新闻", render: (item) => <Link className="text-accent" to={`/admin/content/${item.articleId}`}>{item.title}</Link> },
+            { key: "title", label: "新闻", render: (item) => <Link className="text-accent" to={`/settings/content/${item.articleId}`}>{item.title}</Link> },
             { key: "since", label: "开始等待", render: (item) => <Time at={item.since} /> },
             { key: "recovery", label: "下一步", render: (item) => <Badge tone={item.recovery === "manual" ? "bad" : "warn"}>{item.recovery === "manual" ? "需处理后恢复" : item.recovery === "receipt" ? "等待付费结果自动恢复" : "自动处理中"}</Badge> },
             { key: "error", label: "原因", render: (item) => <span className="line-clamp-2 text-[12px] text-ink-3">{item.receiptId ? `回执 #${item.receiptId} · ` : ""}{item.error ?? "等待身份确认"}</span> },
@@ -129,7 +129,7 @@ export default function RunsAdmin({ loaderData }: Route.ComponentProps) {
               { key: "id", label: "回执", render: (x) => <span className="num">#{x.id}</span> },
               { key: "s", label: "状态", render: (x) => <Badge tone={x.status === "unknown" ? "bad" : "warn"}>{x.status}</Badge> },
               { key: "w", label: "服务", render: (x) => <span className="whitespace-nowrap">{x.service}{x.model ? ` · ${x.model}` : ""}</span> },
-              { key: "p", label: "用途", render: (x) => (x.subject && /^[\w-]{10,}$/.test(x.subject) && x.purpose.includes("analy") ? <Link className="text-accent" to={`/admin/content/${x.subject}`}>{x.purpose}</Link> : x.purpose) },
+              { key: "p", label: "用途", render: (x) => (x.subject && /^[\w-]{10,}$/.test(x.subject) && x.purpose.includes("analy") ? <Link className="text-accent" to={`/settings/content/${x.subject}`}>{x.purpose}</Link> : x.purpose) },
               { key: "e", label: "错误", render: (x) => <span className="line-clamp-2 text-[12px] text-ink-3" title={x.error ?? ""}>{x.error}</span> },
               { key: "a", label: "", render: (x) => (x.status === "unknown" ? <Button size="sm" onClick={() => setReceipt(x)}>核对</Button> : null) },
             ]}
@@ -144,7 +144,7 @@ export default function RunsAdmin({ loaderData }: Route.ComponentProps) {
             columns={[
               { key: "t", label: "目标", render: (d) => d.target_key },
               { key: "s", label: "状态", render: (d) => <Badge tone={d.status === "unknown" ? "bad" : "warn"}>{d.status}</Badge> },
-              { key: "sub", label: "内容", render: (d) => (d.subject_kind === "selected" ? <Link className="text-accent" to={`/admin/content/${d.subject_id}`}>{d.subject_id}</Link> : `${d.subject_kind} ${d.subject_id}`) },
+              { key: "sub", label: "内容", render: (d) => (d.subject_kind === "selected" ? <Link className="text-accent" to={`/settings/content/${d.subject_id}`}>{d.subject_id}</Link> : `${d.subject_kind} ${d.subject_id}`) },
               { key: "at", label: "时间", render: (d) => <Time at={d.updated_at} /> },
               { key: "a", label: "", render: (d) => <Button size="sm" onClick={() => setDelivery(d)}>处理</Button> },
             ]}
@@ -153,14 +153,14 @@ export default function RunsAdmin({ loaderData }: Route.ComponentProps) {
       </div>
 
       <div className="mt-5 grid gap-5 xl:grid-cols-2">
-        <Card title="延迟或失败的信源" right={<Link className="text-accent" to="/admin/sources?health=failing">全部失败信源</Link>} pad={false} scrollable>
+        <Card title="延迟或失败的信源" right={<Link className="text-accent" to="/settings/sources?health=failing">全部失败信源</Link>} pad={false} scrollable>
           <DataTable
             dense
             rows={r.lagging}
             rowKey={(s) => s.id}
             empty="信源都按时采集"
             columns={[
-              { key: "n", label: "信源", render: (s) => <Link className="text-ink hover:text-accent" to={`/admin/sources/${encodeURIComponent(s.id)}`}>{s.name}</Link> },
+              { key: "n", label: "信源", render: (s) => <Link className="text-ink hover:text-accent" to={`/settings/sources/${encodeURIComponent(s.id)}`}>{s.name}</Link> },
               { key: "h", label: "健康", render: (s) => <Badge tone={s.health === "failing" ? "bad" : s.health === "degraded" ? "warn" : "muted"}>{s.health}</Badge> },
               { key: "ok", label: "上次成功", render: (s) => <Time at={s.last_ok_at} /> },
               { key: "nx", label: "应抓", render: (s) => <Time at={s.next_fetch_at} /> },
@@ -186,7 +186,7 @@ export default function RunsAdmin({ loaderData }: Route.ComponentProps) {
             columns={[
               { key: "e", label: "错误", render: (e) => <span className="font-mono text-[11.5px] text-ink-2">{e.error}</span> },
               { key: "n", label: "条数", align: "right", render: (e) => num(e.n) },
-              { key: "x", label: "示例", render: (e) => <Link className="text-accent" to={`/admin/content/${e.example}`}>查看</Link> },
+              { key: "x", label: "示例", render: (e) => <Link className="text-accent" to={`/settings/content/${e.example}`}>查看</Link> },
               { key: "l", label: "最近", render: (e) => <Time at={e.last} /> },
               { key: "a", label: "", align: "right", render: (e) => <Button size="sm" onClick={() => setRequeue(e.error)}>重新处理</Button> },
             ]}

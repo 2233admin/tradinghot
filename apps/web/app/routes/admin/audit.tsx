@@ -11,13 +11,13 @@ export async function loader({ request }: Route.LoaderArgs) {
   return adminGet<AdminAudit>(request, `/api/admin/audit${new URL(request.url).search}`);
 }
 
-export const meta: Route.MetaFunction = () => [{ title: `审计记录 · ${SITE.name} 后台` }];
+export const meta: Route.MetaFunction = () => [{ title: `审计记录 · ${SITE.name}` }];
 
 function subjectLink(subject: string | null) {
   if (!subject) return null;
   const [kind, id] = [subject.slice(0, subject.indexOf(":")), subject.slice(subject.indexOf(":") + 1)];
-  if (kind === "content") return <Link className="text-accent" to={`/admin/content/${id}`}>{subject}</Link>;
-  if (kind === "source") return <Link className="text-accent" to={`/admin/sources/${encodeURIComponent(id)}`}>{subject}</Link>;
+  if (kind === "content") return <Link className="text-accent" to={`/settings/content/${id}`}>{subject}</Link>;
+  if (kind === "source") return <Link className="text-accent" to={`/settings/sources/${encodeURIComponent(id)}`}>{subject}</Link>;
   return <span className="font-mono text-[12px]">{subject}</span>;
 }
 

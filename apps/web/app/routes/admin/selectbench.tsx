@@ -14,7 +14,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   return adminGet<AdminSelectBenchRuns>(request, "/api/admin/selectbench");
 }
 
-export const meta: Route.MetaFunction = () => [{ title: `SelectBench · ${SITE.name} 后台` }];
+export const meta: Route.MetaFunction = () => [{ title: `SelectBench · ${SITE.name}` }];
 
 export default function SelectBench({ loaderData }: Route.ComponentProps) {
   const { run, pending } = useAdminAction();
@@ -53,7 +53,7 @@ export default function SelectBench({ loaderData }: Route.ComponentProps) {
             return (
               <Card
                 key={r.id}
-                title={<Link to={`/admin/selectbench/${r.id}`} className="hover:text-accent">{r.label}</Link>}
+                title={<Link to={`/settings/selectbench/${r.id}`} className="hover:text-accent">{r.label}</Link>}
                 right={<span>{bj(r.created_at, true)} · {r.split ?? "—"} · {num(r.sample_size)} 条 · {r.prompt_version ?? "提示版本未记录"}</span>}
                 pad={false}
               >
@@ -89,7 +89,7 @@ export default function SelectBench({ loaderData }: Route.ComponentProps) {
                 </div>
                 <div className="flex items-center justify-between border-t border-line px-4 py-2 text-[12.5px] text-ink-3">
                   <span>{r.cases ? `${num(r.cases)} 条逐条结果` : "只有汇总"}</span>
-                  {r.cases > 0 && <Link className="text-accent" to={`/admin/selectbench/${r.id}`}>逐条浏览</Link>}
+                  {r.cases > 0 && <Link className="text-accent" to={`/settings/selectbench/${r.id}`}>逐条浏览</Link>}
                 </div>
               </Card>
             );
