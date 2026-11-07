@@ -19,8 +19,14 @@ export function openCli(): { command: string; base: string[] } {
 
 export async function runOpenCli(args: string[], timeoutMs: number): Promise<string> {
   const { command, base } = openCli();
-  const { stdout } = await run(command, [...base, ...args], { timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024, windowsHide: true });
-  return stdout;
+  try {
+    const { stdout } = await run(command, [...base, ...args], { timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024, windowsHide: true });
+    return stdout;
+  } catch (error) {
+    const e = error as { stderr?: string; stdout?: string; message?: string };
+    const detail = [e.stderr, e.stdout].map((s) => (s ?? "").trim()).filter(Boolean).join("\n");
+    throw new Error(`opencli failed: ${(detail || e.message || "unknown error").replace(/\s+/g, " ").slice(0, 600)}`);
+  }
 }
 
 /** `--profile` for a named Browser Bridge context; the adapter's default profile otherwise. */

@@ -35,8 +35,9 @@ import { promptText, promptVersion } from "./prompts.ts";
 import { editorialSettings, type SelectionRules } from "./config.ts";
 import { matchSelectionRules } from "./rules.ts";
 import { scoreMaterial, segmentReason } from "./segment.ts";
-import { buildWebCleanPrompt, parseWebCleanAnswer } from "./webai.ts";
+import { buildWebCleanPrompt, buildWebScorePrompt, parseWebCleanAnswer, parseWebScoreAnswer, rememberWebReview, takeWebReview } from "./webai.ts";
 import { askWebAi } from "../providers/webai.ts";
+import { RELEVANCE } from "@aihot/industry/relevance";
 import { originalPostCopy } from "../content/posts.ts";
 import { wordingProblems } from "./wording.ts";
 
@@ -561,15 +562,57 @@ async function decideByRules(a: AnalyzeInputArticle, _opts: StepOpts, rules: Sel
  * otherwise the score against the industry threshold decides 精选.
  */
 async function decideBySegment(a: AnalyzeInputArticle, _opts: StepOpts, rules: SelectionRules): Promise<SelectionDecision> {
-  if (rules.keywords.length || rules.symbols.length || rules.sources.length || rules.excludeKeywords.length || rules.excludeSources.length) {
-    return decideByRules(a, _opts, rules);
+  // Explicit filters (spam words, excluded sources, lookback) apply before scoring; include
+  // criteria (keywords/symbols/sources) stay the rule filter's own job when set.
+  const gate = matchSelectionRules(a, rules);
+  if (!gate.selected) {
+    return {
+      selected: false, near: false, blocked: false, reason: gate.reason, prefilter: null, scores: null,
+      rule: { selected: false, reason: gate.reason, category: rules.category, tags: rules.tags },
+    };
   }
+  if (rules.keywords.length || rules.symbols.length || rules.sources.length) return decideByRules(a, _opts, rules);
   const result = scoreMaterial(a);
   const reason = segmentReason(result);
   return {
     selected: result.selected, near: result.selected, blocked: false, reason, prefilter: null, scores: null,
     rule: { selected: result.selected, reason, category: rules.category, tags: rules.tags, score: result.score },
   };
+}
+
+/**
+ * The free web chat model reads the material, names its terms and scores it; the copy it writes
+ * is kept for the writing step. A failed site falls back to the deterministic segmentation score.
+ */
+async function decideByWebAi(a: AnalyzeInputArticle, opts: StepOpts, rules: SelectionRules): Promise<SelectionDecision> {
+  const settings = await editorialSettings();
+  if (!settings.webai.enabled) return decideBySegment(a, opts, rules);
+  // A spam word or excluded source never spends a web AI call.
+  const gate = matchSelectionRules(a, rules);
+  if (!gate.selected) {
+    return {
+      selected: false, near: false, blocked: false, reason: gate.reason, prefilter: null, scores: null,
+      rule: { selected: false, reason: gate.reason, category: rules.category, tags: rules.tags },
+    };
+  }
+  if (rules.keywords.length || rules.symbols.length || rules.sources.length) return decideByRules(a, opts, rules);
+  try {
+    const answer = await askWebAi(buildWebScorePrompt(a), {
+      sites: settings.webai.sites,
+      profile: settings.webai.profile,
+      timeoutSeconds: settings.webai.timeoutSeconds,
+    });
+    const review = parseWebScoreAnswer(answer.text);
+    rememberWebReview(a.id, a.revision, review);
+    const selected = review.score >= RELEVANCE.webaiThreshold;
+    const reason = `网页 AI 评分 ${review.score}：${review.keywords.join("、") || "无关键词"}`;
+    return {
+      selected, near: selected, blocked: false, reason, prefilter: null, scores: null,
+      rule: { selected, reason, category: rules.category, tags: rules.tags, score: review.score },
+    };
+  } catch {
+    return decideBySegment(a, opts, rules);
+  }
 }
 
 /** Structure and copy from the models, as the default pipeline writes them. */
@@ -645,6 +688,18 @@ async function writeAuto(a: AnalyzeInputArticle, decision: SelectionDecision, op
 /** The selected material cleaned by a free web chat UI; anything else keeps its own copy. */
 async function writeWithWebAi(a: AnalyzeInputArticle, decision: SelectionDecision, opts: StepOpts): Promise<WritingDecision> {
   if (!decision.selected) return writeFromSource(a, decision);
+  // The selection call already wrote the copy; ask the site once per article.
+  const review = takeWebReview(a.id, a.revision);
+  if (review) {
+    return {
+      writing: {
+        kind: "understand", model: "webai:review", titleZh: review.title, summaryZh: review.summary,
+        reasonZh: review.reason ?? (decision.reason.startsWith("规则命中") || decision.reason.startsWith("网页 AI 评分") ? decision.reason : null),
+        receiptIds: [], reused: false,
+      },
+      structure: null,
+    };
+  }
   const settings = await editorialSettings();
   if (!settings.webai.enabled) return writeFromSource(a, decision);
   try {
@@ -693,6 +748,7 @@ registerSelectionStrategy({ id: "auto", label: "自动（有模型用模型评�
 registerSelectionStrategy({ id: "model", label: "模型评分（预筛 + 两次打分）", decide: decideByModel });
 registerSelectionStrategy({ id: "rules", label: "规则筛选（关键词 / 来源 / 标的 / 时间窗）", decide: decideByRules });
 registerSelectionStrategy({ id: "segment", label: "分词筛选（主体 / 事件 / 动作评分，高分进精选）", decide: decideBySegment });
+registerSelectionStrategy({ id: "webai", label: "网页 AI 评分（分词、评分与精选，慢）", decide: decideByWebAi });
 registerWritingStrategy({ id: "auto", label: "自动（有模型用模型写作，没有用原文写作）", write: writeAuto });
 registerWritingStrategy({ id: "webai", label: "网页 AI 清洗（千问 / 元宝 / Kimi…）", write: writeWithWebAi });
 registerWritingStrategy({ id: "model", label: "模型写作（结构 + 中文标题摘要）", write: writeWithModel });

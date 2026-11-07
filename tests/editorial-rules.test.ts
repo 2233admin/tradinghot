@@ -9,7 +9,7 @@ import { clearEditorialSettings } from "@aihot/backend/editorial/config";
 import { matchSelectionRules } from "@aihot/backend/editorial/rules";
 import { processArticle } from "@aihot/backend/jobs/content";
 import { resolveStrategies } from "@aihot/backend/editorial/analyze";
-import { buildWebCleanPrompt, parseWebCleanAnswer } from "@aihot/backend/editorial/webai";
+import { buildWebCleanPrompt, buildWebScorePrompt, parseWebCleanAnswer, parseWebScoreAnswer, rememberWebReview, takeWebReview } from "@aihot/backend/editorial/webai";
 import { replyFrom } from "@aihot/backend/providers/webai";
 
 type MatchInput = Parameters<typeof matchSelectionRules>[0];
@@ -66,6 +66,26 @@ test("the web AI prompt carries the material and the reply parser tolerates fenc
   assert.throws(() => parseWebCleanAnswer('{"title":"","summary":"x"}'), /标题或摘要为空/);
   assert.deepEqual(replyFrom('[{"Role":"User","Text":"prompt"},{"Role":"Assistant","Text":"answer"}]'), "answer");
   assert.equal(replyFrom('[{"Role":"User","Text":"prompt"}]'), null);
+});
+
+test("the web AI scoring call keeps its terms and copy for the writing step", () => {
+  const article = {
+    id: "web-2", revision: 3, title: "Fed cuts rates", url: "https://example.com/b", author: null,
+    publishedAt: new Date("2026-11-06T10:00:00Z"), bodyText: "The Fed cut rates by 25bp.", excerpt: null, xPost: null,
+    media: [], source: { name: "Example Wire", kind: "rss", tier: "T2", firstParty: false },
+  };
+  const prompt = buildWebScorePrompt(article);
+  assert.match(prompt, /Example Wire/);
+  assert.match(prompt, /Fed cut rates by 25bp/);
+
+  const review = parseWebScoreAnswer('```json\n{"score":130,"keywords":["美联储","降息"," "],"title":"美联储降息","summary":"美联储降息 25 个基点。","reason":"利率路径变化"}\n```');
+  assert.deepEqual(review, {
+    score: 100, keywords: ["美联储", "降息"], title: "美联储降息", summary: "美联储降息 25 个基点。", reason: "利率路径变化",
+  });
+  rememberWebReview("web-2", 3, review);
+  assert.deepEqual(takeWebReview("web-2", 3), review);
+  assert.equal(takeWebReview("web-2", 4), null, "another revision must ask again");
+  assert.throws(() => parseWebScoreAnswer('{"score":"high","title":"x","summary":"y"}'), /字段不对/);
 });
 
 test("rules select and source writing publish with no model call", async () => {

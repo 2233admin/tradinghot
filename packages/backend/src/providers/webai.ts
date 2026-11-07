@@ -97,7 +97,7 @@ export function askWebAi(prompt: string, t: WebAiTransport): Promise<WebAiAnswer
       } catch (error) {
         resting.set(site, Date.now() + SITE_REST_MS);
         const message = error instanceof Error ? error.message : String(error);
-        errors.push(`${site}: ${message.split("\n")[0]}`);
+        errors.push(`${site}: ${message.replace(/\s+/g, " ").slice(0, 400)}`);
       }
     }
     throw new Error(errors.length ? `web ai sites failed: ${errors.join("; ")}` : "every web ai site is resting");
