@@ -1,0 +1,184 @@
+{
+  "source": {
+    "screenshot": "orca-paste-1794041923332-1b35bf4a-9399-4d08-95b2-5d23f248cbfb.png",
+    "width": 760,
+    "height": 248,
+    "transcribed_at": "2026-11-07",
+    "note": "网页表格截图的转录。原始分辨率过低：表格主体的题材名可辨，顶部事件/节点行的小字不可辨，因此 events 一律为空。"
+  },
+  "layout": {
+    "date_columns": 17,
+    "theme_rows": 8,
+    "row_labels": ["涨停第一", "涨停第二", "涨停第三", "涨停第四", "涨停第五", "涨停第六", "涨停第七", "涨停第八"],
+    "date_range": ["2026-10-14", "2026-11-05"],
+    "date_basis": "表头 17 个日期只有落在 2026 年才恰好是 10-14 起的全部交易日：10-16 周五之后跳到 10-19 周一，10-23 周五之后跳到 10-26 周一，11-02 又是周一。年份据此定为 2026。",
+    "cell": "days[].themes[] 的第 rank 项 = 当日涨停强度排第 rank 的题材；右侧标签列印的「涨停第一…第八」与 rank 一一对应。"
+  },
+  "theme_groups": {
+    "AI应用": "#92d051",
+    "大消费": "#ffff00",
+    "医药": "#00b1ef",
+    "机器人": "#fe0000",
+    "光伏": "#70309e",
+    "其他": "#ffffff"
+  },
+  "days": [
+    {"date": "2026-10-14", "weekday": "周三", "events": [], "themes": [
+      {"rank": 1, "theme": "AI应用/传媒", "group": "AI应用", "fill": "#9ec471", "confidence": "high"},
+      {"rank": 2, "theme": "冰雪产业", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 3, "theme": "化工/染料", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 4, "theme": "水产", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 5, "theme": "PCB产业链", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 6, "theme": "医药", "group": "医药", "fill": "#00b1f1", "confidence": "high"},
+      {"rank": 7, "theme": "大消费", "group": "大消费", "fill": "#ffff01", "confidence": "high"},
+      {"rank": 8, "theme": "煤炭", "group": "其他", "fill": "#ffffff", "confidence": "high"}
+    ]},
+    {"date": "2026-10-15", "weekday": "周四", "events": [], "themes": [
+      {"rank": 1, "theme": "大消费", "group": "大消费", "fill": "#fffe00", "confidence": "high"},
+      {"rank": 2, "theme": "PCB产业链", "group": "其他", "fill": "#fffdff", "confidence": "high"},
+      {"rank": 3, "theme": "AI应用/传媒", "group": "AI应用", "fill": "#95cc55", "confidence": "high"},
+      {"rank": 4, "theme": "医药", "group": "医药", "fill": "#02b0ef", "confidence": "high"},
+      {"rank": 5, "theme": "染料", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 6, "theme": "物流", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 7, "theme": "业绩预增", "group": "其他", "fill": "#ffffff", "confidence": "high"}
+    ]},
+    {"date": "2026-10-16", "weekday": "周五", "events": [], "themes": [
+      {"rank": 1, "theme": "低空经济", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 2, "theme": "军工/航天", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 3, "theme": "机器人", "group": "机器人", "fill": "#fe0000", "confidence": "high"},
+      {"rank": 4, "theme": "传媒", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 5, "theme": "算力/半导体", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 6, "theme": "医药", "group": "医药", "fill": "#02aff1", "confidence": "high"}
+    ]},
+    {"date": "2026-10-19", "weekday": "周一", "events": [], "themes": [
+      {"rank": 1, "theme": "机器人", "group": "机器人", "fill": "#fe0000", "confidence": "high"},
+      {"rank": 2, "theme": "算力/半导体", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 3, "theme": "低空经济", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 4, "theme": "PCB产业链", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 5, "theme": "军工/航天", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 6, "theme": "大消费", "group": "大消费", "fill": "#ffff01", "confidence": "high"},
+      {"rank": 7, "theme": "医药", "group": "医药", "fill": "#01b0f3", "confidence": "high"},
+      {"rank": 8, "theme": "染料", "group": "其他", "fill": "#ffffff", "confidence": "high"}
+    ]},
+    {"date": "2026-10-20", "weekday": "周二", "events": [], "themes": [
+      {"rank": 1, "theme": "机器人", "group": "机器人", "fill": "#fe0000", "confidence": "high"},
+      {"rank": 2, "theme": "端侧AI", "group": "其他", "fill": "#fffeff", "confidence": "high"},
+      {"rank": 3, "theme": "医药", "group": "医药", "fill": "#00b1f1", "confidence": "high"},
+      {"rank": 4, "theme": "算力/半导体", "group": "其他", "fill": "#feffff", "confidence": "high"},
+      {"rank": 5, "theme": "AI应用", "group": "AI应用", "fill": "#90ce4f", "confidence": "high"},
+      {"rank": 6, "theme": "低空经济", "group": "其他", "fill": "#fffeff", "confidence": "high"},
+      {"rank": 7, "theme": "军工/航天", "group": "其他", "fill": "#feffff", "confidence": "high"},
+      {"rank": 8, "theme": "大消费", "group": "大消费", "fill": "#ffff00", "confidence": "high"}
+    ]},
+    {"date": "2026-10-21", "weekday": "周三", "events": [], "themes": [
+      {"rank": 1, "theme": "算力/半导体", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 2, "theme": "机器人", "group": "机器人", "fill": "#fd0100", "confidence": "high"},
+      {"rank": 3, "theme": "AI应用", "group": "AI应用", "fill": "#92d051", "confidence": "high"},
+      {"rank": 4, "theme": "业绩预增", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 5, "theme": "医药", "group": "医药", "fill": "#01b0ef", "confidence": "high"},
+      {"rank": 6, "theme": "海峡两岸", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 7, "theme": "养殖业", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 8, "theme": "大消费", "group": "大消费", "fill": "#ffff01", "confidence": "high"}
+    ]},
+    {"date": "2026-10-22", "weekday": "周四", "events": [], "themes": [
+      {"rank": 1, "theme": "机器人", "group": "机器人", "fill": "#fe0000", "confidence": "high"},
+      {"rank": 2, "theme": "机器/设备", "group": "其他", "fill": "#fffffb", "confidence": "medium"},
+      {"rank": 3, "theme": "AI应用", "group": "AI应用", "fill": "#91d250", "confidence": "high"},
+      {"rank": 4, "theme": "算力/半导体", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 5, "theme": "冰雪产业", "group": "其他", "fill": "#ffffff", "confidence": "high"}
+    ]},
+    {"date": "2026-10-23", "weekday": "周五", "events": [], "themes": [
+      {"rank": 1, "theme": "机器人", "group": "机器人", "fill": "#fe0000", "confidence": "high"},
+      {"rank": 2, "theme": "大消费", "group": "大消费", "fill": "#fffe03", "confidence": "high"},
+      {"rank": 3, "theme": "AI应用", "group": "AI应用", "fill": "#92d14e", "confidence": "high"},
+      {"rank": 4, "theme": "AI硬件/半导体", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 5, "theme": "端侧AI", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 6, "theme": "公告", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 7, "theme": "电池", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 8, "theme": "大金融", "group": "其他", "fill": "#ffffff", "confidence": "high"}
+    ]},
+    {"date": "2026-10-26", "weekday": "周一", "events": [], "themes": [
+      {"rank": 1, "theme": "机器人", "group": "机器人", "fill": "#fd0100", "confidence": "high"},
+      {"rank": 2, "theme": "大消费", "group": "大消费", "fill": "#fffe00", "confidence": "high"},
+      {"rank": 3, "theme": "AI应用", "group": "AI应用", "fill": "#92d14f", "confidence": "high"},
+      {"rank": 4, "theme": "医药", "group": "医药", "fill": "#02aff1", "confidence": "high"},
+      {"rank": 5, "theme": "并购重组", "group": "其他", "fill": "#ffffff", "confidence": "high"}
+    ]},
+    {"date": "2026-10-27", "weekday": "周二", "events": [], "themes": [
+      {"rank": 1, "theme": "机器人", "group": "机器人", "fill": "#fe0000", "confidence": "high"},
+      {"rank": 2, "theme": "大消费", "group": "大消费", "fill": "#ffff00", "confidence": "high"},
+      {"rank": 3, "theme": "算力/半导体", "group": "其他", "fill": "#fffeff", "confidence": "high"},
+      {"rank": 4, "theme": "汽车产业链", "group": "其他", "fill": "#fffffd", "confidence": "high"},
+      {"rank": 5, "theme": "业绩增长", "group": "其他", "fill": "#feffff", "confidence": "high"},
+      {"rank": 6, "theme": "AI应用", "group": "AI应用", "fill": "#92d14f", "confidence": "high"}
+    ]},
+    {"date": "2026-10-28", "weekday": "周三", "events": [], "themes": [
+      {"rank": 1, "theme": "机器人", "group": "机器人", "fill": "#fd0002", "confidence": "high"},
+      {"rank": 2, "theme": "业绩增长", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 3, "theme": "算力/半导体", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 4, "theme": "PCB产业链", "group": "其他", "fill": "#fffeff", "confidence": "high"},
+      {"rank": 5, "theme": "医药", "group": "医药", "fill": "#16a9dc", "confidence": "high"},
+      {"rank": 6, "theme": "AI应用", "group": "AI应用", "fill": "#92d14f", "confidence": "high"},
+      {"rank": 7, "theme": "大消费", "group": "大消费", "fill": "#ffff01", "confidence": "high"},
+      {"rank": 8, "theme": "航天", "group": "其他", "fill": "#ffffff", "confidence": "high"}
+    ]},
+    {"date": "2026-10-29", "weekday": "周四", "events": [], "themes": [
+      {"rank": 1, "theme": "航天", "group": "其他", "fill": "#fffeff", "confidence": "high"},
+      {"rank": 2, "theme": "大消费", "group": "大消费", "fill": "#ffff01", "confidence": "high"},
+      {"rank": 3, "theme": "业绩增长", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 4, "theme": "机器人", "group": "机器人", "fill": "#fe0000", "confidence": "high"},
+      {"rank": 5, "theme": "生物医药", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 6, "theme": "AI应用", "group": "AI应用", "fill": "#92d14e", "confidence": "high"},
+      {"rank": 7, "theme": "算力/半导体", "group": "其他", "fill": "#ffffff", "confidence": "high"}
+    ]},
+    {"date": "2026-10-30", "weekday": "周五", "events": [], "themes": [
+      {"rank": 1, "theme": "大消费", "group": "大消费", "fill": "#ffff01", "confidence": "high"},
+      {"rank": 2, "theme": "业绩增长", "group": "其他", "fill": "#fcffff", "confidence": "high"},
+      {"rank": 3, "theme": "生物医药", "group": "其他", "fill": "#fffeff", "confidence": "high"},
+      {"rank": 4, "theme": "医药", "group": "医药", "fill": "#02aff1", "confidence": "high"},
+      {"rank": 5, "theme": "PCB产业链", "group": "其他", "fill": "#fffeff", "confidence": "high"},
+      {"rank": 6, "theme": "机器人", "group": "机器人", "fill": "#fa0000", "confidence": "high"}
+    ]},
+    {"date": "2026-11-02", "weekday": "周一", "events": [], "themes": [
+      {"rank": 1, "theme": "AI应用", "group": "AI应用", "fill": "#92d14e", "confidence": "high"},
+      {"rank": 2, "theme": "大消费", "group": "大消费", "fill": "#fffe00", "confidence": "high"},
+      {"rank": 3, "theme": "算力/半导体", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 4, "theme": "机器人", "group": "机器人", "fill": "#fd0100", "confidence": "high"},
+      {"rank": 5, "theme": "生物医药", "group": "其他", "fill": "#fffeff", "confidence": "high"},
+      {"rank": 6, "theme": "大金融", "group": "其他", "fill": "#fffeff", "confidence": "high"},
+      {"rank": 7, "theme": "医药", "group": "医药", "fill": "#01b0ef", "confidence": "high"},
+      {"rank": 8, "theme": "端侧AI", "group": "其他", "fill": "#ffffff", "confidence": "high"}
+    ]},
+    {"date": "2026-11-03", "weekday": "周二", "events": [], "themes": [
+      {"rank": 1, "theme": "大消费", "group": "大消费", "fill": "#fffe00", "confidence": "high"},
+      {"rank": 2, "theme": "生物医药", "group": "其他", "fill": "#fffeff", "confidence": "high"},
+      {"rank": 3, "theme": "锂电池", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 4, "theme": "AI应用", "group": "AI应用", "fill": "#93d04f", "confidence": "high"},
+      {"rank": 5, "theme": "光伏", "group": "光伏", "fill": "#72309e", "confidence": "high"}
+    ]},
+    {"date": "2026-11-04", "weekday": "周三", "events": [], "themes": [
+      {"rank": 1, "theme": "算力/半导体", "group": "其他", "fill": "#fffeff", "confidence": "high"},
+      {"rank": 2, "theme": "有色金属", "group": "其他", "fill": "#fffeff", "confidence": "high"},
+      {"rank": 3, "theme": "机器人", "group": "机器人", "fill": "#fd0001", "confidence": "high"},
+      {"rank": 4, "theme": "PCB产业链", "group": "其他", "fill": "#fffeff", "confidence": "high"},
+      {"rank": 5, "theme": "数据中心供电", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 6, "theme": "AI应用", "group": "AI应用", "fill": "#92d04b", "confidence": "high"},
+      {"rank": 7, "theme": "光伏", "group": "光伏", "fill": "#7030a0", "confidence": "high"},
+      {"rank": 8, "theme": "光通信", "group": "其他", "fill": "#ffffff", "confidence": "high"}
+    ]},
+    {"date": "2026-11-05", "weekday": "周四", "events": [], "themes": [
+      {"rank": 1, "theme": "光伏", "group": "光伏", "fill": "#70309e", "confidence": "high"},
+      {"rank": 2, "theme": "算力/半导体", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 3, "theme": "AI应用", "group": "AI应用", "fill": "#93cf55", "confidence": "high"},
+      {"rank": 4, "theme": "机器人", "group": "机器人", "fill": "#fe0000", "confidence": "high"},
+      {"rank": 5, "theme": "大消费", "group": "大消费", "fill": "#ffff00", "confidence": "high"},
+      {"rank": 6, "theme": "端侧AI", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 7, "theme": "电力", "group": "其他", "fill": "#ffffff", "confidence": "high"},
+      {"rank": 8, "theme": "生物医药", "group": "其他", "fill": "#ffffff", "confidence": "high"}
+    ]}
+  ],
+  "unreadable": [
+    {"where": "顶部事件/节点行", "dates": ["2026-10-19", "2026-10-26", "2026-11-03"], "detail": "这三列顶部是一行绿色事件块叠一个黄色「重要节点」标记，另有零散的红色、蓝色小块（2026-10-30 是两行绿块）。事件文字约 7px 高，放大 26 倍后笔画连成色带，无法辨认，所以 events 留空，没有补写。"},
+    {"where": "右侧窄标签列", "detail": "除「涨停第一…第八」外，该列还有少量文字和 15→1 的数字刻度，未转录。"}
+  ]
+}
