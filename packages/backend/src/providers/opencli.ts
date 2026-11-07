@@ -27,16 +27,32 @@ export function openCli(): { command: string; base: string[] } {
   return existsSync(entry) ? { command: process.execPath, base: [entry] } : { command: "opencli", base: [] };
 }
 
+/** The tail of the opencli queue: the next call waits for every call started before it. */
+let queue: Promise<unknown> = Promise.resolve();
+
 export async function runOpenCli(args: string[], timeoutMs: number): Promise<string> {
   const { command, base } = openCli();
-  try {
-    const { stdout } = await run(command, [...base, ...args], { timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024, windowsHide: true });
-    return stdout;
-  } catch (error) {
-    const e = error as { stderr?: string; stdout?: string; message?: string };
-    const detail = [e.stderr, e.stdout].map((s) => (s ?? "").trim()).filter(Boolean).join("\n");
-    throw new Error(`opencli failed: ${(detail || e.message || "unknown error").replace(/\s+/g, " ").slice(0, 600)}`);
-  }
+  // One browser drives every opencli command: a second call started while the tab is busy makes both
+  // slower, and a search queued behind article reads hits opencli's own 60s command timeout. Calls are
+  // therefore run one at a time, and the command timeout is raised so a queued one still finishes.
+  const runOne = async () => {
+    try {
+      const { stdout } = await run(command, [...base, ...args], {
+        timeout: timeoutMs,
+        maxBuffer: 8 * 1024 * 1024,
+        windowsHide: true,
+        env: { ...process.env, OPENCLI_BROWSER_COMMAND_TIMEOUT: process.env.OPENCLI_BROWSER_COMMAND_TIMEOUT ?? "180" },
+      });
+      return stdout;
+    } catch (error) {
+      const e = error as { stderr?: string; stdout?: string; message?: string };
+      const detail = [e.stderr, e.stdout].map((s) => (s ?? "").trim()).filter(Boolean).join("\n");
+      throw new Error(`opencli failed: ${(detail || e.message || "unknown error").replace(/\s+/g, " ").slice(0, 600)}`);
+    }
+  };
+  const next = queue.then(runOne, runOne);
+  queue = next.then(() => undefined, () => undefined);
+  return next;
 }
 
 /** `--profile` for a named Browser Bridge context; the adapter's default profile otherwise. */
