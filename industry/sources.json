@@ -434,6 +434,224 @@
       "syndicate_fulltext": false
     },
     {
+      "id": "cn-cls-telegraph",
+      "name": "财联社 · 电报",
+      "kind": "json_list",
+      "config": {
+        "url": "https://www.cls.cn/v1/roll/get_roll_list?app=CailianpressWeb&category=&last_time=&os=web&refresh_type=1&rn=50&sv=7.7.5&sign=d41556984a26bb242d388ce81c66a176",
+        "mode": "json_api",
+        "headers": {
+          "accept": "application/json, text/plain, */*",
+          "referer": "https://www.cls.cn/",
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+        },
+        "itemsPath": "data.roll_data",
+        "titlePaths": ["title", "brief"],
+        "summaryPaths": ["brief", "content"],
+        "publishedAtPath": "ctime",
+        "publishedAtUnit": "epoch_s",
+        "externalIdPath": "id",
+        "urlTemplate": "https://www.cls.cn/detail/{raw:id}",
+        "_aihot": {
+          "initialBackfillLimit": 50
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 10,
+      "tags": ["快讯", "A股"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-gelonghui-live",
+      "name": "格隆汇 · 快讯",
+      "kind": "json_list",
+      "config": {
+        "url": "https://www.gelonghui.com/api/live-channels/all/lives/v4",
+        "mode": "json_api",
+        "headers": {
+          "accept": "application/json",
+          "referer": "https://www.gelonghui.com/live",
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+        },
+        "itemsPath": "result",
+        "titlePaths": ["title", "content"],
+        "summaryPaths": ["content"],
+        "publishedAtPath": "createTimestamp",
+        "publishedAtUnit": "epoch_s",
+        "externalIdPath": "id",
+        "urlTemplate": "{raw:route}",
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 10,
+      "tags": ["快讯", "港股"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-gelonghui-news",
+      "name": "格隆汇 · 资讯",
+      "kind": "json_list",
+      "config": {
+        "url": "https://www.gelonghui.com/api/channels/web_home_page/articles/v8",
+        "mode": "json_api",
+        "headers": {
+          "accept": "application/json",
+          "referer": "https://www.gelonghui.com/",
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+        },
+        "itemsPath": "result",
+        "titlePaths": ["data.title"],
+        "summaryPaths": ["data.summary"],
+        "publishedAtPath": "data.timestamp",
+        "publishedAtUnit": "epoch_s",
+        "urlTemplate": "{raw:data.link}",
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["财经", "港股"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-yicai-news",
+      "name": "第一财经 · 新闻",
+      "kind": "json_list",
+      "config": {
+        "url": "https://www.yicai.com/api/ajax/getjuhelist?action=news&page=1&pagesize=30",
+        "mode": "json_api",
+        "headers": {
+          "accept": "application/json",
+          "referer": "https://www.yicai.com/",
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+        },
+        "titlePaths": ["NewsTitle"],
+        "summaryPaths": ["NewsNotes"],
+        "publishedAtPath": "CreateDate",
+        "externalIdPath": "NewsID",
+        "urlTemplate": "https://www.yicai.com/news/{raw:NewsID}.html",
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["财经", "媒体"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-caixin-latest",
+      "name": "财新 · 最新",
+      "kind": "json_list",
+      "config": {
+        "url": "https://gateway.caixin.com/api/dataplatform/scroll/index",
+        "mode": "json_api",
+        "headers": {
+          "accept": "application/json",
+          "referer": "https://www.caixin.com/",
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+        },
+        "itemsPath": "data.articleList",
+        "titlePaths": ["title"],
+        "summaryPaths": ["summary"],
+        "publishedAtPath": "time",
+        "publishedAtUnit": "epoch_ms",
+        "externalIdPath": "contentId",
+        "urlTemplate": "{raw:url}",
+        "_aihot": {
+          "initialBackfillLimit": 20
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": ["财经", "媒体"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-jisilu",
+      "name": "集思录 · 广场",
+      "kind": "web_list",
+      "config": {
+        "url": "https://www.jisilu.cn/explore",
+        "parseMode": "html",
+        "itemSelector": "div.aw-question-list div.aw-item",
+        "linkSelector": "h4 a",
+        "titleSelector": "h4 a",
+        "publishedAtRegex": "([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2})",
+        "publishedAtUtcOffset": "+08:00",
+        "allowUrlPrefixes": ["https://www.jisilu.cn/question/"],
+        "detail": {
+          "maxFetches": 30,
+          "summarySelector": "div.markitup-box"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["可转债", "社区"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-nbd-news",
+      "name": "每日经济新闻 · 要闻",
+      "kind": "web_list",
+      "config": {
+        "url": "https://www.nbd.com.cn/columns/3/",
+        "parseMode": "html",
+        "itemSelector": "li.u-news-title",
+        "linkSelector": "a.news-title-a",
+        "titleSelector": "a.news-title-a",
+        "allowUrlPrefixes": ["https://www.nbd.com.cn/articles/"],
+        "detail": {
+          "maxFetches": 20,
+          "publishedAtRegex": "\"pubDate\":\\s*\"([^\"]+)\""
+        },
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["财经", "媒体"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-eastmoney-partner",
+      "name": "东方财富 · 合作伙伴资讯",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "http://rss.eastmoney.com/rss_partener.xml",
+        "_aihot": {
+          "initialBackfillLimit": 50
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["财经", "媒体"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
       "id": "rss-ecb-press",
       "name": "ECB · Press",
       "kind": "rss",
