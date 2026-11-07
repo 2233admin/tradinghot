@@ -324,6 +324,182 @@
       "syndicate_fulltext": false
     },
     {
+      "id": "x-wublockchain",
+      "name": "X：吴说区块链 (@WuBlockchain)",
+      "kind": "x_search",
+      "config": {
+        "query": "from:WuBlockchain -filter:replies",
+        "searchType": "Latest"
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": ["X", "加密"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "x-blockbeats",
+      "name": "X：律动 BlockBeats (@BlockBeatsChina)",
+      "kind": "x_search",
+      "config": {
+        "query": "from:BlockBeatsChina -filter:replies",
+        "searchType": "Latest"
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": ["X", "加密"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "x-panewscn",
+      "name": "X：PANews (@PANewsCN)",
+      "kind": "x_search",
+      "config": {
+        "query": "from:PANewsCN -filter:replies",
+        "searchType": "Latest"
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": ["X", "加密"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "x-techflowpost",
+      "name": "X：深潮 TechFlow (@TechFlowPost)",
+      "kind": "x_search",
+      "config": {
+        "query": "from:TechFlowPost -filter:replies",
+        "searchType": "Latest"
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": ["X", "加密"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "x-embercn",
+      "name": "X：Ember (@EmberCN)",
+      "kind": "x_search",
+      "config": {
+        "query": "from:EmberCN -filter:replies",
+        "searchType": "Latest"
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": ["X", "加密", "链上"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "x-lookonchain",
+      "name": "X：Lookonchain (@lookonchain)",
+      "kind": "x_search",
+      "config": {
+        "query": "from:lookonchain -filter:replies",
+        "searchType": "Latest"
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": ["X", "加密", "链上"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "x-whale-alert",
+      "name": "X：Whale Alert (@whale_alert)",
+      "kind": "x_search",
+      "config": {
+        "query": "from:whale_alert -filter:replies",
+        "searchType": "Latest"
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": ["X", "加密", "链上"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "x-zachxbt",
+      "name": "X：ZachXBT (@zachxbt)",
+      "kind": "x_search",
+      "config": {
+        "query": "from:zachxbt -filter:replies",
+        "searchType": "Latest"
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": ["X", "加密", "安全"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "x-cz-binance",
+      "name": "X：CZ (@cz_binance)",
+      "kind": "x_search",
+      "config": {
+        "query": "from:cz_binance -filter:replies",
+        "searchType": "Latest"
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": ["X", "加密", "KOL"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "x-vitalik",
+      "name": "X：Vitalik Buterin (@VitalikButerin)",
+      "kind": "x_search",
+      "config": {
+        "query": "from:VitalikButerin -filter:replies",
+        "searchType": "Latest"
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": ["X", "加密", "KOL"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-xueqiu-hot",
+      "name": "雪球 · 热门讨论",
+      "kind": "json_list",
+      "config": {
+        "url": "https://xueqiu.com/statuses/hot/listV2.json?since_id=-1&max_id=-1&size=20",
+        "via": "opencli",
+        "mode": "json_api",
+        "itemsPath": "items",
+        "titlePaths": ["original_status.title", "original_status.description"],
+        "summaryPaths": ["original_status.description"],
+        "publishedAtPath": "original_status.created_at",
+        "publishedAtUnit": "epoch_ms",
+        "externalIdPath": "original_status.id",
+        "urlTemplate": "https://xueqiu.com/{raw:original_status.user_id}/{raw:original_status.id}",
+        "_aihot": {
+          "initialBackfillLimit": 20
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["雪球", "A股"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
       "id": "cn-ce-xwzx",
       "name": "中国经济网 · 国内",
       "kind": "web_list",

@@ -1,6 +1,17 @@
 {
-  "latestVersion": "2026-11-07T17:28",
+  "latestVersion": "2026-11-07T18:10",
   "releases": [
+    {
+      "date": "2026-11-07",
+      "time": "18:10",
+      "kind": "更新",
+      "title": "雪球与 10 个加密 X 信源接入",
+      "body": [
+        "雪球用本机 opencli 的已登录浏览器读它的热门讨论接口：新增「雪球 · 热门讨论」，每 30 分钟一轮，19 条落库、17 条进精选。这是第一处「只认登录态」的信源，采集走浏览器而不是直连。",
+        "X 新增 10 个加密账号：吴说区块链、律动 BlockBeats、PANews、深潮 TechFlow、Ember、Lookonchain、Whale Alert、ZachXBT 以及 CZ、Vitalik 两个 KOL 账号；媒体与链上数据账号进精选，个人账号只作热度证据（CZ、Vitalik 这次一并设为可入选）。数据源池从 51 个增到 62 个。",
+        "同时给 json_list 补上 via: opencli 的读法：把接口地址当标签页打开、取页面文本当响应体；多条信源各用独立 session，不抢同一个标签页。同时连着多个 Browser Bridge 配置时要在 .env 里指定 OPENCLI_PROFILE。"
+      ]
+    },
     {
       "date": "2026-11-07",
       "time": "17:28",

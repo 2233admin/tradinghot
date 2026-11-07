@@ -3,6 +3,7 @@ import { credential } from "../config.ts";
 import { languageHeaders, requireOk } from "../lib/http-fetch.ts";
 import { JINA_PREFIX, jinaRead } from "../providers/jina.ts";
 import { fetchListing } from "./listing-fetch.ts";
+import { browserJson } from "../providers/browser.ts";
 import { collapseWhitespace, stripTags } from "../lib/text.ts";
 import { readPublicationDate, type PublicationDate } from "./dates.ts";
 import { FetchError, type Candidate, type SourceRow } from "./types.ts";
@@ -148,10 +149,13 @@ export async function fetchJsonList(source: SourceRow): Promise<Candidate[]> {
   }
   const embedded = c.mode === "html_json_key" || c.mode === "html_window_var";
   // A host that blocks our addresses is read through Jina: a page as rendered HTML (its scripts keep the
-  // embedded JSON), a JSON API as the body Jina fetched, which parses like a direct response.
+  // embedded JSON), a JSON API as the body Jina fetched, which parses like a direct response. A site that
+  // needs its own logged-in browser (雪球) is read through opencli instead.
   const jinaTarget = url.startsWith(JINA_PREFIX) ? url.slice(JINA_PREFIX.length) : null;
   let text: string;
-  if (jinaTarget) {
+  if (c.via === "opencli") {
+    text = await browserJson(url, { profile: typeof c.profile === "string" ? c.profile : null, session: typeof c.session === "string" ? c.session : source.id });
+  } else if (jinaTarget) {
     const read = await jinaRead(jinaTarget, { purpose: "source_listing", subject: `source:${source.id}`, ...(embedded ? { format: "html" as const } : {}), perRead: true });
     text = read.markdown;
   } else {
