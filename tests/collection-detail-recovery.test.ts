@@ -5,7 +5,7 @@
 // again on every run, taking the budget from the entries behind it; a page that keeps failing with a
 // recoverable error is read on every run for days (a challenge page, HN buzzing 2026-10-18: one page
 // 47 times in two days), or is given up and never recovers (a Qoder post went online 25 hours late).
-import { tag } from "./setup.ts";
+import { gate, tag } from "./setup.ts";
 import assert from "node:assert/strict";
 import http from "node:http";
 import { after, test } from "node:test";
@@ -19,8 +19,24 @@ const date = new Date(Date.now() - 60_000).toISOString();
 const reads = new Map<string, number>();
 let fail = false;
 let refuse = 0;
+type HeldDetail = { listing: string; detail: string; entered: { open(value: void): void }; release: { promise: Promise<void> } };
+let heldDetail: HeldDetail | null = null;
 const server = http.createServer((req, res) => {
   const path = req.url ?? "/";
+  const held = heldDetail;
+  if (path === held?.listing) {
+    res.end([0, 1].map(i => `<article><a href="${held.detail.slice(0, -1)}${i}">Listed article ${i}</a><time datetime="${date}"></time></article>`).join(""));
+    return;
+  }
+  // A received detail request is held open until the test has queried the committed listing material.
+  if (path === held?.detail) {
+    held.entered.open(undefined);
+    void held.release.promise.then(() => {
+      res.setHeader("content-type", "text/html");
+      res.end(`<html><body><article><h1>Verified detail title</h1><time datetime="${date}"></time></article></body></html>`);
+    });
+    return;
+  }
   if (path.startsWith("/listing")) {
     res.end([0, 1, 2].map(i => `<article><a href="/detail/${path.slice(9)}-${i}">Read more</a></article>`).join(""));
     return;
@@ -190,4 +206,36 @@ test("a page that keeps failing is read less and less often, never given up, and
   assert.equal((await rows(id)).filter(r => r.published_at).length, 3, "the page recovers");
   await collectSource(id);
   assert.equal(readsOf(), 10, "a recovered page is not read again");
+});
+
+test("a fast source persists listing dates and every new article before a slow detail page answers", async () => {
+  const id = `detail-${T}-fast-early`;
+  const entered = gate();
+  const release = gate();
+  await sql`INSERT INTO sources (id,name,kind,tier,participation_mode,config,cursor,next_fetch_at)
+    VALUES (${id},${id},'web_list','T1','editorial',
+      ${sql.json({ url: `${base}/listing/${id}`, itemSelector: "article", linkSelector: "a", publishedAtSelector: "time",
+        _aihot: { fast: true }, detail: { maxFetches: 2, titleSelector: "h1", titleAuthoritative: true, publishedAtSelector: "time" } })},
+      ${sql.json({ initializedAt: new Date().toISOString() })},'2100-01-01')`;
+  heldDetail = { listing: `/listing/${id}`, detail: `/detail/${id}-0`, entered, release };
+  const collecting = collectSource(id);
+  try {
+    await Promise.race([
+      entered.promise,
+      collecting.then((result) => { throw new Error(`detail was not requested before collection finished: ${result.status} ${result.error ?? ""}`); }),
+    ]);
+    const articles = await sql<{ title: string; published_at: Date; publication_time: string }[]>`
+      SELECT title, published_at, publication_time FROM articles WHERE source_id = ${id} ORDER BY url`;
+    assert.deepEqual(articles.map((a) => [a.title, a.published_at?.toISOString(), a.publication_time]), [
+      ["Listed article 0", date, date], ["Listed article 1", date, date],
+    ], "both entries and their source-provided times are durable while the first detail response is still blocked");
+    const [pending] = await sql<{ last_fetch_at: Date | null }[]>`SELECT last_fetch_at FROM sources WHERE id = ${id}`;
+    assert.equal(pending!.last_fetch_at, null, "the source run has not completed just because listing material was stored");
+  } finally {
+    release.open(undefined);
+    try { await collecting; }
+    finally { heldDetail = null; }
+  }
+  const [finished] = await sql<{ last_fetch_at: Date | null }[]>`SELECT last_fetch_at FROM sources WHERE id = ${id}`;
+  assert.ok(finished!.last_fetch_at, "the source's successful-fetch time follows detail completion");
 });

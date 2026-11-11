@@ -8,7 +8,7 @@ import { config } from "@aihot/backend/config";
 import { closeDb, sql } from "@aihot/backend/db";
 import { stopBoss } from "@aihot/backend/jobs/queue";
 import { upsertMaterial } from "@aihot/backend/content/materials";
-import { collectSource, collectXShard, scheduleDueSources } from "@aihot/backend/sources/collect";
+import { adaptIntervals, collectSource, collectXShard, scheduleDueSources } from "@aihot/backend/sources/collect";
 import { refreshSourceIcons } from "@aihot/backend/sources/icons";
 import { planXShards, shardQuery, selfThreadHandle, fetchXSearch } from "@aihot/backend/sources/x";
 
@@ -85,6 +85,23 @@ test("shards keep to the query length and account limits, per participation mode
     assert.ok(s.sourceIds.every((id) => long.find((l) => l.id === id)!.participation_mode === s.mode), "modes are not mixed");
   }
   assert.deepEqual(planXShards([...long].reverse()).map((s) => s.key), shards.map((s) => s.key), "the same sources give the same shards");
+});
+
+test("fast X accounts form their own shard instead of sharing ordinary editorial searches", () => {
+  const ordinary = [0, 1].map((i) => ({
+    id: IDS[i]!, kind: "x_search" as const, participation_mode: "editorial" as const,
+    config: { query: `from:${HANDLES[i]!} -filter:replies` }, cursor: { lastTweetId: String(WATERMARK) },
+  }));
+  const fast = {
+    id: IDS[2]!, kind: "x_search" as const, participation_mode: "editorial" as const,
+    config: { query: `from:${HANDLES[2]!} -filter:replies`, _aihot: { fast: true } }, cursor: { lastTweetId: String(WATERMARK) },
+  };
+  const shards = planXShards([...ordinary, fast]);
+  assert.deepEqual(shards.map((s) => [s.mode, s.sourceIds]), [
+    ["editorial", ordinary.map((s) => s.id)], ["editorial:fast", [fast.id]],
+  ]);
+  assert.notEqual(shards[0]!.key, shards[1]!.key, "independent shard keys also keep scheduled jobs and paid receipts apart");
+  assert.deepEqual(planXShards([fast, ...ordinary].reverse()).map((s) => s.key), shards.map((s) => s.key));
 });
 
 test("one search reads a shard; each account gets its own posts, run and watermark", async () => {
@@ -195,6 +212,28 @@ test("due accounts are scheduled by shard, not one by one", async () => {
   const shard = jobs.find((j) => j.name === "sources.fetch-x");
   assert.ok(shard, "the shard with the due account is enqueued");
   assert.ok(IDS.every((id) => jobs.some((j) => j.data.sourceIds?.includes(id))), "all its accounts are read together");
+});
+
+test("fast X shards stay due in one minute across daily interval adaptation", async () => {
+  const handle = `sf${T}`;
+  const id = `test-xs-${handle}`;
+  await sql`INSERT INTO sources (id, name, kind, config, tier, participation_mode, interval_minutes, cursor, next_fetch_at)
+    VALUES (${id}, ${handle}, 'x_search', ${sql.json({ query: `from:${handle} -filter:replies`, searchType: "Latest", _aihot: { fast: true } })},
+      'T1', 'editorial', 45, ${sql.json({ initializedAt: new Date().toISOString(), lastTweetId: String(WATERMARK) })}, '2100-01-01')`;
+  await adaptIntervals();
+  const [adapted] = await sql<{ interval_minutes: number }[]>`SELECT interval_minutes FROM sources WHERE id = ${id}`;
+  assert.equal(adapted!.interval_minutes, 45, "daily tuning leaves the ordinary interval for when fast mode is disabled");
+  const [shard] = planXShards([{
+    id, kind: "x_search", participation_mode: "editorial",
+    config: { query: `from:${handle} -filter:replies`, _aihot: { fast: true } }, cursor: { lastTweetId: String(WATERMARK) },
+  }]);
+  assert.equal(shard!.mode, "editorial:fast");
+  assert.equal((await collectXShard(shard!.key, [id])).status, "ok");
+  await adaptIntervals();
+  const [stillFast] = await sql<{ minutes: number; interval_minutes: number }[]>`
+    SELECT round(extract(epoch FROM next_fetch_at - now()) / 60)::int AS minutes, interval_minutes FROM sources WHERE id = ${id}`;
+  assert.equal(stillFast!.minutes, 1, "daily tuning does not postpone the one-minute fetch scheduled by a successful read");
+  assert.equal(stillFast!.interval_minutes, 45, "daily tuning preserves the ordinary interval for when fast mode is disabled");
 });
 
 
