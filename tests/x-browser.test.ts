@@ -26,8 +26,14 @@ test("opencli rows map to tweets the X collector understands", () => {
   assert.equal(retweet!.entities?.media?.[0]?.media_url_https, "https://pbs.twimg.com/media/one.jpg");
 });
 
-test("a wrapped or broken opencli output yields no rows instead of throwing", () => {
+test("a valid empty search stays empty, while malformed output fails without exposing it", () => {
+  assert.deepEqual(browserRowsToTweets("[]\n"), []);
   assert.deepEqual(browserRowsToTweets(JSON.stringify({ data: [] })), []);
-  assert.deepEqual(browserRowsToTweets("not json"), []);
-  assert.deepEqual(browserRowsToTweets(JSON.stringify([{ id: "1" }])), []);
+  for (const input of ["private-marker not json", JSON.stringify({ items: ["private-marker"] }), JSON.stringify([{ id: "private-marker" }])]) {
+    assert.throws(() => browserRowsToTweets(input), (error: Error) => {
+      assert.match(error.message, /^opencli X search returned (invalid JSON|an invalid response shape)$/);
+      assert.doesNotMatch(error.message, /private-marker/);
+      return true;
+    });
+  }
 });
