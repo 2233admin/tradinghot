@@ -1,6 +1,7 @@
 // X reads through opencli's twitter adapter: the browser session the user is already logged into.
 // This is the free fallback when SocialData's paid search key is not configured.
 import { z } from "zod";
+import { HttpStatusError } from "../lib/http-fetch.ts";
 import type { SdTweet } from "./socialdata.ts";
 import { openCliProfile, runOpenCli } from "./opencli.ts";
 
@@ -69,9 +70,17 @@ export async function searchTweetsInBrowser(opts: BrowserTweetOptions): Promise<
   const query = opts.query.replace(/\s*since_id:\S+/g, "").trim();
   if (!query) return [];
   const profile = opts.profile ?? process.env.X_OPENCLI_PROFILE ?? null;
-  const stdout = await runOpenCli(
-    [...openCliProfile(profile), "twitter", "search", query, "--product", "live", "--limit", String(opts.limit), "-f", "json"],
-    opts.timeoutMs ?? 120_000,
-  );
+  let stdout: string;
+  try {
+    stdout = await runOpenCli(
+      [...openCliProfile(profile), "twitter", "search", query, "--product", "live", "--limit", String(opts.limit), "-f", "json"],
+      opts.timeoutMs ?? 120_000,
+    );
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("opencli failed: HTTP 429:")) {
+      throw new HttpStatusError(429, error.message);
+    }
+    throw error;
+  }
   return browserRowsToTweets(stdout);
 }
