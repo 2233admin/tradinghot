@@ -1,5 +1,6 @@
 // Jina Reader (r.jina.ai): browser-rendered page text. Paid per request, reached through the egress
-// proxy, always behind receipts and the per-minute/hour/day budget (any zero stops it).
+// proxy, always behind receipts and the per-minute/hour/day budget (any zero stops it). JINA_BASE_URL
+// points the same reads at a reader of your own that speaks this API (pagesift's /r).
 import { randomUUID } from "node:crypto";
 import { credential } from "../config.ts";
 import { guardedFetch } from "../lib/http-fetch.ts";
@@ -20,6 +21,9 @@ const CONTENT = "\nMarkdown Content:\n";
  * next fetch pays for a new read instead of waiting on it. A caller that reads on rounds of its own keys the
  * read by its `round`: a retry of the round reuses it, the next round reads afresh.
  */
+/** A reader of your own is configured: its reads cost no third party and may be used without being asked for per source. */
+export const ownReader = () => credential("collectors", "JINA_BASE_URL") !== null;
+
 export async function jinaRead(
   targetUrl: string,
   opts: { purpose: string; subject: string; format?: "markdown" | "html"; cacheToleranceSeconds?: number; perRead?: boolean; round?: string; removeSelector?: string },
@@ -42,6 +46,8 @@ export async function jinaRead(
         headers: { ...auth, "x-return-format": opts.format ?? "markdown", accept: "text/plain", ...tolerance, ...remove },
         timeoutMs: 60_000,
         maxBytes: 6 * 1024 * 1024,
+        // A reader of your own usually runs beside this service: its host may be listed in PRIVATE_FEED_HOSTS.
+        privateFeedHost: true,
       });
       const text = res.text();
       assertAccepted("jina", res.status, text);
