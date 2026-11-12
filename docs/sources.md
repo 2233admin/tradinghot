@@ -19,6 +19,69 @@
 
 每种信源认哪些配置项写在 [`config-keys.ts`](../packages/backend/src/sources/config-keys.ts)。填了不认识的配置项，保存会被拒绝、抓取会直接失败并在后台显示原因，不会悄悄退回通用解析。
 
+## 快速加信源：watchlist.txt
+
+盯一个 X 账号、一个 Discord 频道或一个网站，不用写 JSON：在 [`industry/watchlist.txt`](../industry/watchlist.txt) 里加一行。worker 每小时读一次这份文件（`COLLECT_ENABLED=true` 时），新的一行自动导入；想马上生效就运行 `npm run sources:sync`（Docker 部署运行 `docker compose run --rm setup`；文件打在镜像里，改完要重新构建）。
+
+```
+@DeItaone Walter Bloomberg !fast
+https://x.com/KobeissiLetter
+https://discord.com/channels/111111111111111111/222222222222222222 某财经社区·快讯 !fast
+https://www.example.com/markets/ 某财经站
+```
+
+| 写法 | 变成 | 需要 |
+|---|---|---|
+| `@账号` 或 `https://x.com/账号` | `x_search`，`from:账号 -filter:replies`，30 分钟 | 同 [x_search](#x_search)：`SOCIALDATA_API_KEY`，或本机已登录的 opencli |
+| Discord 频道链接（右键频道 →“复制链接”） | `json_list`，读频道最近 50 条消息，10 分钟 | `DISCORD_BOT_TOKEN`，见下 |
+| 其它网址：订阅地址，或网站的首页、栏目页 | 自动识别成 `rss` 或 `web_list`，30 分钟 | 无 |
+
+地址后面的文字是显示名。`!fast` 等于 `"_aihot": { "fast": true }`（[抓取频率](#抓取频率)，X 快速账号更费 SocialData 预算）；`!hot` 把参与方式设成 `hot_signal`，只作热度证据。分级都是 `T2`，要调到后台改。
+
+已经有信源在盯的账号和地址会跳过，已导入的信源不会被覆盖，删掉一行也不会删信源（到后台“信源”页暂停）。
+
+### 网址怎么自动识别
+
+按这个顺序试，第一个**真的读出条目**的就用（[`discover.ts`](../packages/backend/src/sources/discover.ts)）：
+
+1. 地址本身就是 RSS / Atom。
+2. 页面在 `<link rel="alternate">` 里声明的订阅（评论订阅不算）。
+3. 页面所在目录和站点根目录下的常见路径：`feed`、`rss`、`rss.xml`、`atom.xml`、`feed.xml`、`index.xml`。
+4. 都没有时当网页列表读：把页面上的站内链接按所在结构分组，取标题文字最多、不少于 5 条的那一组当文章列表，写成 `itemSelector`。列表上没有日期的条目，等读到原文页的发布时间后才公开。
+
+识别不出来的行（页面要执行 JavaScript 才有内容、要登录、被风控拦截）不会导入，同步时打印原因，之后每次同步再试；这类站点仍按[中文财经站点](#中文财经站点没有-rss-时怎么接)的办法在后台手写配置。自动认出的网页列表可能混进栏目里的专题或广告链接，导入后在后台“预览抓取”看一眼，不对就改 `itemSelector` 或加 `allowUrlPrefixes`。
+
+### 自动维护
+
+自动识别的信源在配置里记着它那一行的网址（`_aihot.watch`）。它连续 5 次抓取失败（订阅搬家、页面改版）后，每小时的维护任务按这个网址重新识别一遍：找到一种能读出条目、又和现在不同的方式，就换上并立刻重抓，后台“审计”里记一条 `system` 的修改；你在后台给它加的过滤等设置保留。重新识别也失败的不动，照旧在后台标红。手写配置的信源（没有 `_aihot.watch`）不会被自动改。
+
+X 账号改名由原有的 `sources.x-renames` 任务跟随（需要 SocialData）。
+
+### 命令行入口（给人和 Agent）
+
+不进后台也能查看和配置信源，每条命令输出一份 JSON，出错时是 `{"error": "..."}` 并以非零状态退出：
+
+```bash
+npm run sources -- list                                  # 所有信源：读哪里、是否启用、连续失败次数和最近的错误
+npm run sources -- check https://www.example.com/markets/  # 这个网址会被识别成什么，不保存
+npm run sources -- add "@DeItaone Walter Bloomberg !fast"  # 立刻加一个信源，写法同 watchlist.txt 的一行
+npm run sources -- sync                                  # 导入 watchlist 新行，修复坏掉的自动识别信源
+npm run sources -- pause <id>                            # 暂停；resume <id> 恢复
+npm run sources -- fetch <id>                            # 现在抓一次
+```
+
+`add` 直接写进数据库，并把这一行追加到 `industry/watchlist.txt`（文件写不了时只进数据库，比如在镜像里运行）。Docker 部署里这样调用：`docker compose run --rm setup node scripts/sources.ts list`。`check`、`add`、`sync`、`fetch` 会访问外部网站，X 和 Jina 的请求照常计费并受预算限制。
+
+### Discord 频道
+
+Discord 没有公开订阅，频道由你自己的机器人读：
+
+1. 在 [discord.com/developers](https://discord.com/developers/applications) 建一个应用，Bot 页打开 **Message Content Intent**（不开的话消息正文是空的），复制 token 填进后端 `.env` 的 `DISCORD_BOT_TOKEN`，重启 API 和 worker。token 只在读取时带上，不存进信源配置。
+2. 把机器人邀请进频道所在的服务器，给它“查看频道”和“读取消息历史”。这一步要服务器管理员同意；进不去的服务器，如果目标是公告频道，可以在自己的服务器里“关注”它，再让机器人读自己服务器里的那个频道。不要用个人账号的 token 代替机器人，这违反 Discord 的服务条款。
+3. 把频道链接写进 `watchlist.txt` 并同步。
+
+每条消息是一条资料：有文字的用文字，只有卡片（很多快讯机器人这样发）的用第一张卡片的标题和描述，只有图片或附件的跳过。原文链接指向 Discord 里的那条消息，读者要在该服务器里才打得开。每轮只读最近 50 条，不翻页：停机期间超过 50 条的消息会漏掉。没有填 token 时信源在后台报 `DISCORD_BOT_TOKEN is not configured`；机器人不在服务器里或没有权限时是 HTTP 403。
+
 ## 先预览，再创建
 
 进入 `/admin/sources/new`，填写 ID、名称，选择类型，再把[下一节](#每种信源怎么配置)对应的 JSON 填入“采集配置（JSON）”。这里填的是配置对象，不要包上 `kind` 或 `config`。切换类型会重置配置，先选类型再粘贴。

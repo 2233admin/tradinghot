@@ -17,6 +17,8 @@ import { fetchDetail, fetchWebList, fromHtml, fromMarkdown } from "@aihot/backen
 import { fetchRss } from "@aihot/backend/sources/rss";
 import { fetchJsonList } from "@aihot/backend/sources/json-list";
 import { noiseFiltered } from "@aihot/backend/sources/filters";
+import { discoverSource } from "@aihot/backend/sources/discover";
+import { parseWatchlist } from "@aihot/backend/sources/watchlist";
 
 const source = (config: Record<string, unknown>) => ({ id: "test-list", config }) as never;
 
@@ -37,6 +39,20 @@ const pages: Record<string, () => string> = {
     `<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><entry><title>Episode 42</title><link rel="alternate" href="https://example.org/episodes/42"/>` +
     `<published>2026-09-30T00:00:00Z</published><summary type="html">How leaders build confidence with their team.</summary></entry></feed>`,
   // A list API that gives wall-clock times without a zone, and a page whose metadata does too.
+  // A Discord channel's messages: one typed, one a bot's embed with no text of its own, one a bare attachment.
+  "/discord.json": () => JSON.stringify([
+    { id: "30", channel_id: "222", content: "Fed holds rates steady", timestamp: "2026-10-01T18:00:00.000000+00:00", author: { username: "desk", global_name: "News Desk" } },
+    { id: "20", channel_id: "222", content: "", timestamp: "2026-10-01T17:00:00.000000+00:00", author: { username: "feedbot" }, embeds: [{ title: "CPI 3.1% y/y", description: "Above the 3.0% consensus." }] },
+    { id: "10", channel_id: "222", content: "", timestamp: "2026-10-01T16:00:00.000000+00:00", author: { username: "desk" }, attachments: [{}] },
+  ]),
+  // Sites given only by address: one names its feed, one keeps it at a usual path, one has only a page of headlines.
+  "/named/": () => `<html><head><link rel="alternate" type="application/rss+xml" href="/named/comments/feed"><link rel="alternate" type="application/atom+xml" href="/en/feed.xml"></head><body></body></html>`,
+  "/usual/news.html": () => `<html><body><a href="/usual/about">About this site and its team</a></body></html>`,
+  "/usual/rss.xml": () => `<rss version="2.0"><channel><item><title>Markets close higher</title><link>${site}/usual/1</link><pubDate>Wed, 23 Sep 2026 12:00:00 GMT</pubDate></item></channel></rss>`,
+  "/headlines/": () => `<html><body><nav><ul>${["Home", "Markets", "About"].map((t) => `<li><a href="/${t}">${t}</a></li>`).join("")}</ul></nav>` +
+    `<div class="list">${[1, 2, 3, 4, 5, 6].map((n) => `<div class="item post-${n}"><h3><a href="/headlines/${n}">Central bank holds rates steady, round ${n}</a></h3><a href="/headlines/${n}#comments">12 comments on this</a></div>`).join("")}</div>` +
+    `<footer><a href="/terms">Terms of service and privacy</a></footer></body></html>`,
+  "/bare/": () => `<html><body><a href="/bare/login">Sign in to read the newsletter</a></body></html>`,
   "/zoneless.json": () => JSON.stringify({ result: [{ id: "a", title: "采购公告", publishDate: "2026-09-30 17:43:58" }, { id: "b", title: "Zoned", publishDate: "2026-09-30T17:43:58Z" }, { id: "c", title: "Abbreviated zone", publishDate: "Wed, 30 Sep 2026 17:43:58 EST" }] }),
   "/zoneless-post": () => `<html><head><meta property="article:published_time" content="2026-09-30 17:43:58"></head><body><p>Post</p></body></html>`,
   // A Next.js page whose embedded posts hold arrays and brackets of their own.
@@ -327,4 +343,41 @@ test("JSON pagination refuses unbounded or unsupported requests", () => {
   for (const extra of [{ via: "opencli" }, { method: "POST" }, { minNumeric: { path: "id", min: 1 } }]) {
     assert.ok(unsupportedConfig("json_list", { url, pagination, ...extra }).includes("pagination"));
   }
+});
+
+test("a watchlist line is an X account, a Discord channel or an address; a channel's messages are read as posts", async () => {
+  const watch = parseWatchlist([
+    "# comment", "", "@DeItaone Walter Bloomberg !fast", "https://x.com/KobeissiLetter/", "https://twitter.com/deitaone",
+    "https://discord.com/channels/111/222 财经社区·快讯 !hot", "https://example.org/news Example News",
+  ].join("\n"));
+  assert.deepEqual(watch.map((s) => [s.id, s.source?.kind ?? s.watch, s.name, s.participation_mode]), [
+    ["x-deitaone", "x_search", "X：Walter Bloomberg (@DeItaone)", "editorial"],
+    ["x-kobeissiletter", "x_search", "X：KobeissiLetter (@KobeissiLetter)", "editorial"],
+    ["discord-222", "json_list", "财经社区·快讯", "hot_signal"],
+    [watch[3]!.id, "https://example.org/news", "Example News", "editorial"],
+  ]);
+  assert.deepEqual(watch[0]!.source!.config, { query: "from:DeItaone -filter:replies", searchType: "Latest", _aihot: { fast: true } });
+  for (const s of watch) if (s.source) assert.deepEqual(unsupportedConfig(s.source.kind, s.source.config), [], s.id);
+  assert.throws(() => parseWatchlist("@ok\nnot a source"), /第 2 行/);
+  assert.throws(() => parseWatchlist("@ok !quick"), /!quick/);
+
+  const channel = watch[2]!.source!.config;
+  const posts = await fetchJsonList({ id: "discord-222", config: { ...channel, url: `${site}/discord.json` } } as never);
+  assert.deepEqual(posts.map((p) => [p.url, p.title, p.author, p.publishedAt?.toISOString(), p.bodyText, p.bodyStatus]), [
+    ["https://discord.com/channels/111/222/30", "Fed holds rates steady", "News Desk", "2026-10-01T18:00:00.000Z", "Fed holds rates steady", "ok"],
+    ["https://discord.com/channels/111/222/20", "CPI 3.1% y/y", "feedbot", "2026-10-01T17:00:00.000Z", "Above the 3.0% consensus.", "ok"],
+  ]);
+  await assert.rejects(fetchJsonList({ id: "discord-222", config: channel } as never), /DISCORD_BOT_TOKEN/);
+});
+
+test("an address is worked out into a source: its own feed, the feed its page names or keeps, else its headline list", async () => {
+  assert.deepEqual(await discoverSource(`${site}/en/feed.xml`), { kind: "rss", config: { feedUrl: `${site}/en/feed.xml` } });
+  assert.deepEqual(await discoverSource(`${site}/named/`), { kind: "rss", config: { feedUrl: `${site}/en/feed.xml` } }, "the comment feed is not the site's");
+  assert.deepEqual(await discoverSource(`${site}/usual/news.html`), { kind: "rss", config: { feedUrl: `${site}/usual/rss.xml` } });
+  const list = await discoverSource(`${site}/headlines/`);
+  assert.equal(list.kind, "web_list");
+  assert.deepEqual(unsupportedConfig("web_list", { ...list.config, _aihot: { watch: `${site}/headlines/` } }), []);
+  const found = await fetchWebList(source(list.config));
+  assert.deepEqual(found.map((p) => p.url), [1, 2, 3, 4, 5, 6].map((n) => `${site}/headlines/${n}`), "headlines only: no menu, comment links or footer");
+  await assert.rejects(discoverSource(`${site}/bare/`), /no feed and no headline list/);
 });

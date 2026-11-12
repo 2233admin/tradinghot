@@ -1,0 +1,16 @@
+# 快速加信源：一行一个。worker 每小时自动导入新行；想马上生效运行  npm run sources -- sync
+# 也可以不改文件，直接  npm run sources -- add "@账号 显示名"
+#
+#   X 账号        @账号  或  https://x.com/账号
+#   Discord 频道  在 Discord 里右键频道 →“复制链接”，粘贴进来（先在 .env 填 DISCORD_BOT_TOKEN）
+#   网站          订阅地址，或首页 / 栏目页的网址：自动找 RSS，没有就自动认文章列表；坏了自动重新识别
+#
+# 地址后面可以写显示名；再加 !fast 表示每分钟检查一次，!hot 表示只作热度证据、不单独展示。
+# 已经有信源在盯的账号和地址会自动跳过。这里删掉一行不会删信源，到后台“信源”页暂停。
+#
+# 例子（去掉行首的 # 即生效）：
+# @DeItaone Walter Bloomberg !fast
+# https://x.com/KobeissiLetter
+# https://discord.com/channels/111111111111111111/222222222222222222 某财经社区·快讯 !fast
+# https://feeds.a.dj.com/rss/RSSMarketsMain.xml WSJ Markets
+# https://www.example.com/markets/ 某财经站
