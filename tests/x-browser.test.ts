@@ -60,6 +60,15 @@ test("X browser search classifies explicit OpenCLI HTTP 429 without reclassifyin
       return true;
     });
 
+    // Installed OpenCLI serializes adapter errors as YAML, folding long messages.
+    const envelope = `ok: false\nerror:\n  code: UNKNOWN\n  message: >-\n    ${throttled}\n  exitCode: 1\n`;
+    process.env.X_OPENCLI_TEST_ERROR = envelope;
+    await assert.rejects(search(), (error: unknown) => {
+      assert.ok(error instanceof HttpStatusError);
+      assert.equal(error.status, 429);
+      return true;
+    });
+
     for (const detail of [
       "HTTP 503: SearchTimeline fetch failed",
       "SearchTimeline request 429 failed without an HTTP status",

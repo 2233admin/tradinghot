@@ -53,10 +53,10 @@ function rowsFrom(stdout: string): Array<z.infer<typeof TweetRow>> {
   try {
     raw = JSON.parse(stdout);
   } catch {
-    return [];
+    throw new Error("opencli X search returned invalid JSON");
   }
   const parsed = Rows.safeParse(raw);
-  if (!parsed.success) return [];
+  if (!parsed.success) throw new Error("opencli X search returned an invalid response shape");
   return Array.isArray(parsed.data) ? parsed.data : parsed.data.data;
 }
 
@@ -65,7 +65,7 @@ export function browserRowsToTweets(stdout: string): SdTweet[] {
   return rowsFrom(stdout).map(toTweet);
 }
 
-/** Recent posts for one search, newest first; no cursor, so the next read starts from the watermark. */
+/** Recent posts from opencli; its output does not prove the requested interval is complete. */
 export async function searchTweetsInBrowser(opts: BrowserTweetOptions): Promise<SdTweet[]> {
   const query = opts.query.replace(/\s*since_id:\S+/g, "").trim();
   if (!query) return [];
@@ -75,9 +75,10 @@ export async function searchTweetsInBrowser(opts: BrowserTweetOptions): Promise<
     stdout = await runOpenCli(
       [...openCliProfile(profile), "twitter", "search", query, "--product", "live", "--limit", String(opts.limit), "-f", "json"],
       opts.timeoutMs ?? 120_000,
+      { parallelXSearch: true },
     );
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith("opencli failed: HTTP 429:")) {
+    if (error instanceof Error && /^opencli failed: (?:HTTP 429:|ok: false error: code: \S+ message: (?:>[-+]? )?['"]?HTTP 429:)/.test(error.message)) {
       throw new HttpStatusError(429, error.message);
     }
     throw error;

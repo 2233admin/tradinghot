@@ -1,6 +1,6 @@
 // X accounts via SocialData search, newest first. Verified publishers include their own thread
 // continuations; other replies stay excluded. Plain accounts share length-bounded search shards.
-import { searchTweets, tweetMedia, tweetText, type SdArticle, type SdTweet } from "../providers/socialdata.ts";
+import { searchTweets, tweetMedia, tweetText, usesBrowserXSearch, type SdArticle, type SdTweet } from "../providers/socialdata.ts";
 import { ProviderRejectedError } from "../providers/receipts.ts";
 import type { XPostData } from "../content/materials.ts";
 import { sha256 } from "../lib/ids.ts";
@@ -73,9 +73,10 @@ export function tweetToCandidate(t: SdTweet): Candidate {
   };
 }
 
-/** Half-hour receipt window: a retried fetch in the same window reuses the paid response. */
-function windowKey(now = Date.now()): string {
-  return new Date(Math.floor(now / 1_800_000) * 1_800_000).toISOString();
+/** Receipt windows let retries reuse a response without hiding a new polling interval. */
+function windowKey(minutes: number, now = Date.now()): string {
+  const width = minutes * 60_000;
+  return new Date(Math.floor(now / width) * width).toISOString();
 }
 
 /** Pages of new posts read per run after a watermark; a longer search continues in later runs. */
@@ -121,6 +122,8 @@ export interface XRead {
   pages: number;
   /** The new-post search stopped at the page limit; the rest joined the backlog. */
   truncated: boolean;
+  /** Browser results do not prove that all posts in the interval were returned. */
+  coverageUnverified: boolean;
   backlogPages: number;
   /** Stretches given up (too many, too old, or the provider refused to continue one): posts in them may be missing. */
   dropped: number;
@@ -137,8 +140,14 @@ export interface XFetch extends Omit<XRead, "tweets"> {
  * the old watermark, so nothing in between is skipped. Without a watermark (a source's very first
  * fetch) one page is read: its import is bounded anyway.
  */
-export async function readXSearch(base: string, opts: { lastId: string | null; backlog: XBacklog[]; subject: string; type?: "Latest" | "Top" }): Promise<XRead> {
+export async function readXSearch(base: string, opts: { lastId: string | null; backlog: XBacklog[]; subject: string; type?: "Latest" | "Top"; fast?: boolean }): Promise<XRead> {
   const { lastId } = opts;
+  if (usesBrowserXSearch()) {
+    const res = await searchTweets(base, { purpose: "source_fetch", subject: opts.subject, window: windowKey(opts.fast ? 1 : 30), type: opts.type ?? "Latest" });
+    const seen = new Set<string>();
+    const tweets = res.tweets.filter((t) => !t.retweeted_status && !seen.has(t.id_str) && !!seen.add(t.id_str));
+    return { tweets, receiptIds: [], lastId, backlog: opts.backlog, pages: 1, truncated: false, coverageUnverified: true, backlogPages: 0, dropped: 0 };
+  }
   // One stretch per query, and none left over for days. A shard's stretches travel with its accounts, so
   // regrouping can leave copies of the same query at different positions in several shards, each of them
   // buying the same pages again; a stretch the page limit never catches up with only buys archived posts.
@@ -157,7 +166,7 @@ export async function readXSearch(base: string, opts: { lastId: string | null; b
       return true;
     })
     .map((b) => ({ ...b }));
-  const window = windowKey();
+  const window = windowKey(opts.fast ? 1 : 30);
   const search = (query: string, cursor: string | null) =>
     searchTweets(query, { purpose: "source_fetch", subject: opts.subject, window, type: opts.type ?? "Latest", cursor });
   const all: SdTweet[] = [];
@@ -219,7 +228,7 @@ export async function readXSearch(base: string, opts: { lastId: string | null; b
   const seen = new Set<string>();
   const tweets = all.filter((t) => !t.retweeted_status && !seen.has(t.id_str) && !!seen.add(t.id_str));
   const maxId = tweets.reduce<string | null>((m, t) => (m === null || BigInt(t.id_str) > BigInt(m) ? t.id_str : m), lastId);
-  return { tweets, receiptIds: [...receiptIds], lastId: maxId, backlog, pages, truncated, backlogPages, dropped };
+  return { tweets, receiptIds: [...receiptIds], lastId: maxId, backlog, pages, truncated, coverageUnverified: false, backlogPages, dropped };
 }
 
 /**
@@ -235,8 +244,10 @@ export async function fetchXSearch(source: SourceRow, since?: string): Promise<X
     backlog: Array.isArray(source.cursor?.xBacklog) ? source.cursor.xBacklog : [],
     subject: `source:${source.id}`,
     type: source.config.searchType ?? "Latest",
+    fast: source.config._aihot?.fast === true,
   });
-  return { candidates: tweets.map(tweetToCandidate), ...read };
+  const own = read.coverageUnverified && SHARDABLE.test(String(source.config.query ?? "")) ? xHandle(source.config)?.toLowerCase() : null;
+  return { candidates: tweets.filter((tweet) => !own || tweet.user.screen_name.toLowerCase() === own).map(tweetToCandidate), ...read };
 }
 
 // Shards: plain account queries read together. One search per account overran the SocialData budget on
@@ -283,7 +294,8 @@ export function planXShards(sources: Array<Pick<SourceRow, "id" | "kind" | "conf
   const byMode = new Map<string, Array<{ id: string; handle: string; selfThread: boolean }>>();
   for (const s of sources) {
     const handle = shardHandle(s);
-    if (handle) byMode.set(s.participation_mode, [...(byMode.get(s.participation_mode) ?? []), { id: s.id, handle, selfThread: !!selfThreadHandle(s) }]);
+    const mode = s.config._aihot?.fast === true ? `${s.participation_mode}:fast` : s.participation_mode;
+    if (handle) byMode.set(mode, [...(byMode.get(mode) ?? []), { id: s.id, handle, selfThread: !!selfThreadHandle(s) }]);
   }
   const shards: XShard[] = [];
   for (const [mode, list] of [...byMode].sort(([a], [b]) => a.localeCompare(b))) {

@@ -33,7 +33,8 @@ test("stable external IDs revise the first material after URL changes without me
       VALUES (${id}, ${id}, 'json_list', ${sql.json({ url: base, titlePaths: ["title"], externalIdPath: "id", urlTemplate: `https://example.org/${id}/{slug}`, publishedAtPath: "published" })},
       'T2', 'hot_signal', ${sql.json({ initializedAt: published })}, '2100-01-01')`;
   }
-  assert.equal((await collectSource(ids[0]!, { force: true })).created, 1);
+  const initial = await collectSource(ids[0]!, { force: true });
+  assert.equal(initial.created, 1, initial.error ?? "the first listing should create its material");
   const [first] = await sql<{ id: string; identity_key: string }[]>`SELECT id, identity_key FROM articles WHERE source_id = ${ids[0]!}`;
   // Found a minute ago: the legacy duplicate found next stays the later discovery even when the VM's clock steps back.
   await sql`UPDATE articles SET discovered_at = discovered_at - interval '1 minute' WHERE id = ${first!.id}`;

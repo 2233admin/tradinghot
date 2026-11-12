@@ -179,6 +179,8 @@ export function fromHtml(html: string, base: string, source: SourceRow): Candida
     // A listing that shows the teaser under the headline: the rules can judge it without reading the page.
     const summaryEl = c.summarySelector ? (el.is(c.summarySelector) ? el : el.find(c.summarySelector).first()) : null;
     const excerpt = summaryEl ? collapseWhitespace(summaryEl.text()).slice(0, 2000) : null;
+    const authorEl = c.authorSelector ? (el.is(c.authorSelector) ? el : el.find(c.authorSelector).first()) : null;
+    const author = authorEl ? collapseWhitespace(authorEl.text()) : "";
     let date: PublicationDate = { publishedAt: null, publicationTime: null };
     if (c.publishedAtSelector) {
       const dateEl = el.find(c.publishedAtSelector).first();
@@ -200,7 +202,7 @@ export function fromHtml(html: string, base: string, source: SourceRow): Candida
       date = readPublicationDate(m?.[1], c.publishedAtUtcOffset);
     }
     seen.add(url);
-    out.push({ url, title, ...(excerpt ? { excerpt } : {}), ...date });
+    out.push({ url, title, ...(excerpt ? { excerpt } : {}), ...(author ? { author } : {}), ...date });
   }
   return out;
 }

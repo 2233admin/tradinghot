@@ -27,14 +27,15 @@ export function openCli(): { command: string; base: string[] } {
   return existsSync(entry) ? { command: process.execPath, base: [entry] } : { command: "opencli", base: [] };
 }
 
-/** The tail of the opencli queue: the next call waits for every call started before it. */
+// A normal browser command remains exclusive. Two X searches may run together because opencli
+// gives each search an ephemeral session; commands queued behind them still run before later searches.
 let queue: Promise<unknown> = Promise.resolve();
+const searches: Promise<unknown>[] = [Promise.resolve(), Promise.resolve()];
+let nextSearch = 0;
 
-export async function runOpenCli(args: string[], timeoutMs: number): Promise<string> {
+export async function runOpenCli(args: string[], timeoutMs: number, opts: { parallelXSearch?: boolean } = {}): Promise<string> {
   const { command, base } = openCli();
-  // One browser drives every opencli command: a second call started while the tab is busy makes both
-  // slower, and a search queued behind article reads hits opencli's own 60s command timeout. Calls are
-  // therefore run one at a time, and the command timeout is raised so a queued one still finishes.
+  // Raise opencli's own command timeout for searches that must wait on the browser bridge.
   const runOne = async () => {
     try {
       const { stdout } = await run(command, [...base, ...args], {
@@ -50,7 +51,14 @@ export async function runOpenCli(args: string[], timeoutMs: number): Promise<str
       throw new Error(`opencli failed: ${(detail || e.message || "unknown error").replace(/\s+/g, " ").slice(0, 600)}`);
     }
   };
-  const next = queue.then(runOne, runOne);
+  if (opts.parallelXSearch) {
+    const slot = nextSearch;
+    nextSearch = (nextSearch + 1) % searches.length;
+    const next = Promise.all([queue, searches[slot]]).then(runOne);
+    searches[slot] = next.then(() => undefined, () => undefined);
+    return next;
+  }
+  const next = Promise.all([queue, ...searches]).then(runOne);
   queue = next.then(() => undefined, () => undefined);
   return next;
 }

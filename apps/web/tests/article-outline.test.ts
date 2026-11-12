@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { chromium, webkit, expect } from "@playwright/test";
+import { chromium, webkit, expect, type Browser } from "@playwright/test";
 import { fakeApi, itemDetail, startWebServer, visit, type WebServer } from "./web-server.ts";
 
 // Failure mode (#182 left half-fixed): between lg and 2xl the outline sits under the right rail's other
@@ -44,8 +44,9 @@ test("outline keyboard scrolling stays inside its boundary in WebKit", async () 
     body: { zh: outline.map(o => `<h2 id="${o.id}">${o.text}</h2><p>${"固定正文。".repeat(100)}</p>`).join(""), original: null, zhKind: "original", complete: true },
   });
   const web = await startWebServer(fakeApi(url => url.pathname === "/api/site/items/outline-keys" ? item : undefined));
-  const browser = await webkit.launch();
+  let browser: Browser | undefined;
   try {
+    browser = await webkit.launch();
     const page = await browser.newPage({ viewport: { width: 1366, height: 768 }, reducedMotion: "reduce" });
     await visit(page, web.origin + "/items/outline-keys");
     const nav = page.getByRole("navigation", { name: "本文目录" });
@@ -68,7 +69,7 @@ test("outline keyboard scrolling stays inside its boundary in WebKit", async () 
     await page.keyboard.press("PageDown");
     await expect.poll(() => nav.evaluate(n => n.scrollTop)).toBeGreaterThan(0);
   } finally {
-    await browser.close();
+    await browser?.close();
     await web.stop();
   }
 });

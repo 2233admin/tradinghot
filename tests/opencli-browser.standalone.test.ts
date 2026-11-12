@@ -113,6 +113,7 @@ if (outcome === "fail") {
     const started = Promise.withResolvers<void>();
     const hasStarted = () => events().some((event) => event.kind === "start" && event.id === id);
     const watcher = watch(eventLog, () => { if (hasStarted()) started.resolve(); });
+    // Deadlock guard only; command ordering is controlled by file-watch signals.
     const deadline = setTimeout(() => started.reject(new Error(`timed out waiting for ${id} to start`)), 15_000);
     try {
       if (!hasStarted()) await started.promise;

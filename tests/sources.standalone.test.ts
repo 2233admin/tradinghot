@@ -79,6 +79,13 @@ const site = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
 config.allowPrivateNetworkFetch = true;
 after(() => new Promise<void>((resolve) => server.close(() => resolve())));
 
+test("HTML listing associates each post with its own author", () => {
+  const html = `<article><a class="post" href="/one">One</a><span class="author"> Alice </span></article>
+    <article><a class="post" href="/two">Two</a><span class="author">Bob</span></article>`;
+  const items = fromHtml(html, "https://example.org", source({ url: "https://example.org/list", itemSelector: "article", linkSelector: "a.post", authorSelector: ".author" }));
+  assert.deepEqual(items.map((item) => [item.title, item.author]), [["One", "Alice"], ["Two", "Bob"]]);
+});
+
 test("Jina card links become posts with their own titles", () => {
   const md = [
     "[Skip to main content](http://example.org/blog/#main)",
@@ -307,4 +314,17 @@ test("a source's language is an Accept-Language value, refused by kinds that rea
     }
   }
   for (const kind of ["x_search", "mp_account", "external"] as const) assert.deepEqual(unsupportedConfig(kind, { acceptLanguage: "en" }), ["acceptLanguage"], kind);
+});
+
+test("JSON pagination refuses unbounded or unsupported requests", () => {
+  const url = "https://example.org/posts?page=1";
+  const pagination = { pageParam: "page", startPage: 1, maxPages: 3 };
+  assert.deepEqual(unsupportedConfig("json_list", { url, pagination }), []);
+  for (const invalid of [
+    { ...pagination, maxPages: 0 }, { ...pagination, maxPages: 11 }, { ...pagination, startPage: -1 },
+    { ...pagination, pageParam: "page&other" }, { ...pagination, extra: true },
+  ]) assert.deepEqual(unsupportedConfig("json_list", { url, pagination: invalid }), ["pagination"]);
+  for (const extra of [{ via: "opencli" }, { method: "POST" }, { minNumeric: { path: "id", min: 1 } }]) {
+    assert.ok(unsupportedConfig("json_list", { url, pagination, ...extra }).includes("pagination"));
+  }
 });

@@ -8,7 +8,8 @@ import { identityKeyForUrl } from "../lib/url.ts";
 import { sha256 } from "../lib/ids.ts";
 import { enqueue, QUEUES, shutdownSignal } from "../jobs/queue.ts";
 import { queueProcessing } from "../jobs/content.ts";
-import { BudgetExceededError, completeReceipt } from "../providers/receipts.ts";
+import { BudgetExceededError, ProviderRejectedError, completeReceipt } from "../providers/receipts.ts";
+import { usesBrowserXSearch } from "../providers/socialdata.ts";
 import { fetchRss } from "./rss.ts";
 import { fetchDetail, fetchWebList, isCallToActionTitle, needsTitle, type DetailNeed } from "./web-list.ts";
 import { unsupportedConfig } from "./config-keys.ts";
@@ -25,6 +26,7 @@ export interface CollectResult {
   created: number;
   revised: number;
   error?: string;
+  rateLimited?: boolean;
 }
 
 export async function loadSource(id: string): Promise<SourceRow | null> {
@@ -277,18 +279,42 @@ async function store(sourceId: string, candidates: CollectionCandidate[], backfi
   return { created, revised };
 }
 
+/** Stage a listing page before another network request can delay or lose its newest entries. */
+async function cacheFast(source: SourceRow, candidates: CollectionCandidate[], firstImport: boolean, cacheRules: string): Promise<void> {
+  if (!candidates.length) return;
+  await sql.begin(async (tx) => {
+    await lockSourceCursor(tx, source);
+    for (const candidate of candidates) {
+      await tx`INSERT INTO fast_source_items (source_id, identity_key, payload, first_import, rules_key)
+        VALUES (${source.id}, ${candidate.identityKey!}, ${tx.json(candidate as never)}, ${firstImport}, ${cacheRules})
+        ON CONFLICT (source_id, identity_key) DO UPDATE SET payload = EXCLUDED.payload, pending = true, considered_at = NULL, rules_key = EXCLUDED.rules_key
+        WHERE fast_source_items.payload IS DISTINCT FROM EXCLUDED.payload OR fast_source_items.rules_key IS DISTINCT FROM EXCLUDED.rules_key`;
+    }
+  });
+}
+
 /**
  * The end of a fetch run, on the run and on its source. Success marks the source healthy and due again
  * one interval later. A failure counts toward "failing" (5 in a row) and waits longer after each one,
- * up to six hours; a full budget is not the source's failure: it waits 15 minutes and counts nothing.
+ * up to six hours; a full budget is not the source's failure and does not increase its failure count.
  */
-async function recordFetch(db: Db, sourceId: string, runId: number, run: { found: number; created: number; detail: object | null } & ({ cursor: Record<string, unknown> } | { error: string; budget: boolean })): Promise<void> {
+async function recordFetch(db: Db, sourceId: string, runId: number, run: { found: number; created: number; detail: object | null } & ({ cursor: Record<string, unknown>; coverageError?: string } | { error: string; budget: boolean; rateLimited: boolean })): Promise<void> {
   const detail = run.detail ? db.json(run.detail as never) : null;
   if ("cursor" in run) {
+    if (run.coverageError) {
+      const error = run.coverageError;
+      await db`UPDATE sources SET last_fetch_at = now(), last_error = ${error}, cursor = ${db.json(run.cursor as never)},
+        health = CASE WHEN health = 'failing' THEN health ELSE 'degraded' END,
+        next_fetch_at = now() + make_interval(mins => CASE WHEN config->'_aihot'->>'fast' = 'true' THEN 1 ELSE interval_minutes END),
+        updated_at = now() WHERE id = ${sourceId}`;
+      await db`UPDATE fetch_runs SET status = 'failed', finished_at = now(), found_count = ${run.found}, new_count = ${run.created},
+        error = ${error}, detail = nullif(coalesce(detail,'{}'::jsonb) || coalesce(${detail}::jsonb,'{}'::jsonb),'{}'::jsonb) WHERE id = ${runId}`;
+      return;
+    }
     await db`
       UPDATE sources SET last_fetch_at = now(), last_ok_at = now(), fail_count = 0, last_error = NULL,
         health = 'ok', cursor = ${db.json(run.cursor as never)}, updated_at = now(),
-        next_fetch_at = now() + make_interval(mins => interval_minutes)
+        next_fetch_at = now() + make_interval(mins => CASE WHEN config->'_aihot'->>'fast' = 'true' AND coalesce(config->>'url', '') NOT LIKE 'https://r.jina.ai/%' THEN 1 ELSE interval_minutes END)
       WHERE id = ${sourceId}`;
     await db`UPDATE fetch_runs SET status = 'ok', finished_at = now(), found_count = ${run.found}, new_count = ${run.created},
       detail = nullif(coalesce(detail,'{}'::jsonb) || coalesce(${detail}::jsonb,'{}'::jsonb),'{}'::jsonb) WHERE id = ${runId}`;
@@ -299,11 +325,27 @@ async function recordFetch(db: Db, sourceId: string, runId: number, run: { found
       fail_count = CASE WHEN ${run.budget} THEN fail_count ELSE fail_count + 1 END,
       last_error = ${run.error},
       health = CASE WHEN ${run.budget} THEN health WHEN fail_count + 1 >= 5 THEN 'failing' ELSE 'degraded' END,
-      next_fetch_at = now() + make_interval(mins => CASE WHEN ${run.budget} THEN 15 ELSE LEAST(interval_minutes * (fail_count + 2), 360) END),
+      next_fetch_at = now() + make_interval(mins => CASE
+        WHEN ${run.budget} OR ${run.rateLimited} AND config->'_aihot'->>'fast' = 'true' THEN CASE WHEN config->'_aihot'->>'fast' = 'true' THEN 10 ELSE 15 END
+        WHEN config->'_aihot'->>'fast' = 'true' THEN LEAST(fail_count + 2, 10)
+        ELSE LEAST(interval_minutes * (fail_count + 2), 360) END),
       updated_at = now()
     WHERE id = ${sourceId}`;
   await db`UPDATE fetch_runs SET status = 'failed', finished_at = now(), found_count = ${run.found}, new_count = ${run.created},
               error = ${run.error}, detail = nullif(coalesce(detail,'{}'::jsonb) || coalesce(${detail}::jsonb,'{}'::jsonb),'{}'::jsonb) WHERE id = ${runId}`;
+}
+
+class StaleSourceError extends Error {
+  constructor() { super("source changed during collection"); }
+}
+
+/** Reject a cursor computed from a source snapshot superseded by another collection. */
+async function lockSourceCursor(db: Db, source: SourceRow): Promise<void> {
+  const expected = source.cursor === null ? null : db.json(source.cursor as never);
+  const rows = await db`SELECT id FROM sources WHERE id = ${source.id}
+    AND cursor IS NOT DISTINCT FROM ${expected}::jsonb
+    AND config = ${db.json(source.config as never)}::jsonb AND enabled = ${source.enabled} FOR UPDATE`;
+  if (!rows.length) throw new StaleSourceError();
 }
 
 /** `xSince` reads an X account again from that post, without moving its watermark back. */
@@ -327,10 +369,17 @@ export async function collectSource(sourceId: string, opts: { force?: boolean; x
     if (unsupported.length) throw new FetchError(`unsupported config: ${unsupported.join(", ")}`);
     let candidates: CollectionCandidate[];
     let paidReceiptIds: number[] = [];
+    let coverageUnverified = false;
+    let paginationLimited = false;
+    let pageFailed = false;
+    let pageError: unknown;
     let nextCursor: Record<string, unknown> = { ...(source.cursor ?? {}) };
     let detail: Record<string, unknown> | null = null;
     const d = source.config.detail;
     const rules = detailRulesOf(source);
+    const cacheRules = source.config._aihot?.fast === true ? sha256(JSON.stringify({ detail: d ?? null, publishedAfter: source.config.publishedAfter ?? null })) : null;
+    let earlyImports = 0;
+    const earlyIdentities = new Set<string>();
     if (source.kind === "rss") {
       // Changed detail rules require the listing again even when its bytes did not change.
       const expiredDates = Object.values(source.cursor?.detailDatedOut ?? {}).some(read => !currentDateRead(read as DatedOut[string]));
@@ -343,29 +392,83 @@ export async function collectSource(sourceId: string, opts: { force?: boolean; x
       if (rss.notModified) detail = { notModified: true, httpStatus: 304 };
     }
     else if (source.kind === "web_list") candidates = await fetchWebList(source);
-    else if (source.kind === "json_list") candidates = await fetchJsonList(source);
+    else if (source.kind === "json_list") {
+      candidates = await fetchJsonList(source, {
+        onLimit: () => { paginationLimited = true; },
+        onPageError: cacheRules === null ? undefined : (error) => {
+          if (shutdownSignal.signal.aborted) throw error;
+          pageFailed = true;
+          pageError = error;
+        },
+        onPage: cacheRules === null ? undefined : async (page) => {
+          let entries = await listingEntries(source, page);
+          entries = entries.filter((entry) => {
+            if (earlyIdentities.has(entry.identityKey!)) return false;
+            earlyIdentities.add(entry.identityKey!);
+            return true;
+          });
+          const previous = d || !firstImport ? await storedDetails(entries.map((c) => c.identityKey!)) : new Map<string, StoredDetail>();
+          const policy = admission(source, previous, firstImport);
+          entries = entries.filter(policy.byListing);
+          if (firstImport) {
+            const remaining = Math.max(0, Number(source.config._aihot?.initialBackfillLimit ?? 30) - earlyImports);
+            entries = entries.slice(0, remaining);
+            earlyImports += entries.length;
+          }
+          await cacheFast(source, entries.filter((c) => policy.admits(c) || !c.publishedAt && !!source.config.publishedAfter && Number(d?.maxFetches ?? 0) > 0), firstImport, cacheRules);
+        },
+      });
+      if (source.config.pagination) detail = { paginationLimited };
+    }
     else {
       const x = await fetchXSearch(source, opts.xSince);
       candidates = x.candidates;
       paidReceiptIds = x.receiptIds;
-      if (x.lastId && !(nextCursor.lastTweetId && BigInt(String(nextCursor.lastTweetId)) > BigInt(x.lastId))) nextCursor.lastTweetId = x.lastId;
-      // A search longer than one run keeps its position for the next runs (shown in the admin).
-      if (x.backlog.length) nextCursor.xBacklog = x.backlog;
-      else delete nextCursor.xBacklog;
-      detail = { pages: x.pages, truncated: x.truncated, backlog: x.backlog.length, backlogPages: x.backlogPages, dropped: x.dropped };
+      coverageUnverified = x.coverageUnverified;
+      if (!coverageUnverified) {
+        if (x.lastId && !(nextCursor.lastTweetId && BigInt(String(nextCursor.lastTweetId)) > BigInt(x.lastId))) nextCursor.lastTweetId = x.lastId;
+        // A search longer than one run keeps its position for the next runs (shown in the admin).
+        if (x.backlog.length) nextCursor.xBacklog = x.backlog;
+        else delete nextCursor.xBacklog;
+      }
+      detail = { pages: x.pages, truncated: x.truncated, coverageUnverified, backlog: x.backlog.length, backlogPages: x.backlogPages, dropped: x.dropped };
     }
     found = candidates.length;
     candidates = await listingEntries(source, candidates);
     // Admission of old archive entries and detail recovery both need the same stored identities.
     // A later date correction must still reach material that was already admitted without a date.
-    const known = d || (!firstImport && source.kind !== "x_search")
+    let known = d || (!firstImport && source.kind !== "x_search")
       ? await storedDetails(candidates.map((c) => c.identityKey!)) : new Map<string, StoredDetail>();
-    const { byListing, admits } = admission(source, known, firstImport);
+    const initialAdmission = admission(source, known, firstImport);
+    const byListing = initialAdmission.byListing;
+    let admits = initialAdmission.admits;
     candidates = candidates.filter(byListing);
-    // First import of a new source: bounded, and archived by source time (never "today", never pushed).
-    if (firstImport) candidates = candidates.slice(0, Number(source.config._aihot?.initialBackfillLimit ?? 30));
+    // Browser X cannot resume the observed page, so retain it all as first-import history.
+    if (firstImport && !coverageUnverified) candidates = candidates.slice(0, Number(source.config._aihot?.initialBackfillLimit ?? 30));
+    const cachedImports = new Map<string, boolean>();
+    const coverageError = coverageUnverified ? "opencli X search coverage is unverified"
+      : paginationLimited ? "JSON listing reached its page limit; coverage is unverified" : undefined;
+    if (source.config._aihot?.fast === true) {
+      if (!source.config.pagination) await cacheFast(source, candidates.filter((c) => admits(c) || !c.publishedAt && !!source.config.publishedAfter && Number(d?.maxFetches ?? 0) > 0), firstImport, cacheRules!);
+      const pending = await sql<{ identity_key: string; payload: CollectionCandidate; first_import: boolean; discovered_at: Date }[]>`
+        SELECT identity_key, payload, first_import, discovered_at FROM fast_source_items
+        WHERE source_id = ${sourceId} AND pending ORDER BY considered_at NULLS FIRST, discovered_at, identity_key LIMIT 100`;
+      candidates = pending.map((row) => {
+        cachedImports.set(row.identity_key, row.first_import);
+        const c = row.payload;
+        return { ...c, identityKey: row.identity_key, publishedAt: c.publishedAt ? new Date(c.publishedAt) : null,
+          sourceUpdatedAt: c.sourceUpdatedAt ? new Date(c.sourceUpdatedAt) : null,
+          discoveredAt: c.discoveredAt ? new Date(c.discoveredAt) : row.discovered_at };
+      });
+      if (pending.length) await sql`UPDATE fast_source_items SET considered_at = now()
+        WHERE source_id = ${sourceId} AND identity_key = ANY(${pending.map((r) => r.identity_key)}::text[])`;
+      known = await storedDetails(candidates.map((c) => c.identityKey!));
+      const imported = admission(source, known, true);
+      const normal = admission(source, known, firstImport);
+      admits = (c) => (cachedImports.get(c.identityKey!) ? imported : normal).admits(c);
+    }
     const reads = await enrichDetails(candidates, source, known, {
-      budget: Number(d?.maxFetches ?? 0), admits,
+      budget: source.config._aihot?.fast === true ? Math.min(Number(d?.maxFetches ?? 0), 1) : Number(d?.maxFetches ?? 0), admits,
       after: source.cursor?.detailRules === rules ? source.cursor?.detailAfter : undefined,
       datedOut: source.cursor?.detailRules === rules ? source.cursor?.detailDatedOut ?? {} : {},
       retries: source.cursor?.detailRules === rules ? source.cursor?.detailRetries ?? {} : {},
@@ -378,6 +481,12 @@ export async function collectSource(sourceId: string, opts: { force?: boolean; x
       if (source.kind === "rss" && reads.pending > 0) delete nextCursor.rss;
     } else { delete nextCursor.detailRules; delete nextCursor.detailAfter; }
 
+    const complete = source.config._aihot?.fast === true ? candidates.filter((c) => {
+      const stored = known.get(c.identityKey!);
+      return !d || Number(d.maxFetches ?? 0) === 0 || c.detailRules === rules
+        || !!stored && (stored.source_id !== sourceId || stored.rules === rules) || !detailNeed(c, stored, source, c.title);
+    }).map((c) => c.identityKey!) : [];
+
     // Detail pages can establish a date the listing did not have, including an old archive date: such an
     // entry is not stored, and the cursor remembers what its page said (enrichDetails).
     const datedOut: DatedOut = {};
@@ -389,26 +498,62 @@ export async function collectSource(sourceId: string, opts: { force?: boolean; x
       if (listed !== undefined) datedOut[c.identityKey!] = listed;
       return false;
     });
-    // Kept while the listing offers them; a 304 offers no entries and keeps the last ones.
-    if (found) { nextCursor.detailDatedOut = datedOut; nextCursor.detailRetries = reads.retries; }
+    if (source.config._aihot?.fast === true && cachedImports.size) {
+      const previousRetries: Retries = source.cursor?.detailRules === rules ? { ...source.cursor?.detailRetries } : {};
+      const previousDated: DatedOut = source.cursor?.detailRules === rules ? { ...source.cursor?.detailDatedOut } : {};
+      for (const key of cachedImports.keys()) { delete previousRetries[key]; delete previousDated[key]; }
+      nextCursor.detailRetries = { ...previousRetries, ...reads.retries };
+      nextCursor.detailDatedOut = { ...previousDated, ...datedOut };
+    } else if (found) {
+      nextCursor.detailDatedOut = datedOut;
+      nextCursor.detailRetries = reads.retries;
+    }
     if (!d || !Object.keys(nextCursor.detailDatedOut ?? {}).length) delete nextCursor.detailDatedOut;
     if (!d || !Object.keys(nextCursor.detailRetries ?? {}).length) delete nextCursor.detailRetries;
-    const stored = await store(sourceId, candidates, firstImport ? "first-import" : null);
-    ({ created, revised } = stored);
+    if (source.config._aihot?.fast === true) {
+      for (const candidate of candidates) {
+        const result = await store(sourceId, [candidate], cachedImports.get(candidate.identityKey!) ? "first-import" : null);
+        created += result.created;
+        revised += result.revised;
+      }
+      if (complete.length) await sql`UPDATE fast_source_items SET pending = false, rules_key = ${cacheRules} WHERE source_id = ${sourceId} AND identity_key = ANY(${complete}::text[])`;
+    } else {
+      const stored = await store(sourceId, candidates, firstImport ? "first-import" : null);
+      created += stored.created;
+      revised += stored.revised;
+    }
     for (const id of await fillScheduledPublications(sourceId)) await queueProcessing(id);
+    if (pageFailed) {
+      const message = String(pageError instanceof Error ? pageError.message : pageError).slice(0, 1000);
+      await sql.begin(async (tx) => {
+        await lockSourceCursor(tx, source);
+        await recordFetch(tx, sourceId, run!.id, { found, created, detail, error: message,
+          budget: pageError instanceof BudgetExceededError,
+          rateLimited: (pageError instanceof HttpStatusError || pageError instanceof ProviderRejectedError) && pageError.status === 429 });
+      });
+      return { sourceId, status: "failed", found, created, revised, error: message };
+    }
 
     if (firstImport) nextCursor.initializedAt = new Date().toISOString();
-    nextCursor.lastOkAt = new Date().toISOString();
+    if (!coverageError) nextCursor.lastOkAt = new Date().toISOString();
     await sql.begin(async (tx) => {
-      await recordFetch(tx, sourceId, run!.id, { found, created, detail, cursor: nextCursor });
+      if (source.kind === "x_search" || source.config.pagination) await lockSourceCursor(tx, source);
+      await recordFetch(tx, sourceId, run!.id, { found, created, detail, cursor: nextCursor, coverageError });
       for (const receiptId of paidReceiptIds) await completeReceipt(tx, receiptId);
     });
-    return { sourceId, status: "ok", found, created, revised };
+    return coverageError
+      ? { sourceId, status: "failed", found, created, revised, error: coverageError }
+      : { sourceId, status: "ok", found, created, revised };
   } catch (error) {
     if (shutdownSignal.signal.aborted) throw error;
     const message = String(error instanceof Error ? error.message : error).slice(0, 1000);
-    await recordFetch(sql, sourceId, run!.id, { found, created, detail: null, error: message, budget: error instanceof BudgetExceededError });
-    return { sourceId, status: "failed", found, created, revised, error: message };
+    const rateLimited = (error instanceof HttpStatusError || error instanceof ProviderRejectedError) && error.status === 429;
+    if (error instanceof StaleSourceError) {
+      await sql`UPDATE fetch_runs SET status = 'failed', finished_at = now(), found_count = ${found}, new_count = ${created}, error = ${message} WHERE id = ${run!.id}`;
+    } else {
+      await recordFetch(sql, sourceId, run!.id, { found, created, detail: null, error: message, budget: error instanceof BudgetExceededError, rateLimited });
+    }
+    return { sourceId, status: "failed", found, created, revised, error: message, ...(rateLimited ? { rateLimited: true } : {}) };
   }
 }
 
@@ -444,6 +589,25 @@ export async function collectXShard(key: string, sourceIds: string[]): Promise<{
       FROM sources WHERE id IN ${sql(sourceIds)} ORDER BY id`
   ).filter((m) => m.enabled && shardHandle(m));
   if (members.length === 0) return { key, status: "skipped", accounts: 0, found: 0, created: 0 };
+  if (usesBrowserXSearch()) {
+    let found = 0;
+    let created = 0;
+    let failed = false;
+    let index = 0;
+    let rateLimited = false;
+    await Promise.all(Array.from({ length: Math.min(2, members.length) }, async () => {
+      while (index < members.length && !rateLimited) {
+        const member = members[index++]!;
+        const result = await collectSource(member.id);
+        found += result.found;
+        created += result.created;
+        failed ||= result.status === "failed";
+        rateLimited ||= result.rateLimited === true;
+      }
+    }));
+    return { key, status: failed ? "failed" : "ok", accounts: index, found, created,
+      ...(failed ? { error: rateLimited ? "X rate limit stopped remaining account searches" : "one or more X account collections failed" } : {}) };
+  }
   const runs = new Map((await sql<{ id: number; source_id: string }[]>`
     INSERT INTO fetch_runs ${sql(members.map(m => ({ source_id: m.id })), "source_id")} RETURNING id, source_id`
   ).map(r => [r.source_id, r.id]));
@@ -453,7 +617,7 @@ export async function collectXShard(key: string, sourceIds: string[]): Promise<{
     const since = members.map(coveredTo).reduce((a, b) => (b < a ? b : a));
     // readXSearch keeps one copy per query and gives up stretches left over for days.
     const backlog: XBacklog[] = members.flatMap((m) => (Array.isArray(m.cursor?.xBacklog) ? m.cursor.xBacklog as XBacklog[] : []));
-    const read = await readXSearch(shardQuery(members.map((m) => shardHandle(m)!), members.map(selfThreadHandle).filter((h): h is string => h !== null)), { lastId: String(since), backlog, subject: `x-shard:${key}` });
+    const read = await readXSearch(shardQuery(members.map((m) => shardHandle(m)!), members.map(selfThreadHandle).filter((h): h is string => h !== null)), { lastId: String(since), backlog, subject: `x-shard:${key}`, fast: members[0]!.config._aihot?.fast === true });
     const detail = { shard: key, accounts: members.length, pages: read.pages, truncated: read.truncated, backlog: read.backlog.length, backlogPages: read.backlogPages, dropped: read.dropped };
     const counts = new Map<string, { found: number; created: number; newest: string }>();
     for (const m of members) {
@@ -485,6 +649,7 @@ export async function collectXShard(key: string, sourceIds: string[]): Promise<{
     // were regrouped, and each shard then bought its own copy of the same pages.
     const keeper = members[0]!.id;
     await sql.begin(async tx => {
+      for (const m of members) await lockSourceCursor(tx, m);
       for (const m of members) {
         const { newest, ...count } = counts.get(m.id)!;
         const cursor: Record<string, unknown> = { ...m.cursor, lastTweetId: newest, lastOkAt: new Date().toISOString() };
@@ -498,9 +663,13 @@ export async function collectXShard(key: string, sourceIds: string[]): Promise<{
   } catch (error) {
     if (shutdownSignal.signal.aborted) throw error;
     const message = String(error instanceof Error ? error.message : error).slice(0, 1000);
+    if (error instanceof StaleSourceError) {
+      for (const m of members) await sql`UPDATE fetch_runs SET status = 'failed', finished_at = now(), error = ${message} WHERE id = ${runs.get(m.id)!}`;
+      return { key, status: "failed", accounts: members.length, found, created, error: message };
+    }
     const budget = error instanceof BudgetExceededError;
     for (const m of members) {
-      await recordFetch(sql, m.id, runs.get(m.id)!, { found: 0, created: 0, detail: { shard: key, accounts: members.length }, error: message, budget });
+      await recordFetch(sql, m.id, runs.get(m.id)!, { found: 0, created: 0, detail: { shard: key, accounts: members.length }, error: message, budget, rateLimited: (error instanceof HttpStatusError || error instanceof ProviderRejectedError) && error.status === 429 });
     }
     return { key, status: "failed", accounts: members.length, found, created, error: message };
   }
@@ -518,8 +687,12 @@ async function scheduleXShards(): Promise<number> {
   let enqueued = 0;
   for (const shard of planXShards(rows)) {
     if (!shard.sourceIds.some((id) => due.has(id))) continue;
-    if (await enqueue(QUEUES.fetchXShard, { key: shard.key, sourceIds: shard.sourceIds }, { singletonKey: shard.key })) enqueued += 1;
-    await sql`UPDATE sources SET next_fetch_at = now() + interval '10 minutes' WHERE id IN ${sql(shard.sourceIds)}`;
+    const sent = await sql.begin(async (tx) => {
+      const id = await enqueue(QUEUES.fetchXShard, { key: shard.key, sourceIds: shard.sourceIds }, { singletonKey: shard.key }, tx);
+      if (id) await tx`UPDATE sources SET next_fetch_at = now() + interval '10 minutes' WHERE id IN ${sql(shard.sourceIds)}`;
+      return id;
+    });
+    if (sent) enqueued += 1;
   }
   return enqueued;
 }
@@ -529,11 +702,15 @@ export async function scheduleDueSources(): Promise<{ enqueued: number; shards: 
   const rows = await sql<{ id: string }[]>`
     SELECT id FROM sources
     WHERE enabled AND kind IN ('rss', 'web_list', 'json_list', 'x_search') AND (next_fetch_at IS NULL OR next_fetch_at <= now()) AND NOT (${sharded()})
-    ORDER BY next_fetch_at NULLS FIRST LIMIT 40`;
+    ORDER BY (config->'_aihot'->>'fast' = 'true') DESC NULLS LAST, next_fetch_at NULLS FIRST LIMIT 40`;
   let enqueued = 0;
   for (const r of rows) {
-    if (await enqueue(QUEUES.fetchSource, { sourceId: r.id }, { singletonKey: r.id })) enqueued += 1;
-    await sql`UPDATE sources SET next_fetch_at = now() + interval '10 minutes' WHERE id = ${r.id}`;
+    const sent = await sql.begin(async (tx) => {
+      const id = await enqueue(QUEUES.fetchSource, { sourceId: r.id }, { singletonKey: r.id }, tx);
+      if (id) await tx`UPDATE sources SET next_fetch_at = now() + interval '10 minutes' WHERE id = ${r.id}`;
+      return id;
+    });
+    if (sent) enqueued += 1;
   }
   return { enqueued, shards: await scheduleXShards() };
 }
@@ -559,6 +736,7 @@ export async function adaptIntervals(): Promise<{ updated: number }> {
     FROM sources s WHERE s.enabled AND s.kind IN ('rss', 'web_list', 'json_list', 'x_search')`;
   let updated = 0;
   for (const r of rows) {
+    if (r.config._aihot?.fast === true && !r.paid_listing) continue;
     const perDay = Number(r.per_day);
     // Editorial sites and feeds are looked at hourly at least (they cost nothing);
     // editorial X and listings read through Jina stop at two hours (paid per call, within their budgets);

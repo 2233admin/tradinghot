@@ -17,6 +17,13 @@ const modified = 'Mon, 28 Sep 2026 10:00:00 GMT';
 const server = http.createServer((req, res) => {
   const path = req.url ?? '/';
   requests.push({ path, etag: req.headers['if-none-match'], modified: req.headers['if-modified-since'] });
+  if (path === '/atom-fast.xml') {
+    const published = new Date(Date.now() - 120_000).toISOString();
+    const updated = new Date(Date.now() - 60_000).toISOString();
+    res.writeHead(200, { 'content-type': 'application/atom+xml' });
+    res.end(`<feed xmlns="http://www.w3.org/2005/Atom"><title>Feed</title><id>https://example.org/fast-${T}</id><updated>${updated}</updated><entry><id>https://example.org/post-${T}</id><title>Fast Atom</title><link href="https://example.org/post-${T}"/><published>${published}</published><updated>${updated}</updated></entry></feed>`);
+    return;
+  }
   if (path === '/redirect') { res.writeHead(302, { location: redirectNew ? '/new.xml' : '/old.xml' }); res.end(); return; }
   const etag = path === '/modified.xml' ? undefined : path === '/feed.xml' ? `"v${version}"` : '"shared"';
   if ((etag && req.headers['if-none-match'] === etag) || (!etag && req.headers['if-modified-since'] === modified)) {
@@ -83,4 +90,14 @@ test('Last-Modified works without ETag and changing redirect targets cannot acce
   assert.equal((await collectSource(redirect)).created, 1, 'new destination is fetched without old destination validators');
   assert.equal(requests.at(-1)!.path, '/new.xml');
   assert.equal(requests.at(-1)!.etag, undefined);
+});
+
+test('fast Atom sources restore the updated timestamp when reading cached entries', async () => {
+  const id = `rss-fast-${T}`;
+  await source(id, '/atom-fast.xml');
+  await sql`UPDATE sources SET config = config || '{"_aihot":{"fast":true}}'::jsonb WHERE id = ${id}`;
+  const result = await collectSource(id);
+  assert.equal(result.status, 'ok');
+  const [article] = await sql<{ source_updated_at: Date | null }[]>`SELECT source_updated_at FROM articles WHERE source_id = ${id}`;
+  assert.ok(article?.source_updated_at instanceof Date);
 });

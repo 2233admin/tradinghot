@@ -11,12 +11,12 @@ const KEYS: Record<SourceRow["kind"], string[]> = {
   rss: [...COLLECTED, "feedUrl", "summaryIsBody", "preserveUrlFragment", "allowCategories", "denyCategories", "publishedAtUtcOffset"],
   web_list: [
     ...COLLECTED, "url", "baseUrl", "parseMode", "adapter", "cacheToleranceSeconds", "linksStartLine", "preserveUrlFragment",
-    "itemSelector", "linkSelector", "titleSelector", "summarySelector", "publishedAtSelector", "publishedAtAttribute", "publishedAtRegex", "publishedAtUtcOffset",
+    "itemSelector", "linkSelector", "titleSelector", "summarySelector", "authorSelector", "publishedAtSelector", "publishedAtAttribute", "publishedAtRegex", "publishedAtUtcOffset",
   ],
   json_list: [
     ...COLLECTED, "url", "mode", "method", "headers", "bodyJson", "bodyForm", "jsonKey", "windowVar", "itemsPath", "itemsObjectValues",
     "titlePaths", "summaryPaths", "summaryTemplate", "summaryIsBody", "authorPaths", "publishedAtPath", "publishedAtUnit", "publishedAtUtcOffset", "externalIdPath",
-    "urlTemplate", "urlTemplateFallback", "rawDropKeys", "requireBoolean", "minNumeric",
+    "urlTemplate", "urlTemplateFallback", "rawDropKeys", "requireBoolean", "minNumeric", "pagination",
   ],
   // X accounts are mostly read in shards, which apply only these.
   x_search: [...PUBLISHER, "_aihot", "ingestNoiseFilter", "itemUrlPrefixRewrite", "query", "searchType"],
@@ -26,7 +26,7 @@ const KEYS: Record<SourceRow["kind"], string[]> = {
 
 // Objects with fixed keys (headers and bodyJson are request data, free-form).
 const NESTED: Record<string, string[]> = {
-  _aihot: ["initialBackfillLimit", "initialBackfillMonths"],
+  _aihot: ["initialBackfillLimit", "initialBackfillMonths", "fast"],
   ingestNoiseFilter: ["dropMarkers", "dropMarkersTitleOnly", "keepIfMatches"],
   itemUrlPrefixRewrite: ["from", "to"],
   requireBoolean: ["path", "equals"],
@@ -72,12 +72,23 @@ export function unsupportedConfig(kind: SourceRow["kind"], config: Record<string
       || value && (!Array.isArray(config.publisherUrlPrefixes) || config.publisherUrlPrefixes.length === 0))) out.push(key);
     else if (key === "publishedAfter" && !utcInstant(value)) out.push(key);
     else if (key === "acceptLanguage" && (typeof value !== "string" || !ACCEPT_LANGUAGE.test(value))) out.push(key);
+    else if (key === "pagination" && (
+      !value || typeof value !== "object" || Array.isArray(value)
+      || Object.keys(value).some((part) => !["pageParam", "startPage", "maxPages"].includes(part))
+      || typeof (value as any).pageParam !== "string" || !/^[A-Za-z][A-Za-z0-9_]*$/.test((value as any).pageParam)
+      || !Number.isSafeInteger((value as any).startPage) || (value as any).startPage < 0
+      || !Number.isSafeInteger((value as any).maxPages) || (value as any).maxPages < 1 || (value as any).maxPages > 10
+      || !!config.via || !!config.bodyForm || !!config.bodyJson || !!config.requireBoolean || !!config.minNumeric
+      || !!config.mode && config.mode !== "json_api" || !!config.method && config.method !== "GET"
+      || typeof config.url !== "string" || config.url.startsWith("https://r.jina.ai/")
+    )) out.push(key);
     else if (key === "publisherUrlPrefixes" && (!Array.isArray(value) || !value.every((v) => {
       if (typeof v !== "string") return false;
       try { const u = new URL(v); return /^https?:$/.test(u.protocol) && !u.username && !u.password && !u.search && !u.hash; } catch { return false; }
     }))) out.push(key);
     else if (VALUES[key] && !VALUES[key]!.includes(String(value))) out.push(`${key}=${String(value)}`);
     else if (NESTED[key] && value && typeof value === "object") {
+      if (key === "_aihot" && "fast" in value && typeof value.fast !== "boolean") out.push("_aihot.fast");
       for (const sub of Object.keys(value)) if (!NESTED[key]!.includes(sub)) out.push(`${key}.${sub}`);
       if (key === "detail" && "preserve" in value && !preserveRules((value as { preserve: unknown }).preserve)) out.push("detail.preserve");
     }

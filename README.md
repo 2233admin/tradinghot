@@ -1,6 +1,6 @@
 # 股市热点 · tradinghot
 
-盯 **A股、港股、美股与量化交易** 的行业热点站：从 18 个财经信源里挑出值得看的动态，把同一件事的多篇报道归成一个事件，每天 08:00 出一份日报。
+盯 **A股、港股、美股与量化交易** 的行业热点站：从 72 个财经信源里挑出值得看的动态，把同一件事的多篇报道归成一个事件，每天 08:00 出一份日报。
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-176b75?style=flat-square" alt="MIT License"></a>
@@ -16,11 +16,11 @@
 | 站名与标识 | 股市热点 · `stockhot`（`site/site.ts` 的 `SITE.name`、`SITE.mcpPrefix`） |
 | 类别 | 市场、宏观、个股、行业、量化、教程、观点 |
 | 主题 | 37 个，分「公司与机构 / 市场与方向 / 内容形态」三组（`industry/topics.json`） |
-| 信源 | 18 个：金十数据快讯、新浪财经滚动、CNBC 两条、MarketWatch 两条、美联储 / 苹果 / 微软官方 RSS、Alpha Architect、Quantified Strategies、7 个 X 账号 |
+| 信源 | 72 个，涵盖财经快讯、政府与交易所公告、社区、媒体 RSS 和 X 账号，详见 `industry/sources.json` |
 | 出刊 | 日报 08:00、周报周一 10:00、月报每月 1 日 10:30（北京时间，`EDITION_TIMES`） |
 | 立场 | 只做摘要和阅读索引，不荐股、不喊单、不给买卖建议；原文版权归各来源 |
 
-当前状态：`npm run typecheck`、`npm test`、`node scripts/smoke.ts` 在本机和 GitHub Actions 上都通过；18 个信源实测可抓（金十快讯、新浪财经滚动各抓到几十条）。站内还没有内容——本地联调用的 `.env` 里模型密钥仍是占位值，填上真实的 `LLM_API_KEY`，采集、分析、成刊才会产出。
+运行状态取决于部署：采集需要运行 worker 并开启 `COLLECT_ENABLED`；模型处理还需要可用的模型凭据和 `MODEL_CALLS_ENABLED=true`。重点来源的快速缓存、预算和平台限制见 [信源](docs/sources.md#抓取频率)。
 
 ## 与上游的关系
 

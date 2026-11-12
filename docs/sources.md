@@ -79,6 +79,7 @@
 ```
 
 - `itemSelector` 在整个页面找条目；`linkSelector`、`titleSelector` 在每个条目内取第一个匹配节点，也可以匹配条目自身。选 `.news-list` 只会得到一个容器，通常只取到第一条新闻；只写 `div` 又会混入嵌套容器。要选重复出现的新闻节点。
+- `authorSelector` 可选，在每个条目内取第一个匹配节点的文字作为作者；不要选包含多个作者或其他内容的外层容器。
 - 链接取自 `href`；`/posts/first` 等相对链接按列表重定向后的最终地址解析，也可用 `baseUrl` 指定基准地址。标题取节点文字。重复链接会合并；Markdown 列表先出现“Read more”等按钮、后出现真实标题时，使用真实标题。指向列表自身的链接通常会跳过。
 - 日期在条目内查找 `publishedAtSelector`，依次尝试 `datetime`、`content`、`title` 属性和文字，无法解析的提示文字不会遮住同一节点的有效日期。没有时区的日期时间可用 `publishedAtUtcOffset`（默认 `+08:00`）；自带时区的时间保留原时区语义，纯 `YYYY-MM-DD` 按 UTC 零点读。不完整的月份、产品版本号和不存在的日历日期不作为发布日期。
 - `parseMode`：普通网页默认 `html`；`markdown` 按 Markdown 链接读；`docusaurus_changelog` 读更新日志标题；`intercom_changelog` 按 Intercom 帮助中心的日期章节读取标题和正文，每节保留自己的网址锚点，默认按 UTC 日历日读取，也可指定 `publishedAtUtcOffset`。需要 Jina 时，显式把 `url` 写成 `https://r.jina.ai/https://目标站/路径` 并配置 `JINA_API_KEY`，不是抓不到就自动切换。Jina 默认返回 Markdown；要继续使用 CSS 选择器，显式设 `parseMode: "html"`。
@@ -126,6 +127,7 @@
 - `summaryIsBody`：确认接口里的摘要就是全文时设为 `true`，把 `summaryPaths` 取到的文字当正文，不再去抓原文页。
 - 日期建议返回带时区的 ISO 字符串；`2026-09-30 17:43:58` 这类不带时区的时间，与网页列表一样按 `publishedAtUtcOffset` 读（默认 `+08:00`）；数字时间戳分别设 `publishedAtUnit: "epoch_s"`（秒）或 `"epoch_ms"`（毫秒），`20261001` 这类日期设 `"yyyymmdd"`。
 - 缺少标题或无法生成链接的条目会跳过。非空数组全部映射失败时，会报 `no items mapped (check title/url paths)`；路径不是数组时，会报 `items path did not resolve to an array`。
+- `pagination`：仅支持直接 GET JSON 列表，填写 `{"pageParam":"pagenum","startPage":1,"maxPages":3}`，每轮从起始页读到空页或上限；`maxPages` 为 1–10。快速信源每页在读取下一页前先持久缓存。达到上限时运行标为覆盖未验证；分页不保证排序稳定，也不能保证停机期间超过窗口的帖子不遗漏。分页不能与浏览器、Jina、POST、`requireBoolean` 或 `minNumeric` 一起使用。
 
 ### 本地跑通 HTML/JSON 示例
 
@@ -200,9 +202,9 @@ http.createServer((req, res) => {
 
 在后端运行环境的 `.env` 配置 `SOCIALDATA_API_KEY`，重启 API（预览）和 worker（定时采集）后生效；不要把 key 写进信源 JSON 或提交到仓库。先在后台“设置 → 付费请求上限”检查 SocialData 额度，再按需预览。未配置 key 时会改用浏览器回退（见下），不再报 `SOCIALDATA_API_KEY is not configured`；服务拒绝请求或预算熔断时看后台错误原因。预览可能有付费请求，本文不要求用真实服务验证，结果取决于账号和服务当时的返回。
 
-没有 `SOCIALDATA_API_KEY` 时，程序用本机 opencli 的 `twitter search`，借浏览器里已登录的 X 会话执行同样的查询，不产生付费请求。前提：Chrome 安装 OpenCLI 扩展并在 x.com 登录（`opencli twitter whoami` 能看到账号）；同时连着多个 Browser Bridge 配置时，在 `.env` 填 `X_OPENCLI_PROFILE=<profile>`（`opencli profile list` 查看），重启 API 与 worker。浏览器回退一次最多读 60 条、没有分页游标，靠每条信源的 `lastTweetId` 水位去重；X 长文（Article）正文仍要 SocialData 的 `getArticle`，没有 key 时正文只保留推文文本。配置 key 后自动回到付费接口。
+没有 `SOCIALDATA_API_KEY` 时，程序用本机 opencli 的 `twitter search`，借浏览器里已登录的 X 会话执行查询，不产生付费请求。前提：Chrome 安装 OpenCLI 扩展并在 x.com 登录（`opencli twitter whoami` 能看到账号）；同时连着多个 Browser Bridge 配置时，在 `.env` 填 `X_OPENCLI_PROFILE=<profile>`（`opencli profile list` 查看），重启 API 与 worker。浏览器按账号分别搜索，同一进程最多并行两条 X 搜索；这一限制不跨进程，多个进程仍共享浏览器和平台额度。每次最多读 60 条且不返回可续读游标；已观察的帖子会按身份去重保存，但无法证明结果完整，因此不推进覆盖水位、不丢弃已有付费分页位置，后台运行记录标为覆盖未验证。无效响应报错，不当成空结果。首次导入完成后记录导入时间，后续发现的新帖不会一直按历史导入处理。X 长文（Article）正文仍要 SocialData 的 `getArticle`，没有 key 时正文只保留推文文本。配置 key 后自动回到付费接口。
 
-生产自动采集时，普通账号会被自动合并成一次搜索（每次最多二十几个账号），省请求数；单个信源的手动预览不是合并采集。
+使用 SocialData 时，生产自动采集的普通账号会被自动合并成一次搜索（每次最多二十几个账号），省请求数；单个信源的手动预览不是合并采集。
 
 ### mp_account
 
@@ -226,20 +228,81 @@ http.createServer((req, res) => {
 | 第一财经 · 新闻 | `json_list` | `www.yicai.com/api/ajax/getjuhelist?action=news&page=1&pagesize=30` | 30 条 / 30 分钟 |
 | 财新 · 最新 | `json_list` | `gateway.caixin.com/api/dataplatform/scroll/index`（`time` 是毫秒时间戳） | 20 条 / 60 分钟 |
 | 每日经济新闻 · 要闻 | `web_list` | `www.nbd.com.cn/columns/3/`，`li.u-news-title` | 列表 20 条 + 详情 20 页 / 30 分钟 |
-| 集思录 · 广场 | `web_list` | `www.jisilu.cn/explore`，`div.aw-question-list div.aw-item` | 列表 30 条 + 详情 30 页 / 30 分钟 |
+| 集思录 · 最新发表 | `web_list` | `www.jisilu.cn/home/explore/category-__sort_type-add_time` | 启用自动采集前须确认平台授权 |
 | 华尔街见闻 · 快讯 | `json_list` | `api-one.wallstcn.com/apiv1/content/lives?channel=global-channel`（`data.items`，`display_time` 秒） | 100 条 / 10 分钟 |
 | 智通财经 · 推荐 | `json_list` | `r.jina.ai` + `www.zhitongcaijing.com/content/recommend.html?data_type=1&page=1` | 20 条 / 30 分钟 |
 | 界面新闻 · 快讯 | `web_list` | `www.jiemian.com/lists/1324kb.html`，`data-time` 属性是秒级时间戳 | 列表 20 条 / 15 分钟 |
 | 雪球 · 热门讨论 | `json_list` | `xueqiu.com/statuses/hot/listV2.json`，`via: opencli` 用已登录浏览器读 | 20 条 / 30 分钟 |
 | 东方财富 · 合作伙伴资讯 | `rss` | `rss.eastmoney.com/rss_partener.xml` | 按 feed / 30 分钟 |
+| 淘股吧 · 首页帖子 | `json_list` | `www.tgb.cn/newIndex/getZh?pageNo=1` | 首页 / 快速模式 |
+| 韭研公社 · 最新发布 | `web_list` | `www.jiuyangongshe.com/study_publish`，`.community-bar ul > li` | 列表首页 / 快速模式 |
+| 东方财富股吧 · 首页 | `web_list` | `guba.eastmoney.com/index.html`，`.balist ul.newlist > li` | 首页 / 快速模式；按最后更新排序 |
 
 三类要点：
 
 - **财联社的 URL 带签名**。`sign` 是 `md5(sha1(参数按字段名排序后拼成的查询串))`，参数固定（`app=CailianpressWeb&category=&last_time=&os=web&refresh_type=1&rn=50&sv=7.7.5`）时签名也不变，所以能整段写进配置。改动 `rn` 或其它参数必须重算签名；站点轮换 `sv` 或客户端 ID 时这个地址会返回签名错误，表现为采集失败、`last_error` 停在 `errno 10012`，重算签名即可恢复。
-- **列表页只取第一页**。采集器每次只请求配置里的那一个地址，没有翻页、没有历史归档；首次导入只回填 `_aihot.initialBackfillLimit` 条（默认 30），之后靠轮询去重。列表容量小于该频道的发帖速度就会漏条目，所以表格里给了单次上限：例如金十 15 分钟一轮、每轮约 20 条，超过这个速度的部分补不回来。需要更全的覆盖时，先量出该源在目标间隔内的峰值新增量，再调 `num` / `size` / `rn` 这类页大小参数，而不是简单缩短间隔。
+- **列表默认只取第一页**。JSON 列表可按上面的 `pagination` 显式启用有限翻页；其他列表仍只请求配置里的一个地址。首次导入只回填 `_aihot.initialBackfillLimit` 条（默认 30），之后靠轮询去重；超过分页窗口或因排序变化跨页移动的条目仍可能遗漏。
 - **站点从本机网络不可达时，用 Jina 中转**。把列表或接口地址写成 `https://r.jina.ai/<原地址>`，三种 kind 都认：`web_list` 会向 Jina 要渲染后的 HTML（`parseMode: html` 时）或 Markdown，`json_list` 会把 Jina 取回的 JSON 正文照常按 `itemsPath` 解析。Jina 免费额度接受不带 key 的读，代码里 `JINA_API_KEY` 因此是可选的；配了 key 就走账号额度、按 token 计费。智通财经和证券时报的站点直连超时，智通就是靠这条路接进来的。代价是一次列表读取要经过第三方，`r.jina.ai` 本身不可达时该源会失败。
 
-**列表里可以直接给摘要和时间**：`web_list` 新增两个可选项，`summarySelector` 把列表里已经显示在标题下的提要写进 `excerpt`，`publishedAtAttribute` 读元素属性里的秒/毫秒时间戳（界面用 `data-time="1794017564"`）。列表自带摘要时就不必再为每条抓详情页；集思录和每经的列表没有摘要，仍靠 `detail` 补：集思录取 `div.markitup-box` 当摘要，每经用详情的 `"pubDate"` 字段补发布时间。`detail.maxFetches` 是每轮最多读几页详情，按列表长度和站点容忍度设，别设成整页全量。
+**列表里可以直接给摘要和时间**：`web_list` 的 `summarySelector` 把列表里已有的提要写进 `excerpt`，`publishedAtAttribute` 读取元素属性里的时间戳。列表自带摘要时不必再为每条抓详情。集思录的列表时间可能是回复时间，因此最新发表源只从详情页的“发表时间”取原帖时间；每经用详情的 `"pubDate"` 字段补发布时间。`detail.maxFetches` 是每轮最多读几页详情，按列表长度和站点容忍度设。
+
+东方财富股吧首页按最后更新排列，帖子出现在首页不等于刚发表；页面时间缺少年份，配置不把它当作可信发布时间。原帖详情若要求身份核实，标题和链接仍可缓存，发布时间和正文可能无法补齐，不能据此保证所有新帖被发现或公开。
+
+#### 指定论坛作者
+
+已知作者的站内 ID 后，可以在后台分别建一个快速信源，不必等待作者的帖子出现在广场首页。下面的 ID 占位符要替换成实际用户的 ID；这些是单页轮询，不保证高产账号、置顶帖或访问受限时不漏帖。
+
+集思录的[服务协议第四条第三款第（6）项](https://www.jisilu.cn/account/agreement/)将利用爬虫、数据挖掘等自动化工具抓取数据或内容列为禁止行为。对首页或指定作者启用自动采集前，应先取得平台授权或使用经授权的数据服务；公开页面可以访问不代表已获得采集许可。
+
+淘股吧选择 `json_list`，使用用户主页 `/blog/` 后的数字 ID；移动站的用户主帖接口返回原帖时间和作者，而不是最新回复时间：
+
+```json
+{
+  "url": "https://m.tgb.cn/mBlogTopicAjax?userID=用户ID&sortFlag=W&pageNo=1",
+  "itemsPath": "dto.listTopic",
+  "titlePaths": ["subject"],
+  "summaryPaths": ["content"],
+  "authorPaths": ["userName"],
+  "publishedAtPath": "postDate",
+  "externalIdPath": "topicID",
+  "urlTemplate": "https://m.tgb.cn/a/{newTopicID}",
+  "_aihot": { "fast": true }
+}
+```
+
+韭研公社选择 `web_list`，使用用户主页 `/u/` 后的用户 ID。作者页公开列表与最新发布页使用相同的条目结构：
+
+```json
+{
+  "url": "https://www.jiuyangongshe.com/u/用户ID",
+  "itemSelector": ".community-bar ul > li",
+  "linkSelector": ".html-text a",
+  "titleSelector": ".book-title",
+  "authorSelector": ".username .fs16-bold",
+  "publishedAtSelector": ".fs13-ash",
+  "allowUrlPrefixes": ["https://www.jiuyangongshe.com/a/"],
+  "_aihot": { "fast": true }
+}
+```
+
+东方财富股吧的用户主页地址中有数字用户 ID。选择 `json_list`，用作者动态列表中的原帖时间、作者和股吧代码生成链接；该接口包含发帖与转发，不包括单独的评论列表：
+
+```json
+{
+  "url": "https://i.eastmoney.com/api/guba/userdynamiclistv2?uid=用户ID&pagenum=1&pagesize=20&type=1",
+  "itemsPath": "result",
+  "titlePaths": ["post_title", "post_content"],
+  "summaryPaths": ["post_content"],
+  "authorPaths": ["post_user.user_nickname"],
+  "publishedAtPath": "post_publish_time",
+  "externalIdPath": "post_id",
+  "urlTemplate": "https://guba.eastmoney.com/news,{post_guba.stockbar_code},{post_id}.html",
+  "pagination": { "pageParam": "pagenum", "startPage": 1, "maxPages": 3 },
+  "_aihot": { "fast": true }
+}
+```
+
+东方财富动态接口本次单次公开样本返回 20 条；示例最多读取三页，达到上限时会报告覆盖未验证，不能保证密集发帖或离线期间不漏帖。访问权限、账号可见性和发帖到缓存的持续时效仍需逐账号核实。集思录自动采集须先确认平台授权。来源内容默认只公开摘要和原文链接，不因接口返回正文而开放全文。
 
 **只认登录态浏览器接口的站点，用 opencli 读**（雪球）：`json_list` 配置里写 `"via": "opencli"`，采集器会用本机 opencli 把这个接口地址当成标签页打开（`browser <session> open ... --window background`），再取页面文本当响应体，跳过站点对匿名请求的风控。前提是 Chrome 装了 OpenCLI 扩展、雪球已登录；同时连着多个 Browser Bridge 配置时必须在 `.env` 里指定 `OPENCLI_PROFILE`（`opencli profile list` 查看），否则 opencli 会拒绝执行。每条信源用自己的 session（默认取信源 id），两轮采集不会抢同一个标签页。代价是一次采集要驱动一次浏览器，雪球这一轮实测约 37 秒；Twitter 的搜索额度（429 `SearchTimeline`）也会连带影响 X 信源，冷却 15–30 分钟后再抓即可。
 
@@ -302,6 +365,16 @@ http.createServer((req, res) => {
 
 抓取失败不推进位置，下次从同一处继续；连续失败的信源在后台标红，每周一会在运营群发一份信源周报（配置了飞书告警时）。
 
+需要优先缓存新帖时，在信源的采集配置 JSON 中设置 `"_aihot": { "fast": true }`；已有 `_aihot` 里的首次回填设置要一并保留。保存后，已启用的信源立即标记为到期，由调度器检查并入队；成功采集后按一分钟重新检查，每日自动调频不会改变它原来的普通间隔。删除 `fast` 或改为 `false` 即恢复普通间隔。经 Jina 读取的列表仍遵守原有调频与费用限制。
+
+快速模式先把列表中通过已知过滤条件的条目保存在数据库 `fast_source_items`；发布时间须由权威详情判断时，先缓存再应用时间边界。系统再补详情并按原规则决定是否进入文章库；缓存本身不会公开。快速来源每轮最多补一篇详情，未处理缓存会在后续成功采集时继续处理，即使条目已离开首页；来源暂停、关闭快速模式或列表持续抓取失败时，补齐也会暂停。缓存随信源删除，其他情况下保留。合并采集的 X 账号仍在搜索完成后直接入文章库。发布时间缺失或不可信时内容不公开。
+
+X 快速账号在使用 SocialData 时单独合并搜索，相同查询的付费回执每分钟更新，不与普通账号的半小时回执混用。频繁搜索会更快消耗 SocialData 预算：默认每天 1000 次，一个每分钟只请求一页的分片每天就需 1440 次；多个分片或分页需要更多。预算熔断或能识别为 HTTP 429 的失败使快速源等待 10 分钟再检查，但日预算未恢复时仍会被熔断；OpenCLI 后续页的错误可能被适配器吞掉，平台也可能要求更长冷却。付费搜索的旧续读区间在超时、超数量或游标被拒时可能被丢弃，首次导入也不能证明完整覆盖。浏览器回退在单进程中最多并行两条 X 搜索，其他 OpenCLI 命令仍逐条独占；平台限流、搜索索引延迟、单次结果上限、队列积压或停机时，不能保证三分钟内入库。
+
+浏览器分片中任一账号明确收到 429 后，本轮不再启动该分片的其他账号；已经发出的搜索可能仍会完成。不同进程或分片不共用这次停止状态，平台也可能要求超过十分钟的冷却。
+
+`industry/sources.json` 只在首次导入新信源时生效。已有信源需要在后台“信源”页的采集配置中加入 `fast`，不会自动覆盖运营中修改过的配置；只对确实需要高频监控的来源开启。指定博主需要先把可读取其帖子的账号地址或查询建为信源，再启用快速模式，平台要求的登录和权限仍然适用。
+
 「7 天没有新内容」按**信源自己的节奏**判断，而不是一个固定的窗口：日报和周报里分两类。**超出自身更新节奏**的排在前面，先对照原站（把最近 90 天的**产出日**去重到「天」，相邻两天的间隔取中位数当它的节奏；至少有 4 个这样的日子才算有节奏，静默时长要超过中位间隔的 4 倍才算超）。产出日取该条内容的发布时间，页面没给时间就用我们发现它的那天；**一次首次导入算一天**——它是一次交付，发布时间往回铺多远都不算多次产出（否则一个从没产出过的源会显得很准时，跨月的首次导入还会把中位间隔撑大，把一个已经安静的源藏起来）。窗口只算这 90 天里的产出日，更早的历史说明不了它现在多久发一次；发现时间与发布时间没有固定先后，任一个落在窗口内就读，产出日再按窗口夹一次。**判断不了节奏的仍然列出**，但不当作故障，分两种：窗口内没有可比较的产出（它产出过，只是都在窗口外），以及从未收到过内容（那是采集问题）；在自身节奏内的不再列出。抓取间隔 `interval_minutes` 不参与判断——它表示我们多久看一次，不是它多久发一次。
 
 ## 规则：旧文不刷屏
@@ -309,6 +382,8 @@ http.createServer((req, res) => {
 首次发现时原文已经发布超过 48 小时的资料、新信源第一次导入的存量条目、标记为回灌的推送，都按原文时间归档：不进入“今天”，也不推送。没有可信发布时间的资料先不公开（不进公开列表、精选、报告、热点和推送），从原信源或原文页读到日期后再判断新旧。这条规则所有入口共用，防止一次性导入历史内容刷屏。
 
 新信源第一次导入时，只取列表里前 `_aihot.initialBackfillLimit` 条（默认 30）、`_aihot.initialBackfillMonths` 个月以内（默认 12）的条目。之后的抓取只收发布时间在信源第一次导入前 48 小时以内或之后的条目，列表里更早的存量不再进来，不会为整个订阅存档付费；第一次导入以后发布的条目，排在长列表第几条都会收。列表上没有发布时间的条目照收，按上面的规则等读到日期再判断。X 账号按抓取位置往后读，不受这条限制。
+
+OpenCLI 的 X 搜索无法续读已返回页面，首次导入会保留该次观察到、通过首次导入日期过滤的结果（最多 60 条，仍按首次导入归档），不按 30 条截断；它仍无法证明页面之外没有遗漏。
 
 如果只想从一个固定时间之后开始监控，可在 RSS、网页列表、JSON 配置中设置 `publishedAfter`，例如 `"2026-10-01T00:00:00.000Z"`。必须是完整的 UTC 时间，可省略毫秒；预览、首次和后续采集都只接受**严格晚于**它且发布日期可信的条目，未知日期也会排除。起点当天的单页更新章节若仍使用同一发布日期，之后追加的内容也不会被纳入；选择起点时要把这个限制考虑进去。
 

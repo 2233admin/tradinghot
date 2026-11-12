@@ -84,13 +84,18 @@ async function get<T>(path: string, request: Omit<ReceiptRequest, "service">,
 /** Lookups of one post or article. */
 const LOOKUP = { timeoutMs: 30_000, maxBytes: 4 * 1024 * 1024 };
 
+export function usesBrowserXSearch(): boolean {
+  return !credential("collectors", "SOCIALDATA_API_KEY");
+}
+
 /**
  * Searches recent tweets. `window` makes the receipt identity time-bucketed so a retry in the same
  * bucket reuses the stored response instead of paying again.
  */
 export async function searchTweets(query: string, opts: { purpose: string; subject: string; window: string; type?: "Latest" | "Top"; cursor?: string | null }): Promise<SearchResult> {
   // No paid key: read the same query through the logged-in X browser session.
-  if (!credential("collectors", "SOCIALDATA_API_KEY")) {
+  if (usesBrowserXSearch()) {
+    if (opts.cursor) throw new Error("opencli X search cannot resume a SocialData cursor");
     const tweets = await searchTweetsInBrowser({ query, limit: 60 });
     return { tweets, nextCursor: null, receiptId: null, reused: false };
   }

@@ -3,6 +3,9 @@
 // search moves no watermark. The account a source reads is its query's, whatever its name shows.
 import { Reply, stub, tag } from "./setup.ts";
 import assert from "node:assert/strict";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { after, before, test } from "node:test";
 import { config } from "@aihot/backend/config";
 import { closeDb, sql } from "@aihot/backend/db";
@@ -29,6 +32,7 @@ const tweet = (p: { id: bigint; handle: string }) => ({
 });
 
 let failNext = false;
+let failureStatus = 500;
 let failPage2 = 0;
 const queries: string[] = [];
 const socialdata = await stub((_hit, req) => {
@@ -36,7 +40,7 @@ const socialdata = await stub((_hit, req) => {
   queries.push(q);
   if (failNext) {
     failNext = false;
-    return new Reply(500, { error: "down" });
+    return new Reply(failureStatus, { error: "down" });
   }
   const handles = new Set([...q.matchAll(/from:(\w+)/g)].map((m) => m[1]!.toLowerCase()));
   const since = BigInt(/since_id:(\d+)/.exec(q)?.[1] ?? "0");
@@ -102,6 +106,26 @@ test("fast X accounts form their own shard instead of sharing ordinary editorial
   ]);
   assert.notEqual(shards[0]!.key, shards[1]!.key, "independent shard keys also keep scheduled jobs and paid receipts apart");
   assert.deepEqual(planXShards([fast, ...ordinary].reverse()).map((s) => s.key), shards.map((s) => s.key));
+});
+
+test("a fast X search checks again after an empty minute", async (t) => {
+  const [source] = await sql<Parameters<typeof fetchXSearch>[0][]>`SELECT * FROM sources WHERE id = ${IDS[2]!}`;
+  const fast = { ...source!, config: { query: `from:${HANDLES[2]} -filter:replies`, _aihot: { fast: true } }, cursor: { lastTweetId: String(BASE + 1000n) } };
+  const minute = Math.floor(Date.now() / 60_000) * 60_000;
+  const clock = t.mock.method(Date, "now", () => minute);
+  const post = { id: BASE + 1001n, handle: HANDLES[2]! };
+  try {
+    assert.equal((await fetchXSearch(fast)).candidates.length, 0);
+    POSTS.push(post);
+    clock.mock.mockImplementation(() => minute + 60_000);
+    const next = await fetchXSearch(fast);
+    assert.equal(next.candidates.length, 1);
+    assert.equal(next.candidates[0]!.xPost?.tweetId, String(post.id));
+  } finally {
+    const index = POSTS.indexOf(post);
+    if (index >= 0) POSTS.splice(index, 1);
+    clock.mock.restore();
+  }
 });
 
 test("one search reads a shard; each account gets its own posts, run and watermark", async () => {
@@ -236,6 +260,27 @@ test("fast X shards stay due in one minute across daily interval adaptation", as
   assert.equal(stillFast!.interval_minutes, 45, "daily tuning preserves the ordinary interval for when fast mode is disabled");
 });
 
+test("a rate-limited fast X source waits ten minutes without advancing its watermark", async () => {
+  const handle = `sl${T}`;
+  const id = `test-xs-${handle}`;
+  await sql`INSERT INTO sources (id, name, kind, config, tier, participation_mode, interval_minutes, cursor)
+    VALUES (${id}, ${handle}, 'x_search', ${sql.json({ query: `from:${handle} -filter:replies`, _aihot: { fast: true } })},
+      'T1', 'editorial', 45, ${sql.json({ initializedAt: new Date().toISOString(), lastTweetId: String(WATERMARK) })})`;
+  failureStatus = 429;
+  failNext = true;
+  try {
+    const result = await collectXShard(`editorial:fast-limit-${T}`, [id]);
+    assert.equal(result.status, "failed");
+    const [row] = await sql<{ minutes: number; cursor: { lastTweetId: string } }[]>`
+      SELECT round(extract(epoch FROM next_fetch_at - now()) / 60)::int AS minutes, cursor FROM sources WHERE id = ${id}`;
+    assert.equal(row!.minutes, 10);
+    assert.equal(row!.cursor.lastTweetId, String(WATERMARK));
+  } finally {
+    failureStatus = 500;
+    failNext = false;
+  }
+});
+
 
 test("verified publishers include self-thread announcements in both single and shared searches", async () => {
   await sql`UPDATE sources SET config = config || '{"publisherRole":"organization"}'::jsonb,
@@ -320,4 +365,110 @@ test("an account takes the avatar on its own latest post, whatever its name show
   await refreshSourceIcons();
   const [source] = await sql<{ icon_url: string | null }[]>`SELECT icon_url FROM sources WHERE id = ${id}`;
   assert.equal(source!.icon_url, "https://pbs.twimg.com/profile_images/1/own.jpg", "its own post's avatar, not a later post by someone else");
+});
+
+test("browser searches each account and preserves unverified coverage while caching observed posts", async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "aihot-x-coverage-"));
+  const bin = path.join(dir, "opencli.mjs");
+  const log = path.join(dir, "calls");
+  writeFileSync(bin, `import { appendFileSync } from "node:fs";
+const args = process.argv.slice(2);
+const query = args[args.indexOf("search") + 1];
+appendFileSync(process.env.X_TEST_LOG, JSON.stringify(query) + "\\n");
+console.log(JSON.stringify((JSON.parse(process.env.X_TEST_ROWS)[query] ?? []).slice(0, 60)));
+`);
+  const keys = ["SOCIALDATA_API_KEY", "OPENCLI_BIN", "X_OPENCLI_PROFILE", "X_TEST_LOG", "X_TEST_ROWS"] as const;
+  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  const handles = [`ba${T}`, `bb${T}`];
+  const ids = handles.map((handle) => `test-browser-${handle}`);
+  const queries = handles.map((handle) => `from:${handle} -filter:replies`);
+  const lastOkAt = new Date(Date.now() - 60 * 60_000).toISOString();
+  const cursors = handles.map((_, i) => ({ initializedAt: lastOkAt, lastTweetId: String(WATERMARK), lastOkAt,
+    ...(i === 0 ? { xBacklog: [{ query: "paid query", next: "paid-page-2" }] } : {}) }));
+  try {
+    delete process.env.SOCIALDATA_API_KEY;
+    delete process.env.X_OPENCLI_PROFILE;
+    process.env.OPENCLI_BIN = bin;
+    process.env.X_TEST_LOG = log;
+    const row = (n: number, author: string) => ({ id: String(BASE + BigInt(n)), author, text: `Browser post ${n}`, created_at: new Date().toISOString() });
+    process.env.X_TEST_ROWS = JSON.stringify({ [queries[0]!]: [row(120, handles[0]!)],
+      [queries[1]!]: Array.from({ length: 65 }, (_, i) => row(200 - i, handles[1]!)) });
+    for (const [i, id] of ids.entries()) await sql`INSERT INTO sources (id, name, kind, config, tier, participation_mode, cursor)
+      VALUES (${id}, ${handles[i]!}, 'x_search', ${sql.json({ query: queries[i]!, searchType: "Latest" })}, 'T1', 'editorial', ${sql.json(cursors[i]!)})`;
+    const result = await collectXShard(`browser-${T}`, ids);
+    assert.deepEqual([result.status, result.found, result.created], ["failed", 61, 61]);
+    assert.deepEqual(readFileSync(log, "utf8").trim().split("\n").map((line) => JSON.parse(line)).sort(), [...queries].sort());
+    const sources = await sql<{ cursor: unknown }[]>`SELECT cursor FROM sources WHERE id IN ${sql(ids)} ORDER BY id`;
+    assert.deepEqual(sources.map((source) => source.cursor), cursors);
+    const stored = await sql<{ source_id: string; n: number }[]>`SELECT source_id, count(*)::int AS n FROM articles WHERE source_id IN ${sql(ids)} GROUP BY source_id ORDER BY source_id`;
+    assert.deepEqual(stored.map((row) => row.n), [1, 60]);
+    const handle = `bc${T}`;
+    const id = `test-browser-${handle}`;
+    const query = `from:${handle} -filter:replies`;
+    await sql`INSERT INTO sources (id, name, kind, config, tier, participation_mode, cursor)
+      VALUES (${id}, ${handle}, 'x_search', ${sql.json({ query, _aihot: { fast: true } })}, 'T1', 'editorial', NULL)`;
+    const initial = Array.from({ length: 40 }, (_, i) => row(301 + i, handle));
+    const second = row(400, handle);
+    process.env.X_TEST_ROWS = JSON.stringify({ [query]: initial });
+    const firstResult = await collectSource(id);
+    assert.deepEqual([firstResult.status, firstResult.created], ["failed", 40]);
+    process.env.X_TEST_ROWS = JSON.stringify({ [query]: [second, ...initial] });
+    assert.equal((await collectSource(id)).status, "failed");
+    const articles = await sql<{ identity_key: string; backfill: boolean }[]>`
+      SELECT identity_key, backfill FROM articles WHERE source_id = ${id} ORDER BY identity_key`;
+    assert.equal(articles.filter((article) => article.backfill).length, 40);
+    assert.deepEqual(articles.filter((article) => !article.backfill).map((article) => article.identity_key), [`x:${second.id}`]);
+    const [initialized] = await sql<{ cursor: { initializedAt?: string; lastTweetId?: string }; minutes: number }[]>`
+      SELECT cursor, round(extract(epoch FROM next_fetch_at - now()) / 60)::int AS minutes FROM sources WHERE id = ${id}`;
+    assert.ok(initialized!.cursor.initializedAt);
+    assert.equal(initialized!.cursor.lastTweetId, undefined);
+    assert.equal(initialized!.minutes, 1);
+  } finally {
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a browser 429 stops starting further account searches in the shard", async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "aihot-x-throttle-"));
+  const bin = path.join(dir, "opencli.mjs");
+  const log = path.join(dir, "calls");
+  writeFileSync(bin, `import { appendFileSync } from "node:fs";
+const args = process.argv.slice(2);
+const query = args[args.indexOf("search") + 1];
+appendFileSync(process.env.X_TEST_LOG, JSON.stringify(query) + "\\n");
+process.stderr.write("ok: false\\nerror:\\n  code: UNKNOWN\\n  message: >-\\n    HTTP 429: SearchTimeline fetch failed\\n  exitCode: 1\\n");
+process.exitCode = 1;
+`);
+  const keys = ["SOCIALDATA_API_KEY", "OPENCLI_BIN", "X_OPENCLI_PROFILE", "X_TEST_LOG"] as const;
+  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  const handles = ["qa", "qb", "qc", "qd"].map((part) => `${part}${T}`);
+  const ids = handles.map((handle) => `test-browser-${handle}`);
+  try {
+    delete process.env.SOCIALDATA_API_KEY;
+    delete process.env.X_OPENCLI_PROFILE;
+    process.env.OPENCLI_BIN = bin;
+    process.env.X_TEST_LOG = log;
+    for (const [i, id] of ids.entries()) await sql`INSERT INTO sources (id, name, kind, config, tier, participation_mode, cursor)
+      VALUES (${id}, ${handles[i]!}, 'x_search', ${sql.json({ query: `from:${handles[i]} -filter:replies`, _aihot: { fast: true } })},
+        'T1', 'editorial', ${sql.json({ initializedAt: new Date().toISOString(), lastTweetId: String(WATERMARK) })})`;
+    const result = await collectXShard(`browser-rate-${T}`, ids);
+    assert.equal(result.status, "failed");
+    assert.match(result.error ?? "", /rate limit/);
+    const calls = readFileSync(log, "utf8").trim().split("\n").map((line) => JSON.parse(line) as string);
+    assert.ok(calls.includes(`from:${handles[0]} -filter:replies`));
+    assert.ok(calls.length <= 2, "no third account starts after the rate limit");
+    const [state] = await sql<{ minutes: number }[]>`
+      SELECT round(extract(epoch FROM next_fetch_at - last_fetch_at) / 60)::int AS minutes FROM sources WHERE id = ${ids[0]!}`;
+    assert.equal(state!.minutes, 10);
+  } finally {
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

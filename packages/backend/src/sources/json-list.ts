@@ -139,9 +139,8 @@ function embeddedJson(html: string, source: SourceRow): unknown {
   throw new FetchError(`embedded key ${key} not found`);
 }
 
-export async function fetchJsonList(source: SourceRow): Promise<Candidate[]> {
+async function fetchJsonPage(source: SourceRow, url: string): Promise<Candidate[]> {
   const c = source.config;
-  const url = String(c.url ?? "");
   const headers: Record<string, string> = { accept: "application/json, text/html;q=0.9", ...languageHeaders(c.acceptLanguage), ...(c.headers ?? {}) };
   if (/^https:\/\/api\.github\.com\//.test(url)) {
     const token = credential("collectors", "GITHUB_TOKEN");
@@ -214,5 +213,36 @@ export async function fetchJsonList(source: SourceRow): Promise<Candidate[]> {
     });
   }
   if (items.length > 0 && out.length === 0 && !c.requireBoolean && !c.minNumeric) throw new FetchError("no items mapped (check title/url paths)");
+  return out;
+}
+
+/**
+ * A paginated list always starts at its newest page. Each page can be persisted before the next
+ * request; reaching the configured limit is not evidence that the intervening history is complete.
+ */
+export async function fetchJsonList(source: SourceRow, opts: {
+  onPage?: (items: Candidate[]) => Promise<void>;
+  onLimit?: () => void;
+  onPageError?: (error: unknown) => void;
+} = {}): Promise<Candidate[]> {
+  const pagination = source.config.pagination;
+  if (!pagination) return fetchJsonPage(source, String(source.config.url ?? ""));
+  const url = new URL(String(source.config.url ?? ""));
+  const out: Candidate[] = [];
+  for (let page = 0; page < pagination.maxPages; page++) {
+    url.searchParams.set(pagination.pageParam, String(pagination.startPage + page));
+    let items: Candidate[];
+    try {
+      items = await fetchJsonPage(source, url.toString());
+    } catch (error) {
+      if (!out.length || !opts.onPageError) throw error;
+      opts.onPageError(error);
+      return out;
+    }
+    if (!items.length) return out;
+    if (opts.onPage) await opts.onPage(items);
+    out.push(...items);
+  }
+  opts.onLimit?.();
   return out;
 }

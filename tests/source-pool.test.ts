@@ -1,5 +1,5 @@
-// The public source pool names every enabled source the site may show, with its last collection
-// outcome, and never an isolated source, an internal id, a feed address or an error.
+// The public source pool names enabled sources and their public ids without exposing
+// isolated sources, feed addresses, or collection errors.
 import { tag } from "./setup.ts";
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
@@ -48,6 +48,6 @@ test("the public source pool shows each enabled source's health and hides operat
   assert.equal(body.counts.total, body.sources.length);
   assert.equal(body.counts.failing, body.sources.filter((s) => s.status === "failing").length);
   const leaked = JSON.stringify(body);
-  for (const secret of ["HTTP 503", "feed.example", T]) assert.equal(leaked.includes(secret), false, `the public pool must not carry ${secret}`);
-  assert.deepEqual(Object.keys(body.sources[0]!).sort(), ["firstParty", "items7d", "kind", "lastOkAt", "name", "status"]);
+  for (const secret of ["HTTP 503", "feed.example"]) assert.equal(leaked.includes(secret), false, `the public pool must not carry ${secret}`);
+  assert.equal(ok?.id, T + "-ok", "the public id can be used to filter the source's items");
 });

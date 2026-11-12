@@ -119,13 +119,13 @@ test("missing routes cannot be hidden by a root-only request; errors and redirec
 
 test("admin data and actions never become public cache entries", async () => {
   if (ADMIN) {
-    const admin = await fetch(`${origin}/admin/sources.data?_routes=admin-layout`);
+    const admin = await fetch(`${origin}/settings/sources.data?_routes=settings-sources`);
     assert.equal(admin.status, 202);
     assert.equal(admin.headers.get("Cache-Control"), "private, no-store");
     assert.equal(admin.headers.get("X-Accel-Expires"), "0");
     assert.match(await admin.text(), /api\/auth\/login/);
   } else {
-    const none = await fetch(`${origin}/admin/sources`);
+    const none = await fetch(`${origin}/settings/sources`);
     assert.equal(none.status, 404, "a site without admin pages has none");
     await none.text();
   }

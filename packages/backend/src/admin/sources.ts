@@ -181,6 +181,8 @@ async function saveSource(id: string, patch: z.infer<typeof EDITABLE>, input: { 
       const dup = moved ? await findDuplicateSource(nextKind, patch.config, id, tx) : null;
       if (dup) throw new Conflict(`与已有信源重复：${dup.name}（${dup.id}）`);
     }
+    const settings = patch.config?._aihot;
+    const fastEnabled = !!settings && typeof settings === "object" && "fast" in settings && settings.fast === true;
     const keys = Object.keys(patch) as Array<keyof typeof patch>;
     if (!keys.length) return before;
     const values = Object.fromEntries(keys.map((k) => [k, k === "config" ? tx.json(patch.config as never) : patch[k]]));
@@ -195,7 +197,7 @@ async function saveSource(id: string, patch: z.infer<typeof EDITABLE>, input: { 
     const [after] = await tx`UPDATE sources SET ${tx(values as never, ...(keys as string[]))}, updated_at = now(),
       cursor = CASE WHEN ${kindChanged} THEN ${cursor ? tx.json(cursor as never) : null}::jsonb ELSE cursor END,
       health = CASE WHEN ${patch.enabled ?? null}::boolean IS FALSE THEN 'paused' WHEN ${kindChanged} AND enabled OR ${patch.enabled ?? null}::boolean IS TRUE AND health = 'paused' THEN 'unknown' ELSE health END,
-      next_fetch_at = CASE WHEN ${patch.enabled ?? null}::boolean IS TRUE OR ${kindChanged} AND enabled THEN now() ELSE next_fetch_at END
+      next_fetch_at = CASE WHEN ${patch.enabled ?? null}::boolean IS TRUE OR ${kindChanged} AND enabled OR ${fastEnabled} AND enabled THEN now() ELSE next_fetch_at END
       WHERE id = ${id} RETURNING *`;
     if (before.participation_mode !== "editorial" && patch.participation_mode === "editorial") {
       // A heat-only decision cannot admit the first editorial judgement to selection. Previously
