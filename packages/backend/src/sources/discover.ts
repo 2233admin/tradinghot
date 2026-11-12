@@ -1,9 +1,13 @@
 // From a bare address to a source that reads it. The address itself may be a feed; a page may name its
 // feed, or keep one at a usual path; a page with neither is read as a list, from the group of links that
-// looks most like its headlines. Whatever is found has returned posts before it is accepted.
+// looks most like its headlines. A page that gives nothing to a plain request (it fills itself in with
+// JavaScript, or refuses us) is read once more through your own reader when one is configured
+// (JINA_BASE_URL, e.g. pagesift), and then keeps being read through it. Whatever is found has returned
+// posts before it is accepted.
 import * as cheerio from "cheerio";
 import { requireOk } from "../lib/http-fetch.ts";
 import { collapseWhitespace } from "../lib/text.ts";
+import { JINA_PREFIX, jinaRead, ownReader } from "../providers/jina.ts";
 import { fetchListing } from "./listing-fetch.ts";
 import { fetchRss } from "./rss.ts";
 import { fromHtml } from "./web-list.ts";
@@ -61,6 +65,19 @@ export function headlineSelector(html: string, base: string): string | null {
 }
 
 export async function discoverSource(address: string): Promise<Discovered> {
+  try {
+    return await discoverDirect(address);
+  } catch (error) {
+    if (!ownReader()) throw error;
+  }
+  const page = await jinaRead(address, { purpose: "source_discovery", subject: `watch:${address}`, format: "html", perRead: true });
+  const itemSelector = headlineSelector(page.markdown, address);
+  const config = { url: `${JINA_PREFIX}${address}`, parseMode: "html", itemSelector };
+  if (itemSelector && fromHtml(page.markdown, address, draft("web_list", config)).length >= MIN_HEADLINES) return { kind: "web_list", config };
+  throw new FetchError("no feed and no headline list found, also in the rendered page");
+}
+
+async function discoverDirect(address: string): Promise<Discovered> {
   if (await readsAsFeed(address)) return { kind: "rss", config: { feedUrl: address } };
   const res = requireOk(await fetchListing(address, { timeoutMs: 25_000 }));
   const html = res.text();

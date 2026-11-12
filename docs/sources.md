@@ -49,7 +49,25 @@ https://www.example.com/markets/ 某财经站
 3. 页面所在目录和站点根目录下的常见路径：`feed`、`rss`、`rss.xml`、`atom.xml`、`feed.xml`、`index.xml`。
 4. 都没有时当网页列表读：把页面上的站内链接按所在结构分组，取标题文字最多、不少于 5 条的那一组当文章列表，写成 `itemSelector`。列表上没有日期的条目，等读到原文页的发布时间后才公开。
 
-识别不出来的行（页面要执行 JavaScript 才有内容、要登录、被风控拦截）不会导入，同步时打印原因，之后每次同步再试；这类站点仍按[中文财经站点](#中文财经站点没有-rss-时怎么接)的办法在后台手写配置。自动认出的网页列表可能混进栏目里的专题或广告链接，导入后在后台“预览抓取”看一眼，不对就改 `itemSelector` 或加 `allowUrlPrefixes`。
+5. 前四步都没读出条目（页面要执行 JavaScript 才有内容，或者拒绝了直接请求），并且配置了自己的渲染器（`JINA_BASE_URL`，见下面的 pagesift）时：通过渲染器读一次渲染后的页面，照第 4 步认文章列表，认出来就把信源地址写成 `https://r.jina.ai/<原地址>`，之后每次采集都经渲染器读。没有配置 `JINA_BASE_URL` 时不走这一步，不会悄悄用公共的 Jina 额度。
+
+仍然识别不出来的行（要登录、被风控拦截）不会导入，同步时打印原因，之后每次同步再试；这类站点仍按[中文财经站点](#中文财经站点没有-rss-时怎么接)的办法在后台手写配置。
+
+### 用 pagesift 当渲染器
+
+[pagesift](https://github.com/YOLOW92/pagesift) 自带与 Jina Reader 相同的 `/r/<网址>` 接口，可以整个替换 `r.jina.ai`：
+
+```bash
+docker run -d -p 3002:3002 -v pagesift-data:/data -e PAGESIFT_API_KEYS=<自己定的 key> ghcr.io/yolow92/pagesift:<版本>
+```
+
+在后端 `.env` 里填 `JINA_BASE_URL=http://<pagesift 主机>:3002/r` 和 `JINA_API_KEY=<上面的 key>`；pagesift 在内网（同一 Docker 网络、本机）时把它的主机名加进 `PRIVATE_FEED_HOSTS`，重启 API 和 worker。之后：
+
+- 所有写成 `https://r.jina.ai/...` 的信源（包括 `sources.json` 里已有的智通财经）、抓不到正文时的渲染兜底，都改由 pagesift 读，不再请求 Jina。
+- watchlist 里要执行 JavaScript 的网址按上面第 5 步自动识别；自动维护重新识别坏掉的信源时也会用到它。
+- 这些请求仍记在后台“付费请求”的 `jina` 服务下并受它的每分钟、每小时、每天上限约束（自建不花钱，但上限照旧生效），量大时到后台“设置”里调高。
+
+要渲染 JavaScript 页面，pagesift 那边要有浏览器（`pagesift doctor` 检查）；pagesift 自己的结构化抽取、站点爬取和变更监控这里没有用到。自动认出的网页列表可能混进栏目里的专题或广告链接，导入后在后台“预览抓取”看一眼，不对就改 `itemSelector` 或加 `allowUrlPrefixes`。
 
 ### 自动维护
 

@@ -1,17 +1,29 @@
 // industry/watchlist.txt against the database: a line is imported once, an address is stored as the source
 // discovery worked out, and a discovered source whose reads keep failing follows its site to the new feed.
+// A page that only fills itself in with JavaScript is worked out, and then read, through the site's own reader.
 import { tag } from "./setup.ts";
 import assert from "node:assert/strict";
 import http from "node:http";
 import { after, test } from "node:test";
 import { config } from "@aihot/backend/config";
 import { closeDb, sql } from "@aihot/backend/db";
+import { stopBoss } from "@aihot/backend/jobs/queue";
+import { collectSource } from "@aihot/backend/sources/collect";
 import { repairWatched, syncWatchlist } from "@aihot/backend/sources/watchlist";
 
 config.allowPrivateNetworkFetch = true;
 const T = tag();
 let feed = "old.xml";
 const server = http.createServer((req, res) => {
+  // The reader (pagesift's /r): the rendered page, which a plain request for /script/ does not get.
+  if (req.url === `/reader/${site}/${T}/script/`) {
+    res.writeHead(200, { "content-type": "text/plain" });
+    return void res.end(`<html><body><ul class="feed">${[1, 2, 3, 4, 5].map((n) => `<li><a href="/${T}/script/${n}">Rendered headline number ${n} of ${T}</a></li>`).join("")}</ul></body></html>`);
+  }
+  if (req.url === `/${T}/script/`) {
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    return void res.end(`<html><body><div id="app"></div><script src="/app.js"></script></body></html>`);
+  }
   const page = req.url === `/${T}/`;
   const found = page || req.url === `/${T}/${feed}`;
   res.writeHead(found ? 200 : 404, { "content-type": "text/html; charset=utf-8" });
@@ -23,8 +35,11 @@ await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve
 const site = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
 
 after(async () => {
-  await sql`DELETE FROM sources WHERE config->'_aihot'->>'watch' = ${`${site}/${T}/`} OR id = ${`x-wl${T}`.slice(0, 17)}`;
+  const mine = sql`SELECT id FROM sources WHERE config->'_aihot'->>'watch' LIKE ${`${site}/${T}/%`} OR id = ${`x-wl${T}`.slice(0, 17)}`;
+  await sql`DELETE FROM articles WHERE source_id IN (${mine})`;
+  await sql`DELETE FROM sources WHERE id IN (${mine})`;
   server.close();
+  await stopBoss();
   await closeDb();
 });
 
@@ -55,4 +70,21 @@ test("watchlist lines are imported once, and a discovered source that keeps fail
   assert.deepEqual(repaired.config, { feedUrl: `${site}/${T}/new.xml`, denyCategories: ["ads"], _aihot: { watch: `${site}/${T}/`, fast: true } }, "settings added since are kept");
   const [log] = await sql<{ actor: string }[]>`SELECT actor FROM audit_log WHERE subject = ${`source:${before.id}`}`;
   assert.equal(log!.actor, "system");
+});
+
+test("a page that needs JavaScript is worked out through the site's own reader, and read through it from then on", async () => {
+  const address = `${site}/${T}/script/`;
+  assert.deepEqual((await syncWatchlist(address)).failed.map((f) => f.line), [address], "without a reader the line waits");
+  process.env.JINA_BASE_URL = `${site}/reader`;
+  await sql`UPDATE budgets SET per_minute = 1000, per_hour = 1000, per_day = 1000 WHERE service = 'jina'`;
+  try {
+    const { added } = await syncWatchlist(address);
+    assert.equal(added.length, 1);
+    const [row] = await sql<{ kind: string; config: Record<string, any> }[]>`SELECT kind, config FROM sources WHERE id = ${added[0]!}`;
+    assert.deepEqual([row!.kind, row!.config], ["web_list", { url: `https://r.jina.ai/${address}`, parseMode: "html", itemSelector: "ul.feed > li > a", _aihot: { watch: address } }]);
+    const read = await collectSource(added[0]!, { force: true });
+    assert.deepEqual([read.status, read.found], ["ok", 5]);
+  } finally {
+    delete process.env.JINA_BASE_URL;
+  }
 });
