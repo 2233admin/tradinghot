@@ -10,6 +10,10 @@
 
 改评分标准时保留原有结构（内容类型、五个维度加权、噪声压制、安全边界），替换的是“什么算重要”“什么算噪声”的例子。门槛要用使用者标注的样本重新校准（`docs/selection.md`），不要凭感觉改数字。
 
+## 查看和配置信源
+
+用命令行，不用改数据库或手写 JSON：`npm run sources -- list | check <网址> | add "<一行>" | sync | pause <id> | resume <id> | fetch <id>`，每条输出一份 JSON。一行的写法（X 账号、Discord 频道链接、任意网址，可带显示名和 `!fast`、`!hot`）和自动识别、自动修复的规则见 `docs/sources.md` 的“快速加信源”。要盯哪些信源仍由使用者决定。
+
 ## 运行与检查
 
 - Node.js 24 直接运行 TypeScript，后端没有构建步骤。npm workspaces：`apps/*`、`packages/*`、`industry`、`site`、`modules/*`。

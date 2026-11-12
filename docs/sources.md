@@ -57,6 +57,21 @@ https://www.example.com/markets/ 某财经站
 
 X 账号改名由原有的 `sources.x-renames` 任务跟随（需要 SocialData）。
 
+### 命令行入口（给人和 Agent）
+
+不进后台也能查看和配置信源，每条命令输出一份 JSON，出错时是 `{"error": "..."}` 并以非零状态退出：
+
+```bash
+npm run sources -- list                                  # 所有信源：读哪里、是否启用、连续失败次数和最近的错误
+npm run sources -- check https://www.example.com/markets/  # 这个网址会被识别成什么，不保存
+npm run sources -- add "@DeItaone Walter Bloomberg !fast"  # 立刻加一个信源，写法同 watchlist.txt 的一行
+npm run sources -- sync                                  # 导入 watchlist 新行，修复坏掉的自动识别信源
+npm run sources -- pause <id>                            # 暂停；resume <id> 恢复
+npm run sources -- fetch <id>                            # 现在抓一次
+```
+
+`add` 直接写进数据库，并把这一行追加到 `industry/watchlist.txt`（文件写不了时只进数据库，比如在镜像里运行）。Docker 部署里这样调用：`docker compose run --rm setup node scripts/sources.ts list`。`check`、`add`、`sync`、`fetch` 会访问外部网站，X 和 Jina 的请求照常计费并受预算限制。
+
 ### Discord 频道
 
 Discord 没有公开订阅，频道由你自己的机器人读：
