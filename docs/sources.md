@@ -19,6 +19,37 @@
 
 每种信源认哪些配置项写在 [`config-keys.ts`](../packages/backend/src/sources/config-keys.ts)。填了不认识的配置项，保存会被拒绝、抓取会直接失败并在后台显示原因，不会悄悄退回通用解析。
 
+## 快速加信源：watchlist.txt
+
+盯一个 X 账号、一个 Discord 频道或一个订阅，不用写 JSON：在 [`industry/watchlist.txt`](../industry/watchlist.txt) 里加一行，运行 `npm run sources:sync`（Docker 部署运行 `docker compose run --rm setup`）。
+
+```
+@DeItaone Walter Bloomberg !fast
+https://x.com/KobeissiLetter
+https://discord.com/channels/111111111111111111/222222222222222222 某财经社区·快讯 !fast
+https://feeds.a.dj.com/rss/RSSMarketsMain.xml WSJ Markets
+```
+
+| 写法 | 变成 | 需要 |
+|---|---|---|
+| `@账号` 或 `https://x.com/账号` | `x_search`，`from:账号 -filter:replies`，30 分钟 | 同 [x_search](#x_search)：`SOCIALDATA_API_KEY`，或本机已登录的 opencli |
+| Discord 频道链接（右键频道 →“复制链接”） | `json_list`，读频道最近 50 条消息，10 分钟 | `DISCORD_BOT_TOKEN`，见下 |
+| 其它 `http(s)` 地址 | `rss`，30 分钟 | 无 |
+
+地址后面的文字是显示名。`!fast` 等于 `"_aihot": { "fast": true }`（[抓取频率](#抓取频率)，X 快速账号更费 SocialData 预算）；`!hot` 把参与方式设成 `hot_signal`，只作热度证据。分级都是 `T2`，要调到后台改。
+
+这份文件和 `industry/sources.json` 一样只负责首次导入：已在 `sources.json` 里的账号和订阅会跳过，已导入的信源不会被覆盖，删掉一行也不会删信源（到后台“信源”页暂停）。网页列表、JSON 接口这类要写选择器的信源仍在后台或 `sources.json` 里配。
+
+### Discord 频道
+
+Discord 没有公开订阅，频道由你自己的机器人读：
+
+1. 在 [discord.com/developers](https://discord.com/developers/applications) 建一个应用，Bot 页打开 **Message Content Intent**（不开的话消息正文是空的），复制 token 填进后端 `.env` 的 `DISCORD_BOT_TOKEN`，重启 API 和 worker。token 只在读取时带上，不存进信源配置。
+2. 把机器人邀请进频道所在的服务器，给它“查看频道”和“读取消息历史”。这一步要服务器管理员同意；进不去的服务器，如果目标是公告频道，可以在自己的服务器里“关注”它，再让机器人读自己服务器里的那个频道。不要用个人账号的 token 代替机器人，这违反 Discord 的服务条款。
+3. 把频道链接写进 `watchlist.txt` 并同步。
+
+每条消息是一条资料：有文字的用文字，只有卡片（很多快讯机器人这样发）的用第一张卡片的标题和描述，只有图片或附件的跳过。原文链接指向 Discord 里的那条消息，读者要在该服务器里才打得开。每轮只读最近 50 条，不翻页：停机期间超过 50 条的消息会漏掉。没有填 token 时信源在后台报 `DISCORD_BOT_TOKEN is not configured`；机器人不在服务器里或没有权限时是 HTTP 403。
+
 ## 先预览，再创建
 
 进入 `/admin/sources/new`，填写 ID、名称，选择类型，再把[下一节](#每种信源怎么配置)对应的 JSON 填入“采集配置（JSON）”。这里填的是配置对象，不要包上 `kind` 或 `config`。切换类型会重置配置，先选类型再粘贴。

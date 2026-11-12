@@ -17,6 +17,7 @@ import { fetchDetail, fetchWebList, fromHtml, fromMarkdown } from "@aihot/backen
 import { fetchRss } from "@aihot/backend/sources/rss";
 import { fetchJsonList } from "@aihot/backend/sources/json-list";
 import { noiseFiltered } from "@aihot/backend/sources/filters";
+import { newToList, parseWatchlist } from "../scripts/watchlist.ts";
 
 const source = (config: Record<string, unknown>) => ({ id: "test-list", config }) as never;
 
@@ -37,6 +38,12 @@ const pages: Record<string, () => string> = {
     `<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><entry><title>Episode 42</title><link rel="alternate" href="https://example.org/episodes/42"/>` +
     `<published>2026-09-30T00:00:00Z</published><summary type="html">How leaders build confidence with their team.</summary></entry></feed>`,
   // A list API that gives wall-clock times without a zone, and a page whose metadata does too.
+  // A Discord channel's messages: one typed, one a bot's embed with no text of its own, one a bare attachment.
+  "/discord.json": () => JSON.stringify([
+    { id: "30", channel_id: "222", content: "Fed holds rates steady", timestamp: "2026-10-01T18:00:00.000000+00:00", author: { username: "desk", global_name: "News Desk" } },
+    { id: "20", channel_id: "222", content: "", timestamp: "2026-10-01T17:00:00.000000+00:00", author: { username: "feedbot" }, embeds: [{ title: "CPI 3.1% y/y", description: "Above the 3.0% consensus." }] },
+    { id: "10", channel_id: "222", content: "", timestamp: "2026-10-01T16:00:00.000000+00:00", author: { username: "desk" }, attachments: [{}] },
+  ]),
   "/zoneless.json": () => JSON.stringify({ result: [{ id: "a", title: "采购公告", publishDate: "2026-09-30 17:43:58" }, { id: "b", title: "Zoned", publishDate: "2026-09-30T17:43:58Z" }, { id: "c", title: "Abbreviated zone", publishDate: "Wed, 30 Sep 2026 17:43:58 EST" }] }),
   "/zoneless-post": () => `<html><head><meta property="article:published_time" content="2026-09-30 17:43:58"></head><body><p>Post</p></body></html>`,
   // A Next.js page whose embedded posts hold arrays and brackets of their own.
@@ -327,4 +334,29 @@ test("JSON pagination refuses unbounded or unsupported requests", () => {
   for (const extra of [{ via: "opencli" }, { method: "POST" }, { minNumeric: { path: "id", min: 1 } }]) {
     assert.ok(unsupportedConfig("json_list", { url, pagination, ...extra }).includes("pagination"));
   }
+});
+
+test("a watchlist line becomes a source its kind accepts; a Discord channel's messages are read as posts", async () => {
+  const watch = parseWatchlist([
+    "# comment", "", "@DeItaone Walter Bloomberg !fast", "https://x.com/KobeissiLetter/", "https://twitter.com/deitaone",
+    "https://discord.com/channels/111/222 财经社区·快讯 !hot", "https://example.org/feed.xml Example Feed",
+  ].join("\n"));
+  assert.deepEqual(watch.map((s) => [s.id, s.kind, s.name, s.participation_mode]), [
+    ["x-deitaone", "x_search", "X：Walter Bloomberg (@DeItaone)", "editorial"],
+    ["x-kobeissiletter", "x_search", "X：KobeissiLetter (@KobeissiLetter)", "editorial"],
+    ["discord-222", "json_list", "财经社区·快讯", "hot_signal"],
+    [watch[3]!.id, "rss", "Example Feed", "editorial"],
+  ]);
+  assert.deepEqual(watch[0]!.config, { query: "from:DeItaone -filter:replies", searchType: "Latest", _aihot: { fast: true } });
+  for (const s of watch) assert.deepEqual(unsupportedConfig(s.kind, s.config), [], s.id);
+  assert.deepEqual(newToList(watch, [{ kind: "x_search", config: { query: "from:deitaone -filter:replies" } }, { kind: "rss", config: { feedUrl: "https://example.org/feed.xml" } }]).map((s) => s.id), ["x-kobeissiletter", "discord-222"]);
+  assert.throws(() => parseWatchlist("@ok\nnot a source"), /第 2 行/);
+  assert.throws(() => parseWatchlist("@ok !quick"), /!quick/);
+
+  const posts = await fetchJsonList({ id: "discord-222", config: { ...watch[2]!.config, url: `${site}/discord.json` } } as never);
+  assert.deepEqual(posts.map((p) => [p.url, p.title, p.author, p.publishedAt?.toISOString(), p.bodyText, p.bodyStatus]), [
+    ["https://discord.com/channels/111/222/30", "Fed holds rates steady", "News Desk", "2026-10-01T18:00:00.000Z", "Fed holds rates steady", "ok"],
+    ["https://discord.com/channels/111/222/20", "CPI 3.1% y/y", "feedbot", "2026-10-01T17:00:00.000Z", "Above the 3.0% consensus.", "ok"],
+  ]);
+  await assert.rejects(fetchJsonList({ id: "discord-222", config: watch[2]!.config } as never), /DISCORD_BOT_TOKEN/);
 });

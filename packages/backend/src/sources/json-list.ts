@@ -146,6 +146,14 @@ async function fetchJsonPage(source: SourceRow, url: string): Promise<Candidate[
     const token = credential("collectors", "GITHUB_TOKEN");
     if (token) headers.authorization = `Bearer ${token}`;
   }
+  // A Discord channel is read as the bot that was invited to its server; Discord refuses API clients
+  // that do not name themselves in this form.
+  if (/^https:\/\/discord\.com\/api\//.test(url)) {
+    const token = credential("collectors", "DISCORD_BOT_TOKEN");
+    if (!token) throw new FetchError("DISCORD_BOT_TOKEN is not configured");
+    headers.authorization = `Bot ${token}`;
+    headers["user-agent"] = "DiscordBot (https://github.com/2233admin/tradinghot, 1.0)";
+  }
   const embedded = c.mode === "html_json_key" || c.mode === "html_window_var";
   // A host that blocks our addresses is read through Jina: a page as rendered HTML (its scripts keep the
   // embedded JSON), a JSON API as the body Jina fetched, which parses like a direct response. A site that

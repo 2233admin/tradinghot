@@ -1,11 +1,12 @@
-// Seeds a fresh site from the industry pack: the demo sources (industry/sources.json, only the ones not
-// there yet, so admin edits are never undone). Topics need no seeding: they are read from industry/topics.json.
+// Seeds a fresh site from the industry pack: the demo sources (industry/sources.json) and the one-line
+// watchlist (industry/watchlist.txt), only the ones not there yet, so admin edits are never undone. Topics need no seeding: they are read from industry/topics.json.
 // Re-runnable:  node --env-file=.env scripts/seed.ts
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { REPO_ROOT } from "@aihot/backend/config";
 import { closeDb, sql } from "@aihot/backend/db";
 import { assertSupportedConfig } from "@aihot/backend/sources/config-keys";
+import { newToList, parseWatchlist } from "./watchlist.ts";
 
 interface SeedSource {
   id: string;
@@ -22,7 +23,9 @@ interface SeedSource {
   enabled?: boolean;
 }
 
-const { sources } = JSON.parse(readFileSync(path.join(REPO_ROOT, "industry/sources.json"), "utf8")) as { sources: SeedSource[] };
+const { sources: listed } = JSON.parse(readFileSync(path.join(REPO_ROOT, "industry/sources.json"), "utf8")) as { sources: SeedSource[] };
+const watchlist = path.join(REPO_ROOT, "industry/watchlist.txt");
+const sources: SeedSource[] = [...listed, ...newToList(existsSync(watchlist) ? parseWatchlist(readFileSync(watchlist, "utf8")) : [], listed)];
 let added = 0;
 for (const s of sources) {
   assertSupportedConfig(s.kind, s.config);
