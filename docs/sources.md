@@ -21,24 +21,41 @@
 
 ## 快速加信源：watchlist.txt
 
-盯一个 X 账号、一个 Discord 频道或一个订阅，不用写 JSON：在 [`industry/watchlist.txt`](../industry/watchlist.txt) 里加一行，运行 `npm run sources:sync`（Docker 部署运行 `docker compose run --rm setup`）。
+盯一个 X 账号、一个 Discord 频道或一个网站，不用写 JSON：在 [`industry/watchlist.txt`](../industry/watchlist.txt) 里加一行。worker 每小时读一次这份文件（`COLLECT_ENABLED=true` 时），新的一行自动导入；想马上生效就运行 `npm run sources:sync`（Docker 部署运行 `docker compose run --rm setup`；文件打在镜像里，改完要重新构建）。
 
 ```
 @DeItaone Walter Bloomberg !fast
 https://x.com/KobeissiLetter
 https://discord.com/channels/111111111111111111/222222222222222222 某财经社区·快讯 !fast
-https://feeds.a.dj.com/rss/RSSMarketsMain.xml WSJ Markets
+https://www.example.com/markets/ 某财经站
 ```
 
 | 写法 | 变成 | 需要 |
 |---|---|---|
 | `@账号` 或 `https://x.com/账号` | `x_search`，`from:账号 -filter:replies`，30 分钟 | 同 [x_search](#x_search)：`SOCIALDATA_API_KEY`，或本机已登录的 opencli |
 | Discord 频道链接（右键频道 →“复制链接”） | `json_list`，读频道最近 50 条消息，10 分钟 | `DISCORD_BOT_TOKEN`，见下 |
-| 其它 `http(s)` 地址 | `rss`，30 分钟 | 无 |
+| 其它网址：订阅地址，或网站的首页、栏目页 | 自动识别成 `rss` 或 `web_list`，30 分钟 | 无 |
 
 地址后面的文字是显示名。`!fast` 等于 `"_aihot": { "fast": true }`（[抓取频率](#抓取频率)，X 快速账号更费 SocialData 预算）；`!hot` 把参与方式设成 `hot_signal`，只作热度证据。分级都是 `T2`，要调到后台改。
 
-这份文件和 `industry/sources.json` 一样只负责首次导入：已在 `sources.json` 里的账号和订阅会跳过，已导入的信源不会被覆盖，删掉一行也不会删信源（到后台“信源”页暂停）。网页列表、JSON 接口这类要写选择器的信源仍在后台或 `sources.json` 里配。
+已经有信源在盯的账号和地址会跳过，已导入的信源不会被覆盖，删掉一行也不会删信源（到后台“信源”页暂停）。
+
+### 网址怎么自动识别
+
+按这个顺序试，第一个**真的读出条目**的就用（[`discover.ts`](../packages/backend/src/sources/discover.ts)）：
+
+1. 地址本身就是 RSS / Atom。
+2. 页面在 `<link rel="alternate">` 里声明的订阅（评论订阅不算）。
+3. 页面所在目录和站点根目录下的常见路径：`feed`、`rss`、`rss.xml`、`atom.xml`、`feed.xml`、`index.xml`。
+4. 都没有时当网页列表读：把页面上的站内链接按所在结构分组，取标题文字最多、不少于 5 条的那一组当文章列表，写成 `itemSelector`。列表上没有日期的条目，等读到原文页的发布时间后才公开。
+
+识别不出来的行（页面要执行 JavaScript 才有内容、要登录、被风控拦截）不会导入，同步时打印原因，之后每次同步再试；这类站点仍按[中文财经站点](#中文财经站点没有-rss-时怎么接)的办法在后台手写配置。自动认出的网页列表可能混进栏目里的专题或广告链接，导入后在后台“预览抓取”看一眼，不对就改 `itemSelector` 或加 `allowUrlPrefixes`。
+
+### 自动维护
+
+自动识别的信源在配置里记着它那一行的网址（`_aihot.watch`）。它连续 5 次抓取失败（订阅搬家、页面改版）后，每小时的维护任务按这个网址重新识别一遍：找到一种能读出条目、又和现在不同的方式，就换上并立刻重抓，后台“审计”里记一条 `system` 的修改；你在后台给它加的过滤等设置保留。重新识别也失败的不动，照旧在后台标红。手写配置的信源（没有 `_aihot.watch`）不会被自动改。
+
+X 账号改名由原有的 `sources.x-renames` 任务跟随（需要 SocialData）。
 
 ### Discord 频道
 

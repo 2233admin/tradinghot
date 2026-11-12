@@ -1,12 +1,13 @@
 // Seeds a fresh site from the industry pack: the demo sources (industry/sources.json) and the one-line
-// watchlist (industry/watchlist.txt), only the ones not there yet, so admin edits are never undone. Topics need no seeding: they are read from industry/topics.json.
+// watchlist (industry/watchlist.txt), only the ones not there yet, so admin edits are never undone.
+// Topics need no seeding: they are read from industry/topics.json.
 // Re-runnable:  node --env-file=.env scripts/seed.ts
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { REPO_ROOT } from "@aihot/backend/config";
 import { closeDb, sql } from "@aihot/backend/db";
 import { assertSupportedConfig } from "@aihot/backend/sources/config-keys";
-import { newToList, parseWatchlist } from "./watchlist.ts";
+import { maintainWatchlist } from "@aihot/backend/sources/watchlist";
 
 interface SeedSource {
   id: string;
@@ -23,9 +24,7 @@ interface SeedSource {
   enabled?: boolean;
 }
 
-const { sources: listed } = JSON.parse(readFileSync(path.join(REPO_ROOT, "industry/sources.json"), "utf8")) as { sources: SeedSource[] };
-const watchlist = path.join(REPO_ROOT, "industry/watchlist.txt");
-const sources: SeedSource[] = [...listed, ...newToList(existsSync(watchlist) ? parseWatchlist(readFileSync(watchlist, "utf8")) : [], listed)];
+const { sources } = JSON.parse(readFileSync(path.join(REPO_ROOT, "industry/sources.json"), "utf8")) as { sources: SeedSource[] };
 let added = 0;
 for (const s of sources) {
   assertSupportedConfig(s.kind, s.config);
@@ -40,4 +39,7 @@ for (const s of sources) {
   added += inserted.length;
 }
 console.log(`sources: ${added} added, ${sources.length - added} already there`);
+const watch = await maintainWatchlist();
+console.log(`watchlist: ${watch.added.length} added, ${watch.repaired.length} repaired`);
+for (const f of watch.failed) console.log(`watchlist: ${f.line} 没有接上（${f.error}），下次同步再试`);
 await closeDb();

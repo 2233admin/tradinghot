@@ -17,7 +17,7 @@
 | 类别 | 市场、宏观、个股、行业、量化、教程、观点 |
 | 主题 | 37 个，分「公司与机构 / 市场与方向 / 内容形态」三组（`industry/topics.json`） |
 | 信源 | 72 个，涵盖财经快讯、政府与交易所公告、社区、媒体 RSS 和 X 账号，详见 `industry/sources.json` |
-| 加信源 | X 账号、Discord 频道、RSS 在 `industry/watchlist.txt` 里一行一个，`npm run sources:sync` 导入，见 [快速加信源](docs/sources.md#快速加信源watchlisttxt) |
+| 加信源 | X 账号、Discord 频道、网站在 `industry/watchlist.txt` 里一行一个：网站自动找 RSS 或文章列表，坏了自动重新识别，见 [快速加信源](docs/sources.md#快速加信源watchlisttxt) |
 | 出刊 | 日报 08:00、周报周一 10:00、月报每月 1 日 10:30（北京时间，`EDITION_TIMES`） |
 | 立场 | 只做摘要和阅读索引，不荐股、不喊单、不给买卖建议；原文版权归各来源 |
 

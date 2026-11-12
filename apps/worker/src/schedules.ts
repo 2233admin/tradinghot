@@ -10,6 +10,7 @@ import { scheduleMpReconcile } from "@aihot/backend/sources/mp";
 import { followXRenames } from "@aihot/backend/sources/x-renames";
 import { dajialaConfigured } from "@aihot/backend/providers/dajiala";
 import { refreshSourceIcons } from "@aihot/backend/sources/icons";
+import { maintainWatchlist } from "@aihot/backend/sources/watchlist";
 import { computeHotRanking, snapshotHeat } from "@aihot/backend/events/hot";
 import { linkRelatedStories } from "@aihot/backend/events/consolidate";
 import { composeDueReports } from "@aihot/backend/reports/compose";
@@ -54,6 +55,8 @@ const ENGINE_SCHEDULES: Scheduled[] = [
         { name: "sources.adapt-intervals", cron: "20 4 * * *", run: adaptIntervals },
         // X accounts quiet for a day: a renamed one is followed to its new handle (SocialData, paid per lookup).
         { name: "sources.x-renames", cron: "50 4 * * *", missed: "once" as const, run: () => followXRenames() },
+        // New lines of industry/watchlist.txt are imported and discovered sources that broke are worked out again.
+        { name: "sources.watchlist", cron: "7 * * * *", missed: "once" as const, run: () => maintainWatchlist() },
         // Icons are read from the sources' own sites, so they stop with collection.
         { name: "sources.icons", cron: "40 4 * * *", missed: "once" as const, run: () => refreshSourceIcons() },
       ]
