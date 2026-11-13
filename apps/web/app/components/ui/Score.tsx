@@ -1,4 +1,5 @@
 import { ITEM_COPY } from "@aihot/site";
+import { AnimatedCounter } from "./animated-counter";
 
 /**
  * The AI score as a small pill, tinted by tier instead of drawn as a bar: strong picks (85+) in a wash of
@@ -33,7 +34,7 @@ export function ScoreLabel({ score, compact = false }: { score: number | null; c
           <span className="h-2.5 w-px bg-current opacity-25" aria-hidden="true" />
         </>
       )}
-      <span className="mono text-[12.5px] font-bold leading-none tabular-nums">{value}</span>
+      <AnimatedCounter value={value} className="mono text-[12.5px] font-bold leading-none tabular-nums" />
     </span>
   );
 }

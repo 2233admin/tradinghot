@@ -36,6 +36,25 @@ Change: `feed-arknights-redesign` — the reader interface in the Arknights lang
 4. `apps/web/app/features/feed/{Timeline,DayList,FeedItem,parts}.tsx` — the instrument column, the rail, the card.
 5. The light theme becomes the counterpart of the same token set, not a second palette.
 
+## Component Source
+
+The components come from **Rare UI** (github.com/swamimalode07/rare-ui), a shadcn-style registry of
+animated components: MIT + Commons Clause + Attribution, so every vendored file keeps its header and
+the site credits it. Components are copied into the app (no runtime dependency), and the ones that
+arrive with their own palette are re-pointed at this project's tokens (`bg-ink`, `bg-bg`, `stroke-ink`)
+and at this project's square corners.
+
+| Component | Where it lands | What it brings |
+| --- | --- | --- |
+| `animated-counter` | `apps/web/app/components/ui/animated-counter.tsx` | the digits that roll into place (the crowding page's index point and score) |
+| `scroll-progress` | `apps/web/app/components/ui/scroll-progress.tsx` | the reading ring on the article page, with the outline's entries as the sections it can jump to |
+
+`clsx` and `tailwind-merge` arrive with them, for the `cn` helper in `apps/web/app/lib/utils.ts`.
+
+The layout follows the reference (Twitter/X): a fixed nav column on the left (275px, mark and name),
+the feed in the middle under a header that stays while it scrolls, and an aside on the right (350px:
+search, what is hot right now, the foot of the site). Phones keep the tab bar at the foot.
+
 ## Spec Reconciliation
 
 Graybox: `graybox.png`, captured 2026-11-14T03:14:00+08:00 (the mockup in

@@ -3,6 +3,19 @@ import { Link } from "react-router";
 import { IconChevronRight } from "../icons";
 
 /**
+ * The feed template: the feed on the left and the aside (350px) on the right, the way the reference
+ * layout sits them. Below `xl` the aside follows the feed.
+ */
+export function FeedLayout({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
+  return (
+    <div className="mx-auto grid max-w-[var(--page-max-wide)] gap-8 xl:grid-cols-[minmax(0,1fr)_350px]">
+      <div className="min-w-0">{children}</div>
+      {aside && <aside className="hidden min-w-0 xl:block">{aside}</aside>}
+    </div>
+  );
+}
+
+/**
  * The reading template, one of the site's two page widths (the other is the full-width feeds and
  * boards): a main column and an aside (300px, 340px on wide screens) in a container that fills a 16:9
  * screen and centres on wider ones (--page-max-reading); long text keeps its own reading measure

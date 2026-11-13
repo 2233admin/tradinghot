@@ -89,7 +89,23 @@ site's own h1 is 23 px.
 - **Spacing base 3–7 px** (the reference's): card padding 11/13 px, gaps 6 / 8 / 10 px, rows 8 px
   apart.
 
+## Layout
+
+The page follows the reference (Twitter/X) in three columns:
+
+- **Left nav column 275 px** — the wordmark at the top, the lanes down the column (mark + name), the
+  site's own pages at the foot. Below `xl` the marks stand in for the names.
+- **Feed column** — the feed under a header that stays while it scrolls (the page's name and its
+  lanes). The rows are the reference's rows: the mark of the source on the left, the name and the time
+  above the text, the actions under it.
+- **Right aside 350 px** — the search, what is hot right now, the foot of the site. Phones keep the tab
+  bar at the foot.
+
 ## Components
+
+The components come from **Rare UI** (github.com/swamimalode07/rare-ui, MIT + Commons Clause +
+Attribution): they are copied into the app, their palettes are re-pointed at this project's tokens and
+their corners at this project's squares.
 
 - **Card** — flat surface, 1 px hairline, square corners, no shadow. Source · lane chip · score on one
   line; the headline; the summary clamped to two lines; tags and the original link as hairline chips.

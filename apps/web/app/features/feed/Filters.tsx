@@ -1,6 +1,6 @@
 // Feed filters: the channel and category choice (a row of tabs on desktop, a sheet behind the bar's filter
 // button on phones), the phone bar of 精选 and 全部, and search.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Form, Link, useNavigation, useSearchParams } from "react-router";
 import { CATEGORY_KEYS, CATEGORY_LABELS, CHANNEL_LABELS, type CategoryKey, type ChannelKey } from "@aihot/contracts/taxonomy";
 import { CHANNELS, SITE } from "@aihot/site";
@@ -182,6 +182,7 @@ function useSlashFocus(ref: React.RefObject<HTMLInputElement | null>) {
 /** Desktop search field (GET /all?q=…): at the end of the filter row as the same grey track, at the height of md tabs, with a "/" hint. */
 export function SearchField({ defaultValue = "", keep = {} }: { defaultValue?: string; keep?: Record<string, string | null> }) {
   const [value, setValue] = useState(defaultValue);
+  const inputId = useId();
   const navigation = useNavigation();
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => setValue(defaultValue), [defaultValue]);
@@ -192,13 +193,13 @@ export function SearchField({ defaultValue = "", keep = {} }: { defaultValue?: s
   return (
     <Form method="get" action="/all" role="search" className="group relative w-full shrink-0 lg:w-60">
       {hidden}
-      <label htmlFor="site-search" className="sr-only">
+      <label htmlFor={inputId} className="sr-only">
         搜索标题和摘要
       </label>
       <IconSearch size={16} className={`pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${searching ? "text-accent" : "text-ink-4 group-focus-within:text-ink-3"}`} />
       <input
         ref={inputRef}
-        id="site-search"
+        id={inputId}
         name="q"
         value={value}
         onChange={(e) => setValue(e.target.value)}
