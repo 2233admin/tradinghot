@@ -25,27 +25,41 @@ function hrefWith(base: string, params: URLSearchParams, patch: Record<string, s
 }
 
 /**
- * The feed's one filter (精选 and 全部动态 alike): none, a channel (资讯 / X 大V / 散户闲聊), 一手, or a
+ * The feed's two filters (精选 and 全部动态 alike): a channel (资讯 / X 大V / 散户闲聊 / 一手) or a
  * category. One choice at a time: picking a channel clears the category and picking a category clears
- * the channel.
+ * the channel. They sit on two rows, so a narrow window scrolls the categories instead of cutting them.
  */
-function filterOptions(base: string, params: URLSearchParams, noneLabel: string) {
+function channelOptions(base: string, params: URLSearchParams, noneLabel: string) {
   return [
     { key: "all", label: noneLabel, to: hrefWith(base, params, { category: null, channel: null }) },
     ...CHANNELS.map((c) => ({ key: c.key, label: c.label, to: hrefWith(base, params, { category: null, channel: c.key }) })),
     { key: "firstParty", label: CHANNEL_LABELS.firstParty, to: hrefWith(base, params, { category: null, channel: "firstParty" }) },
-    ...CATEGORY_KEYS.map((k) => ({ key: k, label: CATEGORY_LABELS[k], to: hrefWith(base, params, { category: k, channel: null }) })),
   ];
+}
+
+function categoryOptions(base: string, params: URLSearchParams) {
+  return CATEGORY_KEYS.map((k) => ({ key: k, label: CATEGORY_LABELS[k], to: hrefWith(base, params, { category: k, channel: null }) }));
+}
+
+function filterOptions(base: string, params: URLSearchParams, noneLabel: string) {
+  return [...channelOptions(base, params, noneLabel), ...categoryOptions(base, params)];
 }
 
 function filterKey(category: CategoryKey | null, channel: ChannelKey): string {
   return channel !== "all" ? channel : (category ?? "all");
 }
 
-/** Desktop: the filter as a row of tabs beside the search field. */
+/** Desktop: the channels as a row of tabs beside the search field. */
+export function ChannelTabs({ base, category, channel = "all", layoutId, className = "" }: { base: string; category: CategoryKey | null; channel?: ChannelKey; layoutId: string; className?: string }) {
+  const [params] = useSearchParams();
+  return <PillTabs items={channelOptions(base, params, "全部").map(o => ({ ...o, prefetchOnPress: true }))} active={channel} layoutId={layoutId} label="频道" className={className} />;
+}
+
+/** Desktop: the categories as their own row, so a narrow window scrolls them instead of cutting them. */
 export function CategoryTabs({ base, category, channel = "all", layoutId, className = "" }: { base: string; category: CategoryKey | null; channel?: ChannelKey; layoutId: string; className?: string }) {
   const [params] = useSearchParams();
-  return <PillTabs items={filterOptions(base, params, "全部").map(o => ({ ...o, prefetchOnPress: true }))} active={filterKey(category, channel)} layoutId={layoutId} label="筛选" className={className} />;
+  const active = channel === "all" ? (category ?? "all") : "";
+  return <PillTabs items={categoryOptions(base, params).map(o => ({ ...o, prefetchOnPress: true }))} active={active} layoutId={layoutId} label="分类" className={className} />;
 }
 
 /**

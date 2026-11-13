@@ -303,8 +303,10 @@ async function recordFetch(db: Db, sourceId: string, runId: number, run: { found
   if ("cursor" in run) {
     if (run.coverageError) {
       const error = run.coverageError;
-      await db`UPDATE sources SET last_fetch_at = now(), last_error = ${error}, cursor = ${db.json(run.cursor as never)},
-        health = CASE WHEN health = 'failing' THEN health ELSE 'degraded' END,
+      // The source answered; what it cannot prove is that it answered for the whole window. That is not a
+      // failed fetch, so the source stops counting as one and reads as degraded instead of failing.
+      await db`UPDATE sources SET last_fetch_at = now(), last_ok_at = now(), fail_count = 0, last_error = ${error}, cursor = ${db.json(run.cursor as never)},
+        health = 'degraded',
         next_fetch_at = now() + make_interval(mins => CASE WHEN config->'_aihot'->>'fast' = 'true' THEN 1 ELSE interval_minutes END),
         updated_at = now() WHERE id = ${sourceId}`;
       await db`UPDATE fetch_runs SET status = 'failed', finished_at = now(), found_count = ${run.found}, new_count = ${run.created},

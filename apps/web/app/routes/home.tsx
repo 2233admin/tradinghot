@@ -8,7 +8,7 @@ import { inNav } from "../components/shell/nav";
 import type { Screen } from "../components/shell/screens";
 import { Timeline } from "../features/feed/Timeline";
 import { HotTopics } from "../features/feed/HotTopics";
-import { ActiveFilters, CategoryTabs, FeedBar, SearchField } from "../features/feed/Filters";
+import { ActiveFilters, CategoryTabs, ChannelTabs, FeedBar, SearchField } from "../features/feed/Filters";
 
 export const handle: Screen = { tab: "featured", name: "精选" };
 export { pageHeaders as headers } from "../lib/api.server";
@@ -42,9 +42,12 @@ export default function Home() {
       <ActiveFilters base="/" category={filters.category} channel={filters.channel} tag={filters.tag} />
       <div className="hidden lg:block">
         <h1 className="text-[24px] font-semibold leading-[1.3] text-ink">{title}</h1>
-        <div className="mb-5 mt-4 flex items-center justify-between gap-4">
+        <div className="mb-5 mt-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-4">
+            <ChannelTabs base="/" category={filters.category} channel={filters.channel} layoutId="home-chan-desk" className="min-w-0" />
+            <SearchField keep={{ category: filters.category }} />
+          </div>
           <CategoryTabs base="/" category={filters.category} channel={filters.channel} layoutId="home-cat-desk" className="min-w-0" />
-          <SearchField keep={{ category: filters.category }} />
         </div>
       </div>
 
