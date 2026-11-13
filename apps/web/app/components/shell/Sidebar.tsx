@@ -46,21 +46,48 @@ function useSidebarColumn() {
   return { width, setWidth, folded, setFolded };
 }
 
+/** The marks column's width: the folded column and the column that opens beside it. */
+const RAIL_WIDTH = 72;
+/** Dragging the column narrower than this folds it into its marks instead of squeezing the text. */
+const FOLD_AT = 96;
+
 /**
- * The column's edge: drag it to widen or narrow the column, click it to fold the column to its marks.
- * The width survives a reload, so the reader keeps the column they set.
+ * The column's edge. Drag it to widen or narrow the column; drag it all the way in and it folds to the
+ * marks; drag the marks' edge and it opens again. The width survives a reload.
  */
-function ColumnEdge({ width, setWidth, onFold }: { width: number; setWidth: (w: number) => void; onFold: () => void }) {
+function ColumnEdge({
+  side, width, setWidth, folded, setFolded,
+}: {
+  side: "wide" | "rail";
+  width: number;
+  setWidth: (w: number) => void;
+  folded: boolean;
+  setFolded: (v: boolean) => void;
+}) {
   const start = useRef<{ x: number; width: number } | null>(null);
   const [dragging, setDragging] = useState(false);
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    start.current = { x: event.clientX, width };
+    start.current = { x: event.clientX, width: folded ? RAIL_WIDTH : width };
     event.currentTarget.setPointerCapture(event.pointerId);
     setDragging(true);
   };
   const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!start.current) return;
-    setWidth(start.current.width + (event.clientX - start.current.x));
+    const next = start.current.width + (event.clientX - start.current.x);
+    if (folded) {
+      // Dragged out of the marks: the column opens and follows the pointer.
+      if (next > RAIL_WIDTH + 12) {
+        setFolded(false);
+        setWidth(next);
+      }
+      return;
+    }
+    // Dragged into the marks: the column folds instead of squeezing its text.
+    if (next < FOLD_AT) {
+      setFolded(true);
+      return;
+    }
+    setWidth(next);
   };
   const onPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!start.current) return;
@@ -71,19 +98,27 @@ function ColumnEdge({ width, setWidth, onFold }: { width: number; setWidth: (w: 
   return (
     <div
       role="separator"
-      aria-label="调整侧栏宽度"
+      aria-label={side === "wide" ? "调整侧栏宽度，向左拖可折叠" : "向右拖可展开侧栏"}
       aria-orientation="vertical"
+      aria-valuenow={side === "wide" ? width : RAIL_WIDTH}
+      aria-valuemin={RAIL_WIDTH}
+      aria-valuemax={MAX_WIDTH}
       tabIndex={0}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onDoubleClick={onFold}
+      onDoubleClick={() => (side === "wide" ? setFolded(true) : setFolded(false))}
       onKeyDown={(event) => {
-        if (event.key === "ArrowLeft") setWidth(width - 12);
-        if (event.key === "ArrowRight") setWidth(width + 12);
+        if (event.key === "ArrowLeft") (side === "wide" ? setWidth(width - 12) : setFolded(true));
+        if (event.key === "ArrowRight") (side === "wide" ? setWidth(width + 12) : setFolded(false));
       }}
-      className={`absolute inset-y-0 -right-1 w-2 cursor-col-resize touch-none ${dragging ? "bg-accent/40" : "hover:bg-accent/20"}`}
-    />
+      className={`absolute inset-y-0 z-10 w-2.5 cursor-col-resize touch-none ${
+        side === "wide" ? "-right-1.5" : "-right-1.5"
+      } ${dragging ? "bg-accent/40" : "hover:bg-accent/20"}`}
+    >
+      {/* The grip: a short hairline in the middle of the edge, seen when the column is hovered. */}
+      <span aria-hidden="true" className={`absolute left-1/2 top-1/2 h-8 w-px -translate-x-1/2 -translate-y-1/2 bg-accent/40 transition-opacity ${dragging ? "opacity-100" : "opacity-0 hover:opacity-60"}`} />
+    </div>
   );
 }
 
@@ -111,7 +146,9 @@ function SideLink({ item, dot, active }: { item: NavItem; dot: boolean; active: 
  * phone on its side) and when the reader folds the column: the same entries in the same order as the
  * full column, the site's own pages at the foot.
  */
-function Rail({ dot, folded }: { dot: boolean; folded: boolean }) {
+function Rail({
+  dot, folded, width, setWidth, setFolded,
+}: { dot: boolean; folded: boolean; width: number; setWidth: (w: number) => void; setFolded: (v: boolean) => void }) {
   const { pathname } = useLocation();
   const { tab, home } = useScreen();
   const groups = navGroups();
@@ -152,6 +189,7 @@ function Rail({ dot, folded }: { dot: boolean; folded: boolean }) {
       <nav className="mt-auto flex w-full flex-col border-t border-line pt-2" aria-label="站点">
         {bottom.map(mark)}
       </nav>
+      <ColumnEdge side="rail" width={width} setWidth={setWidth} folded={folded} setFolded={setFolded} />
     </aside>
   );
 }
@@ -164,7 +202,7 @@ export function Sidebar({ changelogVersion }: { changelogVersion: string | null 
   // only a few rows, so the whole column scrolls instead.
   return (
     <>
-      <Rail dot={dot} folded={folded} />
+      <Rail dot={dot} folded={folded} width={width} setWidth={setWidth} setFolded={setFolded} />
       {!folded && (
         <aside
           className="scrollbar-thin sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-line bg-sidebar px-3 pb-[max(14px,env(safe-area-inset-bottom))] pt-6 wide:flex short:overflow-y-auto"
@@ -214,7 +252,7 @@ export function Sidebar({ changelogVersion }: { changelogVersion: string | null 
             </div>
             <ThemeSwitch />
           </div>
-          <ColumnEdge width={width} setWidth={setWidth} onFold={() => setFolded(true)} />
+          <ColumnEdge side="wide" width={width} setWidth={setWidth} folded={folded} setFolded={setFolded} />
         </aside>
       )}
     </>
