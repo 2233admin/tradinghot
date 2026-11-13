@@ -2,7 +2,7 @@
 // the industry pack (industry/taxonomy.ts); their keys are external identities (URLs, API, RSS) and never change.
 // How the public API, RSS and MCP differ from the website is the site's (site/site.ts PUBLIC_CATEGORIES).
 import { CATEGORIES } from "@aihot/industry/taxonomy";
-import { PUBLIC_CATEGORIES } from "@aihot/site";
+import { CHANNELS, PUBLIC_CATEGORIES } from "@aihot/site";
 
 type Category = (typeof CATEGORIES)[number];
 
@@ -35,14 +35,16 @@ export function isCategoryKey(value: unknown): value is CategoryKey {
   return typeof value === "string" && (CATEGORY_KEYS as readonly string[]).includes(value);
 }
 
-export const CHANNEL_KEYS = ["all", "news", "x", "firstParty"] as const;
+/** The site's own channels (site/site.ts CHANNELS); "all" and "firstParty" are the framework's two extras. */
+export type SiteChannelKey = (typeof CHANNELS)[number]["key"];
+
+export const CHANNEL_KEYS = ["all", "firstParty", ...CHANNELS.map((c) => c.key)] as readonly ["all", "firstParty", ...SiteChannelKey[]];
 export type ChannelKey = (typeof CHANNEL_KEYS)[number];
 
 export const CHANNEL_LABELS: Record<ChannelKey, string> = {
   all: "全部",
-  news: "资讯",
-  x: "X",
   firstParty: "一手",
+  ...(Object.fromEntries(CHANNELS.map((c) => [c.key, c.label])) as Record<SiteChannelKey, string>),
 };
 
 export function isChannelKey(value: unknown): value is ChannelKey {

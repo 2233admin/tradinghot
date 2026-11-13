@@ -226,3 +226,27 @@ test("today's time inside other text, or no real time, is no date", () => {
     assert.deepEqual(readRelativeDate(v, now), { publishedAt: null, publicationTime: null }, v);
   }
 });
+
+test("a month and a day without a year is the most recent such moment", () => {
+  // A forum prints a post's time as "11-13 16:37": the month, the day and the hour, no year.
+  const now = new Date("2026-11-14T02:00:00.000Z");
+  const real = Date.now;
+  Date.now = () => now.getTime();
+  try {
+    // A moment already past belongs to this year, in the source's offset.
+    assert.equal(iso("11-13 16:37"), new Date("2026-11-13T08:37:00.000Z").toISOString());
+    assert.equal(iso("01-05 10:00"), new Date("2026-01-05T02:00:00.000Z").toISOString());
+    // A day still ahead of now belongs to the year before.
+    assert.equal(iso("12-25 10:00"), new Date("2025-12-25T02:00:00.000Z").toISOString());
+    // Tonight, a few hours ahead, still belongs to this year.
+    assert.equal(iso("11-14 23:00"), new Date("2026-11-14T15:00:00.000Z").toISOString());
+    // The source's own offset, not the server's.
+    assert.equal(iso("11-13 16:37", "-07:00"), new Date("2026-11-13T23:37:00.000Z").toISOString());
+    // No time, no day or an impossible month or hour is no date.
+    for (const v of ["11-13", "13-13 10:00", "11-32 10:00", "11-13 25:00", "11-13 10:61"]) {
+      assert.equal(iso(v), null, v);
+    }
+  } finally {
+    Date.now = real;
+  }
+});

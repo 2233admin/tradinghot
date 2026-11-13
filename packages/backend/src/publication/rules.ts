@@ -1,4 +1,5 @@
 // Publication rules. Each rule is defined once here and used by every exit.
+import { CHANNEL_KEYS } from "@aihot/contracts/taxonomy";
 import { serverModules } from '../modules.ts';
 
 /** Presentation exceptions never alter scoring, selection eligibility or fact membership. */
@@ -29,10 +30,18 @@ export interface SourceFacts {
   first_party: boolean;
   site_fulltext: boolean;
   syndicate_fulltext: boolean;
+  /** The channel the source declares in its own config (the site's channels, site/site.ts CHANNELS). */
+  channel: string | null;
 }
 
-export function channelOf(sourceKind: string, hasXPost: boolean): "x" | "news" {
-  return sourceKind === "x_search" || hasXPost ? "x" : "news";
+/**
+ * The line a publication belongs to. A source may name one in its own config (the site's channels,
+ * site/site.ts CHANNELS); without it an X account or a post read from X is "x", everything else "news".
+ */
+export function channelOf(source: { kind: string; channel?: string | null }, hasXPost: boolean): string {
+  const declared = typeof source.channel === "string" ? source.channel : null;
+  if (declared && (CHANNEL_KEYS as readonly string[]).includes(declared)) return declared;
+  return source.kind === "x_search" || hasXPost ? "x" : "news";
 }
 
 /** Public pool (/all): editorial sources, AI relevant, with usable copy or an original post. */

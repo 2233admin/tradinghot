@@ -61,7 +61,7 @@ export interface ItemSummary {
   tags: string[];
   score: number | null;
   selected: boolean;
-  channel: "news" | "x";
+  channel: ChannelKey;
   story: StoryRef | null;
 }
 

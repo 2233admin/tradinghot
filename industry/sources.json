@@ -503,6 +503,7 @@
         "summaryPaths": ["original_status.description"],
         "publishedAtPath": "original_status.created_at",
         "publishedAtUnit": "epoch_ms",
+        "channel": "forum",
         "externalIdPath": "original_status.id",
         "urlTemplate": "https://xueqiu.com/{raw:original_status.user_id}/{raw:original_status.id}",
         "_aihot": {
@@ -588,6 +589,7 @@
         "titlePaths": ["subject"],
         "summaryPaths": ["subinfo"],
         "authorPaths": ["userName"],
+        "channel": "forum",
         "urlTemplate": "https://www.tgb.cn/a/{raw:newTopicID}",
         "publishedAtPath": "postDate",
         "publishedAtUnit": "epoch_ms",
@@ -617,6 +619,7 @@
         "authorSelector": ".username .fs16-bold",
         "publishedAtSelector": ".fs13-ash",
         "publishedAtUtcOffset": "+08:00",
+        "channel": "forum",
         "allowUrlPrefixes": ["https://www.jiuyangongshe.com/a/"],
         "_aihot": {
           "initialBackfillLimit": 30,
@@ -788,6 +791,7 @@
         "linkSelector": "h4 a",
         "titleSelector": "h4 a",
         "publishedAtUtcOffset": "+08:00",
+        "channel": "forum",
         "allowUrlPrefixes": ["https://www.jisilu.cn/question/"],
         "detail": {
           "maxFetches": 30,
@@ -1484,6 +1488,9 @@
         "linkSelector": ".sub a.note",
         "titleSelector": ".sub a.note",
         "authorSelector": "cite.aut a",
+        "publishedAtSelector": "cite.date",
+        "publishedAtUtcOffset": "+08:00",
+        "channel": "forum",
         "allowUrlPrefixes": ["https://guba.eastmoney.com/news,"],
         "_aihot": { "initialBackfillLimit": 30, "fast": true }
       },
