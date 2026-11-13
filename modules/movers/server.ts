@@ -9,7 +9,11 @@
 // What it is not: a quote feed. The site collects reports, not prices, so the module never says a
 // stock moved by how much, only that the wires reported it. The reader's own channels keep the forum
 // chatter out: only the news lane is read, because a forum's "涨停" is a poster's hope, not a move.
-import { sql } from "@aihot/backend/db";
+//
+// The read goes through the engine's one publication layer (packages/backend/src/publication/), like
+// every other public exit: the same visibility, release date and browsing rules apply, and the
+// module keeps no second definition of what the public may read.
+import { loadPool } from "@aihot/backend/publication/pool";
 import { defineServerModule } from "@aihot/backend/modules";
 import { moversResponseSchema, type Mover, type MoverKind, type MoversResponse } from "./types.ts";
 
@@ -17,8 +21,8 @@ import { moversResponseSchema, type Mover, type MoverKind, type MoversResponse }
 const WINDOW_MINUTES = 120;
 /** How many moves the site shows at once. */
 const MAX_ITEMS = 8;
-/** How many headlines it reads to find them. */
-const SCAN_ROWS = 400;
+/** How many published headlines it reads to find them. */
+const SCAN_PAGES = 2;
 /** How long an answer is reused before the api reads the headlines again. */
 const CACHE_MS = 30_000;
 
@@ -39,14 +43,6 @@ const RULES: ReadonlyArray<{ kind: MoverKind; label: string; re: RegExp }> = [
   },
 ];
 
-interface HeadlineRow {
-  id: string;
-  title: string;
-  summary: string | null;
-  source_name: string;
-  discovered_at: Date;
-}
-
 let cached: { at: number; response: MoversResponse } | null = null;
 
 /** The rule a headline trips, or null when it is ordinary news. */
@@ -58,31 +54,38 @@ export function matchKind(text: string): { kind: MoverKind; label: string } | nu
 }
 
 /**
- * The published news of the last while, newest first. Only the news lane: the forum's and the
- * accounts' own words about limits and halts are talk, not moves.
+ * The published news, newest first, read through the publication layer like every other public exit.
+ * Only the news lane: the forum's and the accounts' own words about limits and halts are talk, not
+ * moves.
  */
-async function readHeadlines(): Promise<HeadlineRow[]> {
-  return sql<HeadlineRow[]>`
-    SELECT a.id, p.title, p.summary, s.name AS source_name, a.discovered_at
-    FROM publications p
-    JOIN articles a ON a.id = p.article_id
-    JOIN sources s ON s.id = a.source_id
-    WHERE p.visibility = 'public' AND p.eligible AND p.channel = 'news'
-      AND a.discovered_at > now() - make_interval(mins => ${WINDOW_MINUTES})
-    ORDER BY a.discovered_at DESC
-    LIMIT ${SCAN_ROWS}
-  `;
+async function readHeadlines(): Promise<Array<{ id: string; title: string; sourceName: string; at: string }>> {
+  const pages = await Promise.all(
+    Array.from({ length: SCAN_PAGES }, (_, index) => loadPool({ channel: "news", category: null, tag: null, page: index + 1 })),
+  );
+  return pages.flatMap((page) =>
+    page.items.map((item) => ({
+      id: item.id,
+      title: item.title,
+      sourceName: item.source.name,
+      at: item.timelineAt,
+    })),
+  );
 }
 
 /** What the site serves: the moves the wires reported, newest first. */
 export async function loadMovers(): Promise<MoversResponse> {
   if (cached && Date.now() - cached.at < CACHE_MS) return cached.response;
   const rows = await readHeadlines();
+  const newest = Date.now() - WINDOW_MINUTES * 60_000;
   const items: Mover[] = [];
   const seen = new Set<string>();
   for (const row of rows) {
     const title = row.title.trim();
     if (!title) continue;
+    // The move's own time, not the moment the site read it: a report collected late is still the
+    // report it was, and an old report is not a move of the last two hours.
+    const at = Date.parse(row.at);
+    if (!Number.isFinite(at) || at < newest) continue;
     // The same move reported twice is one move: the headline's own words are the key.
     const key = title.slice(0, 24);
     if (seen.has(key)) continue;
@@ -96,8 +99,8 @@ export async function loadMovers(): Promise<MoversResponse> {
       title,
       kind: hit.kind,
       label: hit.label,
-      sourceName: row.source_name,
-      at: row.discovered_at.toISOString(),
+      sourceName: row.sourceName,
+      at: new Date(at).toISOString(),
     });
     if (items.length >= MAX_ITEMS) break;
   }
