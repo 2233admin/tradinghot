@@ -12,6 +12,7 @@ interface Mover {
   label: string;
   sourceName: string;
   at: string;
+  changePercent: number | null;
 }
 
 /** The few moves the api answered with, read without trusting the shape. */
@@ -23,13 +24,15 @@ function readItems(body: unknown): Mover[] {
     if (!("id" in item) || typeof item.id !== "string") continue;
     if (!("title" in item) || typeof item.title !== "string") continue;
     if (!("label" in item) || typeof item.label !== "string") continue;
+    const change = "changePercent" in item && typeof item.changePercent === "number" ? item.changePercent : null;
     items.push({
       id: item.id,
       title: item.title,
-      kind: "limit",
+      kind: "kind" in item && typeof item.kind === "string" ? item.kind : "limit",
       label: item.label,
       sourceName: "sourceName" in item && typeof item.sourceName === "string" ? item.sourceName : "",
       at: "at" in item && typeof item.at === "string" ? item.at : "",
+      changePercent: change,
     });
   }
   return items;
@@ -69,11 +72,17 @@ export function MoverAlert() {
             {index > 0 && <span className="mx-1.5 text-line-strong">|</span>}
             <Link
               viewTransition
-              to={`/items/${item.id}`}
+              to={item.kind === "up" || item.kind === "down" ? `/all?q=${encodeURIComponent(item.title)}` : `/items/${item.id}`}
               className="inline-flex max-w-full items-baseline transition-colors hover:text-accent"
               title={`${item.label} · ${item.sourceName} · ${item.title}`}
             >
               <span className="shrink-0 text-accent">{item.label}</span>
+              {item.changePercent !== null && (
+                <span className="num ml-1 shrink-0 text-accent">
+                  {item.changePercent > 0 ? "+" : ""}
+                  {item.changePercent.toFixed(2)}%
+                </span>
+              )}
               <span className="ml-1 truncate">{item.title}</span>
             </Link>
           </span>

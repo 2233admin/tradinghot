@@ -3,10 +3,10 @@
 // so the module says "the wires reported a limit-up", never "the stock is up 10%".
 import { z } from "zod";
 
-export const moverKindSchema = z.enum(["limit", "halt", "breaker", "spike", "extreme"]);
+export const moverKindSchema = z.enum(["limit", "halt", "breaker", "spike", "extreme", "up", "down"]);
 
 export const moverSchema = z.object({
-  /** The item's id, the same one its page uses. */
+  /** The item's id (the same one its page uses) for a reported move, the symbol for a quoted one. */
   id: z.string(),
   title: z.string(),
   kind: moverKindSchema,
@@ -15,6 +15,8 @@ export const moverSchema = z.object({
   sourceName: z.string(),
   /** When the item came in, in ISO time. */
   at: z.string(),
+  /** The day's change in percent, when a quote gave it; null for a move read off a headline. */
+  changePercent: z.number().nullable(),
 });
 
 export const moversResponseSchema = z.object({
