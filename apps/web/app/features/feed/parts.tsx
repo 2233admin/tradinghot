@@ -24,6 +24,26 @@ export function SourceLine({ item, className = "" }: { item: Pick<FeedItemSummar
   return <span className={`min-w-0 truncate ${className}`}>{item.source.name}</span>;
 }
 
+/**
+ * The lane a report belongs to, named once: 资讯 (the wires), X 大V (the accounts), 散户闲聊 (the
+ * community forums). One chip per card, so a mixed feed stays readable.
+ */
+const LANES: Record<string, { label: string; className: string }> = {
+  news: { label: "资讯", className: "text-accent border-accent/25" },
+  x: { label: "X 大V", className: "text-amber border-amber/30" },
+  forum: { label: "散户闲聊", className: "text-ok border-ok/30" },
+};
+
+export function LaneChip({ channel, className = "" }: { channel: string; className?: string }) {
+  const lane = LANES[channel];
+  if (!lane) return null;
+  return (
+    <span className={`shrink-0 border px-[6px] text-[10.5px] leading-[16px] tracking-[0.06em] ${lane.className} ${className}`}>
+      {lane.label}
+    </span>
+  );
+}
+
 /** Up to four media thumbnails, kept small in lists (the detail page shows them larger). Videos are stills. */
 export function MediaThumbs({ media, className = "" }: { media: MediaView[]; className?: string }) {
   const [index, setIndex] = useState<number | null>(null);

@@ -313,6 +313,17 @@ export const PUBLIC_CATEGORIES = {
   feedLabels: {},
 } as const;
 
+/**
+ * 频道：把一条 feed 里的内容分成几条线（网页的筛选栏、接口的 channel 参数、信源的 channel 字段都用这里的 key）。
+ * news 是快讯与资讯，x 是 X 上的大V，forum 是社区里的散户讨论。key 会进网址和接口（?channel=…），上线后不要改。
+ * 信源在自己的配置里写 channel 就归到这条线；不写时按信源类型默认（X 账号归 x，其余归 news）。
+ */
+export const CHANNELS = [
+  { key: "news", label: "资讯" },
+  { key: "x", label: "X 大V" },
+  { key: "forum", label: "散户闲聊" },
+] as const satisfies ReadonlyArray<{ key: string; label: string }>;
+
 /** “AI 日报”这类说法：行业词和名词之间，英文词加空格，中文词不加。 */
 export function withSubject(noun: string): string {
   return /[A-Za-z0-9]$/.test(SITE.subject) ? `${SITE.subject} ${noun}` : `${SITE.subject}${noun}`;

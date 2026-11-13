@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<title>终端流（无卡片面） · 方向 C</title>
+<style>
+  :root {
+    --ground:#0f1116; --panel:#15181e; --card:#191d24;
+    --line:rgba(255,255,255,.075); --line-2:rgba(255,255,255,.14);
+    --accent:#a3c4d5; --accent-dim:rgba(163,196,213,.20); --accent-glow:rgba(163,196,213,.10);
+    --text:#eef2f5; --muted:#9aa6b0; --faint:#69737e; --sand:#c9a97e; --green:#93b39a;
+    --sans:"Noto Sans CJK SC","PingFang SC",system-ui,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--text); font-family:var(--sans); font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  .shell { display:grid; grid-template-columns:76px minmax(0,1fr); min-height:100vh; }
+  .rail-nav { background:var(--panel); border-right:1px solid var(--line); padding:18px 0; position:sticky; top:0; height:100vh; display:flex; flex-direction:column; }
+  .mark { width:40px; height:40px; margin:0 auto 22px; border:1px solid var(--accent); color:var(--accent); display:grid; place-items:center; font-family:var(--mono); font-size:12px; }
+  .nav { display:flex; flex-direction:column; gap:2px; padding:0 6px; }
+  .nav a { display:block; text-align:center; padding:10px 2px; color:var(--faint); text-decoration:none; font-size:11px; letter-spacing:.04em; }
+  .nav a.on { color:var(--accent); background:var(--accent-glow); box-shadow:inset 2px 0 0 var(--accent); }
+  .nav .bottom { margin-top:auto; border-top:1px solid var(--line); padding-top:6px; }
+  main { min-width:0; padding:22px 26px 60px; }
+  .wrap { max-width:1040px; margin:0 auto; }
+  h1 { font-size:23px; font-weight:600; margin:0 0 4px; }
+  .meta { color:var(--faint); font-size:12px; margin-bottom:16px; }
+  .tabs { display:flex; gap:2px; overflow-x:auto; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.16) transparent; padding-bottom:6px; }
+  .tabs::-webkit-scrollbar { height:5px; } .tabs::-webkit-scrollbar-thumb { background:rgba(255,255,255,.16); border-radius:0; }
+  .tabs .t { flex:0 0 auto; padding:5px 11px; font-size:12.5px; color:var(--muted); text-decoration:none; border:1px solid transparent; white-space:nowrap; }
+  .tabs .t.on { color:var(--accent); border-color:var(--accent-dim); background:var(--accent-glow); }
+  .cats .t { font-size:12px; color:var(--faint); padding:4px 9px; }
+  .row { display:flex; align-items:center; gap:10px; margin:20px 0 10px; }
+  .row .day { font-family:var(--mono); font-size:15px; letter-spacing:.10em; }
+  .row .sub { font-size:11.5px; color:var(--faint); }
+  .row .rule { flex:1; height:1px; background:var(--line); }
+  ul { list-style:none; margin:0; padding:0; }
+  .slot { display:grid; grid-template-columns:64px 22px minmax(0,1fr); align-items:start; }
+  .slot .t { font-family:var(--mono); font-size:12.5px; color:var(--accent); padding-top:13px; }
+  .rail { position:relative; height:100%; }
+  .rail i { position:absolute; left:9px; top:16px; width:7px; height:7px; background:var(--accent); }
+  .rail::after { content:""; position:absolute; left:12px; top:26px; bottom:-4px; width:1px; background:var(--line-2); }
+  .slot:last-child .rail::after { display:none; }
+  .card { background:var(--card); border:1px solid var(--line); }
+  .card header { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .src { font-size:11.5px; color:var(--muted); }
+  .ch { font-size:10.5px; letter-spacing:.06em; border:1px solid; padding:1px 6px; }
+  .ch-news { color:var(--accent); border-color:var(--accent-dim); }
+  .ch-x { color:var(--sand); border-color:rgba(201,169,126,.28); }
+  .ch-forum { color:var(--green); border-color:rgba(147,179,154,.28); }
+  .score { margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--accent); }
+  .card h3 { margin:0 0 5px; font-weight:600; line-height:1.45; }
+  .sum { margin:0; color:var(--muted); font-size:12.5px; line-height:1.6; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .note { margin-top:22px; padding:13px 15px; border:1px solid var(--line); background:var(--panel); color:var(--muted); font-size:12.5px; }
+  .note b { color:var(--accent); font-weight:600; }
+  
+    .card { background: transparent; border: 0; border-bottom: 1px solid var(--line); padding: 12px 0 10px; margin-bottom: 0; }
+    .card header { margin-bottom: 4px; }
+    .sum { -webkit-line-clamp: 1; }
+    h3 { font-size: 14.5px; }
+    .slot .t { padding-top: 15px; }
+  
+</style></head>
+<body>
+<div class="shell">
+  <aside class="rail-nav">
+    <div class="mark">股市</div>
+    <nav class="nav">
+      <a href="#" class="on">全部</a><a href="#">精选</a><a href="#">热点</a><a href="#">日报</a>
+      <div class="bottom"><a href="#">我的</a><a href="#">主题</a><a href="#">信源</a><a href="#">设置</a><a href="#">关于</a></div>
+    </nav>
+  </aside>
+  <main><div class="wrap">
+    <h1>全部股市动态</h1>
+    <div class="meta">从 72 个信源里挑出的动态 · 按事件发生的时间排</div>
+    <div class="tabs"><a class="t on" href="#">全部</a><a class="t" href="#">资讯</a><a class="t" href="#">X 大V</a><a class="t" href="#">散户闲聊</a><a class="t" href="#">一手</a></div>
+    <div class="tabs cats"><a class="t" href="#">美股</a><a class="t" href="#">A股</a><a class="t" href="#">港股</a><a class="t" href="#">宏观数据</a><a class="t" href="#">债券与利率</a><a class="t" href="#">能源</a><a class="t" href="#">贵金属</a><a class="t" href="#">大宗商品</a><a class="t" href="#">加密货币</a><a class="t" href="#">地缘政治</a><a class="t" href="#">外汇</a><a class="t" href="#">其他</a></div>
+    <div class="row"><span class="day">11月14日</span><span class="sub">星期三 · 264 条</span><span class="rule"></span></div>
+    <ul>
+      <li class="slot">
+        <time class="t">02:51</time><span class="rail"><i></i></span>
+        <article class="card">
+          <header><span class="src">格隆汇 · 快讯</span><span class="ch ch-news">资讯</span><span class="score">82</span></header>
+          <h3>美联储戴利：通胀持续恶化 进一步加息很可能有必要</h3>
+          <p class="sum">格隆汇11月14日｜美联储旧金山联储主席戴利周五表示，鉴于通胀形势恶化，美联储很可能需要进一步加息。她指出，核心CPI连续三个月环比上涨约0.3%，高于与美联储2%通胀目标相符的0.2%或以下水平。她尤其担忧剔除住房后的服务业通胀走势不佳，因为这类价格通常具有较强粘性。企业投入成本不断上升，越来越多生产商表示利润空间已难以消化成本压力，正考虑将成本转嫁给消费者。戴利表示，她将在12月会议及未来会议</p>
+        </article>
+      </li>
+      <li class="slot">
+        <time class="t">02:49</time><span class="rail"><i></i></span>
+        <article class="card">
+          <header><span class="src">华尔街见闻 · 快讯</span><span class="ch ch-news">资讯</span><span class="score">82</span></header>
+          <h3>英伟达势创18个月来最差单周表现，市值蒸发逾6200亿美元</h3>
+          <p class="sum">英伟达股价势将创下逾18个月来最差单周表现，在黄仁勋从这家芯片巨头离职后，公司股价持续承压。 英伟达周五一度下跌4.7%，本周累计跌幅扩大至约14%，势将创下2025年4月以来最差单周表现，当时美国总统特朗普宣布大范围加征关税的计划，引发全球股市震荡。英伟达本周市值已蒸发逾6200亿美元，这一损失超过标普500指数中97%的成分股各自的市值。</p>
+        </article>
+      </li>
+      <li class="slot">
+        <time class="t">02:43</time><span class="rail"><i></i></span>
+        <article class="card">
+          <header><span class="src">华尔街见闻 · 快讯</span><span class="ch ch-news">资讯</span><span class="score">82</span></header>
+          <h3>Anthropic因“Mythos”模型遭商标侵权起诉</h3>
+          <p class="sum">一家名为Mythos的软件公司周五在美国弗吉尼亚州联邦法院起诉Anthropic，指控该人工智能公司对“Mythos”一词的使用侵犯了其商标权。 运营着面向非营利组织软件平台的Mythos公司告诉法院，Anthropic的Mythos AI模型将造成市场混淆，并使其遭受“重大且不可弥补的损害”。Mythos公司请求法院判令未指明金额的损害赔偿，并下达法院命令禁止Anthropic使用“Mythos</p>
+        </article>
+      </li>
+      <li class="slot">
+        <time class="t">02:40</time><span class="rail"><i></i></span>
+        <article class="card">
+          <header><span class="src">华尔街见闻 · 快讯</span><span class="ch ch-news">资讯</span><span class="score">82</span></header>
+          <h3>美联储加息预期升温，黄金恐创6月以来最差单周表现</h3>
+          <p class="sum">随着交易员押注能源驱动的持续性通胀将促使美联储进一步收紧政策，黄金正走向6月以来最差单周表现，这对这种贵金属构成严峻挑战。在上一交易日暴跌至13个月低点后，黄金周五小幅走高，但周跌幅仍达4.6%，势必创6月初以来最大单周跌幅。</p>
+        </article>
+      </li>
+      <li class="slot">
+        <time class="t">02:37</time><span class="rail"><i></i></span>
+        <article class="card">
+          <header><span class="src">格隆汇 · 快讯</span><span class="ch ch-news">资讯</span><span class="score">82</span></header>
+          <h3>夜盘主力合约收盘</h3>
+          <p class="sum">格隆汇11月14日｜截至2:30收盘，沪金主力合约收跌0.21%，报836元/克，沪银主力合约收跌2.16%，报11799元/千克，SC原油主力合约收涨1.63%，报617元/桶。</p>
+        </article>
+      </li>
+      <li class="slot">
+        <time class="t">02:23</time><span class="rail"><i></i></span>
+        <article class="card">
+          <header><span class="src">新浪财经 · 滚动</span><span class="ch ch-news">资讯</span><span class="score">82</span></header>
+          <h3>欧洲股市收于历史新高，本周累涨2.4%创7月以来最佳表现</h3>
+          <p class="sum">11月13日，欧洲股市小幅收涨，泛欧斯托克600指数收于历史最高水平，本周累计上涨2.4%，创7月以来最大单周涨幅。尽管矿业及科技股下跌...</p>
+        </article>
+      </li>
+      <li class="slot">
+        <time class="t">02:23</time><span class="rail"><i></i></span>
+        <article class="card">
+          <header><span class="src">华尔街见闻 · 快讯</span><span class="ch ch-news">资讯</span><span class="score">82</span></header>
+          <h3>稳市活水持续涌入，着力增强A股内在稳定性</h3>
+          <p class="sum">政策引导与市场力量同频共振，转化为A股内在稳定力量。11月6日召开的国务院常务会议提出“完善资本市场稳市机制”，释放明确的政策呵护市场信号。受访机构人士认为，随着中长期资金入市渠道持续拓宽、稳市工具体系日益完善，A股抵御外部冲击、平滑波动的韧性将有望稳步增强。</p>
+        </article>
+      </li>
+      <li class="slot">
+        <time class="t">02:20</time><span class="rail"><i></i></span>
+        <article class="card">
+          <header><span class="src">财联社 · 电报</span><span class="ch ch-news">资讯</span><span class="score">82</span></header>
+          <h3>五国及欧盟机构将代表欧洲参与下一轮乌克兰问题谈判</h3>
+          <p class="sum">【五国及欧盟机构将代表欧洲参与下一轮乌克兰问题谈判】财联社11月14日电，欧盟领导人非正式会议在爱尔兰首都都柏林举行。欧洲理事会主席科斯塔在会议结束后表示，欧盟各成员国领导人当天一致同意，德国、法国、意大利、波兰、英国和欧盟各机构将代表欧洲参与乌克兰问题谈判。</p>
+        </article>
+      </li>
+      <li class="slot">
+        <time class="t">02:02</time><span class="rail"><i></i></span>
+        <article class="card">
+          <header><span class="src">华尔街见闻 · 快讯</span><span class="ch ch-news">资讯</span><span class="score">82</span></header>
+          <h3>美国芝加哥市今年已经第三任CFO离职，引发信用评级担忧</h3>
+          <p class="sum">美国芝加哥市今年已失去第三任首席财务官（CFO），上任仅三个月的加布里施（Ashlee Gabrysch）宣布辞职。加布里施表示，她必须辞职以避免损害自身职业操守与专业义务；而市长约翰逊（Brandon Johnson）的发言人则对其任职期间的行为提出质疑。该事件将移交市监察长办公室进行独立审查。在市信用评级与财政基础引发担忧之际，市议员康威（Bill Conway）呼吁立即展开调查。</p>
+        </article>
+      </li></ul>
+    <div class="note"><b>方向 C</b>：终端流 —— 去掉卡片面，只留发丝线和时间轴，密度最高、最像终端；层级最弱。</div>
+  </div></main>
+</div>
+</body></html>

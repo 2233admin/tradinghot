@@ -625,17 +625,34 @@ async function writeWithModel(a: AnalyzeInputArticle, decision: SelectionDecisio
   return { writing, structure };
 }
 
+/** A summary that only repeats the title adds nothing: the card shows the title alone. */
+function withoutRepeatedTitle(title: string, summary: string): string {
+  const t = collapseWhitespace(title);
+  const s = collapseWhitespace(summary);
+  if (!t || !s) return s;
+  if (s === t) return "";
+  // A summary that starts with the title still carries the rest of it (a flash repeats its headline and
+  // then says more); only a summary that says nothing beyond the title is dropped.
+  const extra = s.startsWith(t) ? s.slice(t.length) : t.startsWith(s) ? t.slice(s.length) : null;
+  return extra !== null && extra.replace(/[\s，。、！？：；·…—\-]/g, "").length < 8 ? "" : s;
+}
+
 /** The material's own title and opening text: readable without any model. */
 async function writeFromSource(a: AnalyzeInputArticle, decision: SelectionDecision): Promise<WritingDecision> {
   const original = originalPostCopy(a.xPost, a.url);
   const copy = (title: string, summary: string): WritingDecision => ({
     writing: {
-      kind: "verbatim", model: null, titleZh: collapseWhitespace(title), summaryZh: collapseWhitespace(summary).slice(0, 200),
+      kind: "verbatim", model: null, titleZh: collapseWhitespace(title),
+      summaryZh: withoutRepeatedTitle(title, summary).slice(0, 200),
       reasonZh: decision.reason.startsWith("规则命中") ? decision.reason : null, receiptIds: [], reused: true,
     },
     structure: null,
   });
-  return original ? copy(original.title, original.summary ?? "") : copy(a.title, a.bodyText ?? a.excerpt ?? "");
+  if (original) return copy(original.title, original.summary ?? "");
+  // The listing's own words (a flash's text, a feed's description) are the summary. The page's opening is the
+  // fallback: a page that renders its own menu first would otherwise put the menu in the summary.
+  const own = collapseWhitespace(a.excerpt ?? "");
+  return copy(a.title, own.length >= 24 ? own : a.bodyText ?? a.excerpt ?? "");
 }
 
 /**

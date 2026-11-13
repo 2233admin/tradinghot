@@ -79,7 +79,7 @@ export function PillTabs({
   const links = items.some((t) => t.to);
   const Track = links ? "nav" : "div";
   return (
-    <div className={`scrollbar-none max-w-full overflow-x-auto ${fill ? "w-full" : ""} ${className}`}>
+    <div className={`scrollbar-thin max-w-full overflow-x-auto ${fill ? "w-full" : ""} ${className}`}>
       <Track
         data-pill-track=""
         aria-label={label}

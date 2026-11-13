@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Form, Link, useNavigation, useSearchParams } from "react-router";
 import { CATEGORY_KEYS, CATEGORY_LABELS, CHANNEL_LABELS, type CategoryKey, type ChannelKey } from "@aihot/contracts/taxonomy";
-import { SITE } from "@aihot/site";
+import { CHANNELS, SITE } from "@aihot/site";
 import { IconClose, IconFilter, IconSearch } from "../../components/icons";
 import { PillTabs } from "../../components/ui/Tabs";
 import { ChoiceTick, Sheet, sheetChoice } from "../../components/ui/Sheet";
@@ -25,26 +25,41 @@ function hrefWith(base: string, params: URLSearchParams, patch: Record<string, s
 }
 
 /**
- * The feed's one filter (精选 and 全部动态 alike): none, 一手, or a category. One choice at a time: picking
- * 一手 clears the category and picking a category clears 一手. Older 资讯 / X links still filter; the
- * choice then shows as none.
+ * The feed's two filters (精选 and 全部动态 alike): a channel (资讯 / X 大V / 散户闲聊 / 一手) or a
+ * category. One choice at a time: picking a channel clears the category and picking a category clears
+ * the channel. They sit on two rows, so a narrow window scrolls the categories instead of cutting them.
  */
-function filterOptions(base: string, params: URLSearchParams, noneLabel: string) {
+function channelOptions(base: string, params: URLSearchParams, noneLabel: string) {
   return [
     { key: "all", label: noneLabel, to: hrefWith(base, params, { category: null, channel: null }) },
+    ...CHANNELS.map((c) => ({ key: c.key, label: c.label, to: hrefWith(base, params, { category: null, channel: c.key }) })),
     { key: "firstParty", label: CHANNEL_LABELS.firstParty, to: hrefWith(base, params, { category: null, channel: "firstParty" }) },
-    ...CATEGORY_KEYS.map((k) => ({ key: k, label: CATEGORY_LABELS[k], to: hrefWith(base, params, { category: k, channel: null }) })),
   ];
 }
 
-function filterKey(category: CategoryKey | null, channel: ChannelKey): string {
-  return channel === "firstParty" ? "firstParty" : (category ?? "all");
+function categoryOptions(base: string, params: URLSearchParams) {
+  return CATEGORY_KEYS.map((k) => ({ key: k, label: CATEGORY_LABELS[k], to: hrefWith(base, params, { category: k, channel: null }) }));
 }
 
-/** Desktop: the filter as a row of tabs beside the search field. */
+function filterOptions(base: string, params: URLSearchParams, noneLabel: string) {
+  return [...channelOptions(base, params, noneLabel), ...categoryOptions(base, params)];
+}
+
+function filterKey(category: CategoryKey | null, channel: ChannelKey): string {
+  return channel !== "all" ? channel : (category ?? "all");
+}
+
+/** Desktop: the channels as a row of tabs beside the search field. */
+export function ChannelTabs({ base, category, channel = "all", layoutId, className = "" }: { base: string; category: CategoryKey | null; channel?: ChannelKey; layoutId: string; className?: string }) {
+  const [params] = useSearchParams();
+  return <PillTabs items={channelOptions(base, params, "全部").map(o => ({ ...o, prefetchOnPress: true }))} active={channel} layoutId={layoutId} label="频道" className={className} />;
+}
+
+/** Desktop: the categories as their own row, so a narrow window scrolls them instead of cutting them. */
 export function CategoryTabs({ base, category, channel = "all", layoutId, className = "" }: { base: string; category: CategoryKey | null; channel?: ChannelKey; layoutId: string; className?: string }) {
   const [params] = useSearchParams();
-  return <PillTabs items={filterOptions(base, params, "全部").map(o => ({ ...o, prefetchOnPress: true }))} active={filterKey(category, channel)} layoutId={layoutId} label="筛选" className={className} />;
+  const active = channel === "all" ? (category ?? "all") : "";
+  return <PillTabs items={categoryOptions(base, params).map(o => ({ ...o, prefetchOnPress: true }))} active={active} layoutId={layoutId} label="分类" className={className} />;
 }
 
 /**
@@ -121,7 +136,7 @@ function FilterSheet({ open, onClose, base, active }: { open: boolean; onClose: 
 /** Phones: the filter and tag in use as chips under the bar; each one clears itself when tapped. */
 export function ActiveFilters({ base, category, channel, tag }: { base: string; category: CategoryKey | null; channel: ChannelKey; tag: string | null }) {
   const [params] = useSearchParams();
-  const label = channel === "firstParty" ? CHANNEL_LABELS.firstParty : category ? CATEGORY_LABELS[category] : null;
+  const label = channel !== "all" ? CHANNEL_LABELS[channel] : category ? CATEGORY_LABELS[category] : null;
   if (!label && !tag) return null;
   const chip = "inline-flex min-h-11 max-w-full items-center gap-1 rounded-full bg-accent-soft pl-3 pr-2 text-[13px] font-medium text-accent transition-opacity active:opacity-60";
   return (

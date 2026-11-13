@@ -1,0 +1,118 @@
+{
+  "schema": "design-pipeline.workflow-state.v1",
+  "deliverable": "web",
+  "tier": "standard",
+  "mode": "brief",
+  "director": null,
+  "assistedBy": null,
+  "decisions": {
+    "intake": {
+      "answer": "重新设计全部动态/精选/热点榜/日报/数据源这一整套读者界面，视觉方向用明日方舟（Arknights）：深色底、青与白的高对比、克制的几何、硬朗的分割线，不要现在这种米色奶油风，也不要现在这种近黑底+亮青的暗色配色。读者是每天看盘的中文投资者，一进来就要知道现在该看什么：快讯、大V、散户闲聊三条线分开，时间按事情发生的时间排。窄屏时侧栏和分类栏必须能用（现在侧栏挤压重叠、分类栏被直接截断）。摘要必须是信源自己的话（现在塞的是站点导航外壳），标题和摘要不得逐字重复。",
+      "playback": "confirmed",
+      "by": "owner"
+    },
+    "playbacks": [
+      {
+        "verdict": "accept",
+        "at": "2026-11-13T18:46:18.996Z",
+        "by": "owner"
+      }
+    ],
+    "roles": [
+      {
+        "stage": "intake",
+        "by": "owner",
+        "verdict": "accept",
+        "answer": "重新设计全部动态/精选/热点榜/日报/数据源这一整套读者界面，视觉方向用明日方舟（Arknights）：深色底、青与白的高对比、克制的几何、硬朗的分割线，不要现在这种米色奶油风，也不要现在这种近黑底+亮青的暗色配色。读者是每天看盘的中文投资者，一进来就要知道现在该看什么：快讯、大V、散户闲聊三条线分开，时间按事情发生的时间排。窄屏时侧栏和分类栏必须能用（现在侧栏挤压重叠、分类栏被直接截断）。摘要必须是信源自己的话（现在塞的是站点导航外壳），标题和摘要不得逐字重复。",
+        "at": "2026-11-13T18:46:18.998Z"
+      },
+      {
+        "stage": "reference",
+        "by": "agent",
+        "agent": "unspecified",
+        "answer": "Reference: 明日方舟 / Arknights, measured from https://arknights.global/ with reference extract (computed styles, 1440x900, 254 elements). Facts: display type Oswald Bold/DemiBold, UI numerals Novecento Medium, Chinese Noto Sans CJK SC; type scale 52.5/20.5/19.5/18/16.5/16/15/13.5/12/10px; one saturated colour #a3c4d5 (HSL sat 0.37, hue ~200deg, cold), neutral base, surface steps #3b3b3b and #1a1a1a, ",
+        "at": "2026-11-13T18:52:59.824Z"
+      },
+      {
+        "stage": "reference",
+        "by": "owner",
+        "verdict": "accept",
+        "answer": "我们还是用二次元公司，用明日方舟的设计方式和配色。我觉得现在这个太傻逼了（米色奶油主题、近黑+亮青的暗色配色都不要）。你给我一个静态稿子没问题 —— 明日方舟的参考就按这个来，深色底、冷蓝单强调色、发丝线、方角、密集排布。",
+        "at": "2026-11-13T19:15:05.734Z"
+      },
+      {
+        "stage": "reference",
+        "by": "owner",
+        "verdict": "accept",
+        "answer": "明日方舟 / Arknights（arknights-web-2026-11-14，https://arknights.global/）。Owner: 「我们还是用二次元公司，用明日方舟的设计方式和配色」「你给我一个静态稿子没问题」。Evidence: reference.md + brand-facts.md + .design-pipeline/reference-evidence.json + graybox.png.",
+        "at": "2026-11-13T19:17:12.736Z"
+      }
+    ],
+    "reference": "明日方舟 / Arknights（arknights-web-2026-11-14，https://arknights.global/）。Owner: 「我们还是用二次元公司，用明日方舟的设计方式和配色」「你给我一个静态稿子没问题」。Evidence: reference.md + brand-facts.md + .design-pipeline/reference-evidence.json + graybox.png."
+  },
+  "gates": {},
+  "rules": [
+    {
+      "text": "现在的米色奶油主题",
+      "from": "anti-goal 1",
+      "scope": "project"
+    },
+    {
+      "text": "现在的近黑底+亮青暗色配色",
+      "from": "anti-goal 2",
+      "scope": "project"
+    },
+    {
+      "text": "侧边栏在窄屏挤压重叠",
+      "from": "anti-goal 3",
+      "scope": "project"
+    },
+    {
+      "text": "分类栏缩放即被截断",
+      "from": "anti-goal 4",
+      "scope": "project"
+    }
+  ],
+  "createdAt": "2026-11-13T18:41:05.576Z",
+  "delegation": {
+    "intake": {
+      "to": "owner",
+      "set": "default"
+    },
+    "reference": {
+      "to": "agent",
+      "set": "default"
+    },
+    "concept": {
+      "to": "owner",
+      "set": "default"
+    },
+    "components": {
+      "to": "agent",
+      "set": "default"
+    },
+    "description": {
+      "to": "agent",
+      "set": "default"
+    },
+    "section": {
+      "to": "agent",
+      "set": "default"
+    },
+    "review": {
+      "to": "owner",
+      "locked": true,
+      "set": "default"
+    },
+    "deliver": {
+      "to": "agent",
+      "set": "default"
+    },
+    "creative-intent": {
+      "to": "owner",
+      "locked": true,
+      "set": "default"
+    }
+  },
+  "updatedAt": "2026-11-13T19:17:12.736Z"
+}

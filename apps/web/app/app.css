@@ -6,8 +6,10 @@
 @source "../../../modules/*/{web.tsx,web/**}";
 
 /* ---------------------------------------------------------------------------
-   Design tokens: warm off-white paper, ink text, one teal accent (cyan in
-   dark), hairline borders, no gradients.
+   Design tokens: a cold near-black ground (dark) and a cool paper (light), one
+   desaturated cold blue as the only accent, hairline borders, square corners,
+   no gradients. Measured from arknights.global's computed styles
+   (DESIGN.md, reference.md); the warm sand is the site's own warm signal.
    Components use the semantic names below; values change per theme only.
    --------------------------------------------------------------------------- */
 
@@ -65,12 +67,12 @@
   /* Radius scale: mark 5 (inline code, kbd, tiny tags and swatches), control 8 (inputs, small
      blocks), tile 10 (list rows, hover areas), card 12, panel 14 (wells, pictures), sheet 16 (dialogs,
      sheets, hero shells); pills are rounded-full. Arbitrary radii are not used. */
-  --radius-mark: 5px;
-  --radius-control: 8px;
-  --radius-tile: 10px;
-  --radius-card: 12px;
-  --radius-panel: 14px;
-  --radius-sheet: 16px;
+  --radius-mark: 0px;
+  --radius-control: 2px;
+  --radius-tile: 2px;
+  --radius-card: 2px;
+  --radius-panel: 2px;
+  --radius-sheet: 2px;
 
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
 
@@ -102,55 +104,55 @@
   --gutter-l: max(16px, env(safe-area-inset-left));
   --gutter-r: max(16px, env(safe-area-inset-right));
   color-scheme: light;
-  --bg: #faf9f6;
-  --bg-sunk: #f3f3ef;
-  --bg-muted: #e9ede9;
+  --bg: #f2f4f6;
+  --bg-sunk: #e9ecef;
+  --bg-muted: #e3e7ea;
   /* Sunk fills: wells, pill tracks, search fields, quiet badges. */
   --well: var(--bg-sunk);
   --surface: #ffffff;
-  --surface-2: #fdfdfb;
+  --surface-2: #fbfcfd;
   --raised: #ffffff;
-  --sidebar: #fdfdfb;
-  --daybar: #f0f2ee;
-  --ink: #202a30;
-  --ink-2: #303c42;
-  --ink-3: #59656b;
-  --ink-4: #657176;
-  --line: #dfe4e1;
-  --line-strong: #d1d9d5;
-  --line-soft: #e9ede9;
-  --accent: #176b75;
-  --accent-ink: #145f68;
-  --accent-soft: rgba(23, 107, 117, 0.08);
-  --accent-softer: rgba(23, 107, 117, 0.05);
+  --sidebar: #eceff2;
+  --daybar: #e9edf0;
+  --ink: #1b2126;
+  --ink-2: #333c43;
+  --ink-3: #5b666e;
+  --ink-4: #79848c;
+  --line: #dde2e6;
+  --line-strong: #c9d1d7;
+  --line-soft: #e8ecef;
+  --accent: #3f6f88;
+  --accent-ink: #2f5b73;
+  --accent-soft: rgba(63, 111, 136, 0.08);
+  --accent-softer: rgba(63, 111, 136, 0.05);
   --accent-contrast: #ffffff;
-  --note: #526f72;
-  --hot: #b3402a;
-  --hot-soft: rgba(179, 64, 42, 0.08);
-  --amber: #b8873a;
-  --amber-ink: #7c5a24;
-  --amber-soft: rgba(184, 135, 58, 0.1);
-  --ok: #2f7d5c;
-  --ok-soft: rgba(47, 125, 92, 0.1);
-  --ok-ink: #2a6e51;
-  --rank-1: #b3402a;
-  --rank-2: #a3642f;
-  --rank-3: #96702e;
+  --note: #4d6a78;
+  --hot: #9a6b3f;
+  --hot-soft: rgba(154, 107, 63, 0.09);
+  --amber: #9a6b3f;
+  --amber-ink: #7d5730;
+  --amber-soft: rgba(154, 107, 63, 0.1);
+  --ok: #3f7a5c;
+  --ok-soft: rgba(63, 122, 92, 0.1);
+  --ok-ink: #356a4f;
+  --rank-1: #9a6b3f;
+  --rank-2: #8a7250;
+  --rank-3: #77806a;
   --rank-rest: #6b7684;
-  --shadow-card: 0 1px 2px rgba(32, 42, 48, 0.025);
-  --shadow-card-hover: 0 3px 12px rgba(32, 42, 48, 0.055);
-  --shadow-soft: 0 4px 12px rgba(28, 39, 51, 0.06);
-  --shadow-thumb: 0 1px 2px rgba(28, 39, 51, 0.1), 0 1px 1px rgba(28, 39, 51, 0.04);
-  --shadow-pop: 0 12px 32px rgba(28, 39, 51, 0.12);
-  --prose-ink: #26323a;
-  --code-bg: #f6f7f4;
-  --code-keyword: #006d77;
-  --code-string: #2f6f44;
-  --code-number: #9a6700;
-  --code-title: #6f42c1;
-  --code-variable: #a13d10;
-  --code-meta: #b42348;
-  --selection: rgba(23, 107, 117, 0.16);
+  --shadow-card: 0 1px 2px rgba(27, 33, 38, 0.03);
+  --shadow-card-hover: 0 4px 14px rgba(27, 33, 38, 0.06);
+  --shadow-soft: 0 6px 18px rgba(24, 31, 36, 0.08);
+  --shadow-thumb: 0 1px 2px rgba(24, 31, 36, 0.1), 0 1px 1px rgba(24, 31, 36, 0.04);
+  --shadow-pop: 0 16px 40px rgba(24, 31, 36, 0.14);
+  --prose-ink: #232b31;
+  --code-bg: #f3f5f7;
+  --code-keyword: #2f5b73;
+  --code-string: #3f7a5c;
+  --code-number: #8a6a2f;
+  --code-title: #5b4b8a;
+  --code-variable: #8a4a2a;
+  --code-meta: #8a3a5a;
+  --selection: rgba(63, 111, 136, 0.16);
 }
 
 @media (min-width: 700px) {
@@ -161,54 +163,54 @@
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #13191c;
-  --bg-sunk: #182024;
-  --bg-muted: #202a2f;
+  --bg: #0f1116;
+  --bg-sunk: #0b0d11;
+  --bg-muted: #171b22;
   --well: color-mix(in oklab, var(--bg-muted) 60%, transparent);
-  --surface: #1a2226;
-  --surface-2: #1d272b;
-  --raised: #202a2f;
-  --sidebar: #161e21;
-  --daybar: #182024;
-  --ink: #e7eceb;
-  --ink-2: #d2dada;
-  --ink-3: #a5b0b3;
-  --ink-4: #89979d;
-  --line: rgba(255, 255, 255, 0.08);
-  --line-strong: rgba(255, 255, 255, 0.12);
-  --line-soft: rgba(255, 255, 255, 0.06);
-  --accent: #12ccd8;
-  --accent-ink: #2ce2e8;
-  --accent-soft: rgba(18, 204, 216, 0.12);
-  --accent-softer: rgba(18, 204, 216, 0.06);
-  --accent-contrast: #000000;
-  --note: #8fb8a8;
-  --hot: #d86a52;
-  --hot-soft: rgba(216, 106, 82, 0.12);
-  --amber: #d3b26a;
-  --amber-ink: #d3b26a;
-  --amber-soft: rgba(211, 178, 106, 0.12);
-  --ok: #5fc79a;
-  --ok-soft: rgba(95, 199, 154, 0.12);
-  --ok-ink: #7fd1ad;
-  --rank-1: #d86a52;
-  --rank-2: #d18a5e;
-  --rank-3: #d3b26a;
-  --rank-rest: #7b869a;
+  --surface: #191d24;
+  --surface-2: #1e232b;
+  --raised: #232830;
+  --sidebar: #15181e;
+  --daybar: #15181e;
+  --ink: #eef2f5;
+  --ink-2: #c3ccd4;
+  --ink-3: #9aa6b0;
+  --ink-4: #69737e;
+  --line: rgba(255, 255, 255, 0.075);
+  --line-strong: rgba(255, 255, 255, 0.14);
+  --line-soft: rgba(255, 255, 255, 0.05);
+  --accent: #a3c4d5;
+  --accent-ink: #a3c4d5;
+  --accent-soft: rgba(163, 196, 213, 0.13);
+  --accent-softer: rgba(163, 196, 213, 0.07);
+  --accent-contrast: #0f1116;
+  --note: #8fa3b0;
+  --hot: #c9a97e;
+  --hot-soft: rgba(201, 169, 126, 0.12);
+  --amber: #c9a97e;
+  --amber-ink: #c9a97e;
+  --amber-soft: rgba(201, 169, 126, 0.12);
+  --ok: #93b39a;
+  --ok-soft: rgba(147, 179, 154, 0.12);
+  --ok-ink: #a3c4ab;
+  --rank-1: #c9a97e;
+  --rank-2: #a8a08c;
+  --rank-3: #8d9199;
+  --rank-rest: #69737e;
   --shadow-card: none;
   --shadow-card-hover: none;
-  --shadow-soft: 0 6px 18px rgba(0, 0, 0, 0.35);
-  --shadow-thumb: 0 1px 2px rgba(0, 0, 0, 0.45);
-  --shadow-pop: 0 16px 40px rgba(0, 0, 0, 0.45);
-  --prose-ink: #d7dfdf;
-  --code-bg: #10151c;
-  --code-keyword: #78dce8;
-  --code-string: #a9dc76;
-  --code-number: #ffd866;
-  --code-title: #ab9df2;
-  --code-variable: #fc9867;
-  --code-meta: #ff6188;
-  --selection: rgba(18, 204, 216, 0.22);
+  --shadow-soft: 0 6px 18px rgba(0, 0, 0, 0.4);
+  --shadow-thumb: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-pop: 0 16px 40px rgba(0, 0, 0, 0.5);
+  --prose-ink: #dfe6ea;
+  --code-bg: #12161c;
+  --code-keyword: #a3c4d5;
+  --code-string: #a3c4ab;
+  --code-number: #c9a97e;
+  --code-title: #b3a8d6;
+  --code-variable: #d0a08c;
+  --code-meta: #c98fa3;
+  --selection: rgba(163, 196, 213, 0.18);
 }
 
 @layer base {
@@ -286,10 +288,24 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
-  /* Quiet scrollbars for side columns that scroll on their own. */
+  /* Quiet scrollbars for side columns that scroll on their own: a slim square rule, not the browser's chunky one. */
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: var(--line-strong) transparent;
+    scrollbar-color: color-mix(in srgb, var(--ink-3) 45%, transparent) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--ink-3) 40%, transparent);
+    border-radius: 0;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--ink-3) 65%, transparent);
   }
   /* <details> without the native marker (source lists, method notes). */
   .disclosure > summary {

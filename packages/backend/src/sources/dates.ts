@@ -25,6 +25,16 @@ function atOffset(y: string | number, mo: string | number, d: string | number, h
   return Number.isFinite(t) ? new Date(t) : null;
 }
 
+const DAY_MS = 86400000;
+
+/** The current moment in a source's own offset: its year, month, day, hour and minute. */
+function nowInOffset(utcOffset: string, now = new Date(Date.now())): { y: number; mo: number; d: number; h: number; mi: number } {
+  const m = /^([+-])(\d{2}):?(\d{2})$/.exec(utcOffset);
+  const minutes = m ? (m[1] === "-" ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3])) : -now.getTimezoneOffset();
+  const t = new Date(now.getTime() + minutes * 60000);
+  return { y: t.getUTCFullYear(), mo: t.getUTCMonth() + 1, d: t.getUTCDate(), h: t.getUTCHours(), mi: t.getUTCMinutes() };
+}
+
 /**
  * A published date as a source prints it. Date.parse is kept only where it reads the same
  * on every host: a time with its zone. A calendar day always belongs to the source, including ISO date-only text. Anything else it would read
@@ -37,6 +47,18 @@ export function parseLooseDate(value: string | null | undefined, utcOffset = "+0
   if (!v) return null;
   const compact = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/.exec(v);
   if (compact) return atOffset(compact[1]!, compact[2]!, compact[3]!, compact[4]!, compact[5]!, compact[6]!, utcOffset);
+  // "11-13 16:37": a month and a day without a year, the way a forum prints a post's time. It means the
+  // most recent such moment: a day still ahead of now belongs to the year before.
+  const monthDay = /^(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(v);
+  if (monthDay) {
+    const mo = Number(monthDay[1]), day = Number(monthDay[2]), hour = Number(monthDay[3]), minute = Number(monthDay[4]), second = Number(monthDay[5] ?? 0);
+    const now = nowInOffset(utcOffset);
+    const thisYear = atOffset(now.y, mo, day, hour, minute, second, utcOffset);
+    if (!thisYear) return null;
+    const reference = atOffset(now.y, now.mo, now.d, now.h, now.mi, 0, utcOffset) ?? new Date();
+    if (thisYear.getTime() - reference.getTime() > DAY_MS) return atOffset(now.y - 1, mo, day, hour, minute, second, utcOffset);
+    return thisYear;
+  }
   const yearFirst = /(\d{4})[-/.年](\d{1,2})[-/.月](\d{1,2})日?(?:(?:T|\s*)(\d{1,2}):(\d{2})(?::(\d{2}))?)?/.exec(v);
   const monthFirst = /\b(\d{1,2})\/(\d{1,2})\/(\d{4})(?:(?:T|\s+)(\d{1,2}):(\d{2})(?::(\d{2}))?)?/.exec(v);
   const numeric = yearFirst ?? monthFirst?.map((part, i, match) => i === 1 ? match[3]! : i === 2 ? match[1]! : i === 3 ? match[2]! : part);
