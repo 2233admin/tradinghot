@@ -1,12 +1,14 @@
 import { useEffect } from "react";
 import { Link, redirect, useLoaderData, useNavigation, useSearchParams } from "react-router";
 import type { Route } from "./+types/all";
-import type { PoolResponse } from "@aihot/contracts/site";
+import type { HotResponse, PoolResponse } from "@aihot/contracts/site";
 import { SITE, subjectAfter } from "@aihot/site";
 import { beijingTime } from "@aihot/contracts/time";
 import { cachedPage, loadOr404 } from "../lib/api.server";
 import { pageReuse } from "../lib/page-reuse";
 import { filterParams, hasFeedFilters, itemListLd, listPath, pageMeta, readFilters } from "../lib/seo";
+import { FeedAside } from "../features/feed/FeedAside";
+import { FeedLayout } from "../components/ui/Page";
 import { ActiveFilters, CategoryTabs, ChannelTabs, FeedBar, SearchField } from "../features/feed/Filters";
 import { PillTabs } from "../components/ui/Tabs";
 import { DayList, Pagination } from "../features/feed/DayList";
@@ -29,14 +31,18 @@ export async function loader({ request }: Route.LoaderArgs) {
   const tab = url.searchParams.get("tab") === "relevance" ? "relevance" : null;
   // Older deep-paging parameters (deep, anchorAt) still open a normal page.
   const page = Math.min(Math.max(Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1, 1), 50);
-  const data = await loadOr404<PoolResponse>(
-    listPath("/api/site/pool", { ...filterParams(readFilters(url.searchParams)), q, tab, page: page > 1 ? page : null }),
-    // The busy page keeps the search, so it can be tried again as it was.
-    { signal: request.signal, busyRedirect: `/all/search-busy${url.search}` },
-  );
+  // The list and the ranking the aside shows are fetched together.
+  const [data, hot] = await Promise.all([
+    loadOr404<PoolResponse>(
+      listPath("/api/site/pool", { ...filterParams(readFilters(url.searchParams)), q, tab, page: page > 1 ? page : null }),
+      // The busy page keeps the search, so it can be tried again as it was.
+      { signal: request.signal, busyRedirect: `/all/search-busy${url.search}` },
+    ),
+    loadOr404<HotResponse>("/api/site/hot", { signal: request.signal }).catch(() => null),
+  ]);
   // Past the last page of what there is: the last page, with the same search and filters.
   if (data.total > 0 && data.page > data.pageCount) throw redirect(pageHref(url.searchParams, data.pageCount));
-  return cachedPage(60, { data });
+  return cachedPage(60, { data, hot });
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -67,7 +73,7 @@ function pageHref(params: URLSearchParams, page: number) {
 }
 
 export default function AllPage() {
-  const { data } = useLoaderData<typeof loader>();
+  const { data, hot } = useLoaderData<typeof loader>();
   const [params] = useSearchParams();
   const navigation = useNavigation();
   const f = data.filters;
@@ -93,6 +99,7 @@ export default function AllPage() {
   }, []);
 
   return (
+    <FeedLayout aside={<FeedAside trends={hot?.entries.map((e) => ({ rank: e.rank, title: e.story.title, heat: e.heat, trend: e.trend, href: `/story/${e.story.publicId}` }))} category={f.category} channel={f.channel} />}>
     <div className="pb-6">
       {/* Phones: the feed bar, or for a search the query (tap to change it) and back to 全部. */}
       {f.q ? (
@@ -110,13 +117,15 @@ export default function AllPage() {
       )}
       <ActiveFilters base="/all" category={f.category} channel={f.channel} tag={f.tag} />
 
-      {/* Desktop, as on 精选: the title, then one filter row with the search field aligned on the right. */}
-      <div className="hidden lg:block">
-        <h1 className="text-[24px] font-semibold leading-[1.3] text-ink">{title ?? ALL_TITLE}</h1>
-        <div className="mb-5 mt-4 flex flex-col gap-3">
+      {/* Desktop, as on 精选: the name and the lanes in a header that stays while the list scrolls. */}
+      <div className="sticky top-0 z-30 hidden border-b border-line bg-bg lg:block lg:-mx-2 lg:px-2">
+        <h1 className="py-3 text-[20px] font-bold leading-[1.3] text-ink">{title ?? ALL_TITLE}</h1>
+        <div className="flex flex-col gap-2.5 pb-2.5">
           <div className="flex items-center justify-between gap-4">
             <ChannelTabs base="/all" category={f.category} channel={f.channel} layoutId="all-chan-desk" className="min-w-0" />
-            <SearchField defaultValue={f.q ?? ""} keep={keep} />
+            <span className="hidden lg:block xl:hidden">
+              <SearchField defaultValue={f.q ?? ""} keep={keep} />
+            </span>
           </div>
           <CategoryTabs base="/all" category={f.category} channel={f.channel} layoutId="all-cat-desk" className="min-w-0" />
         </div>
@@ -160,5 +169,6 @@ export default function AllPage() {
       <Pagination page={data.page} pageCount={data.pageCount} href={(p) => pageHref(params, p)} />
       {data.page >= 50 && <p className="mt-4 text-center text-[12px] text-ink-4">最多提供 50 页，更早的内容请使用搜索或主题页。</p>}
     </div>
+    </FeedLayout>
   );
 }
