@@ -93,7 +93,10 @@ export function decideTimeline(claimed: Date | null | undefined, discoveredAt: D
   else if (!publishedAt) backfillReason = UNKNOWN_TIME;
   else if (publishedAt && discoveredAt.getTime() - publishedAt.getTime() > STALE_ON_DISCOVERY_MS) backfillReason = STALE;
   const backfill = backfillReason !== null;
-  const timelineAt = backfill && publishedAt ? publishedAt : discoveredAt;
+  // The source's own time is the truth when it has one: a card shows that time, and the timeline reads by
+  // it, so the hour beside a card and the time in its header agree. Only an item whose time we do not know
+  // (or refuse) sorts by when we found it.
+  const timelineAt = publishedAt ?? discoveredAt;
   return { publishedAt, timelineAt, backfill, backfillReason };
 }
 

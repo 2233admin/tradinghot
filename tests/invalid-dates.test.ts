@@ -146,7 +146,7 @@ test("a post listed up to a day before its stated time gets that time once it ar
     assert.equal(row.revision, c.filled ? 2 : 1, `${c.name}: a filled date is a new revision, judged again`);
     if (c.filled) {
       assert.equal(row.backfill, false, "news, not history");
-      assert.equal(row.timeline_at.getTime(), c.discovered);
+      assert.equal(row.timeline_at.getTime(), c.claim, "the timeline reads by the source's own time");
     }
   }
 });

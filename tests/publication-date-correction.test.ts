@@ -198,7 +198,7 @@ test('verified recent publication corrects the date without archiving or repeati
   assert.deepEqual(await retained(id),before);
   const [a]=await sql`SELECT published_at,timeline_at,discovered_at,backfill FROM articles WHERE id=${id}`;
   assert.equal(a!.published_at.toISOString(),publishedAt);
-  assert.equal(a!.timeline_at.toISOString(),a!.discovered_at.toISOString());
+  assert.equal(a!.timeline_at.toISOString(),publishedAt,'the timeline reads by the source’s own time');
   assert.equal(a!.backfill,false);
 });
 
