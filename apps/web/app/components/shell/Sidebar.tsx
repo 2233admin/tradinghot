@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { IntentLink } from "../ui/IntentLink";
 import { SITE } from "@aihot/site";
-import { RingMark, Wordmark } from "@aihot/site/brand/Logo.tsx";
+import { Wordmark } from "@aihot/site/brand/Logo.tsx";
+import { MarkEmblem } from "./nav-marks";
 import { useChangelogSeen } from "../../lib/local-state";
-import { activeSidebarItem, rail, railIsActive, sidebar, type NavItem } from "./nav";
+import { activeSidebarItem, rail, railBottom, railIsActive, sidebar, type NavItem } from "./nav";
 import { useScreen } from "./screens";
 import { ThemeSwitch } from "./ThemeSwitch";
 import { Filings } from "./Filings";
@@ -47,9 +48,9 @@ function Rail({ dot }: { dot: boolean }) {
   const { pathname } = useLocation();
   const { tab, home } = useScreen();
   return (
-    <aside className="scrollbar-thin sticky top-0 hidden h-dvh w-16 shrink-0 flex-col items-center border-r border-line bg-sidebar px-1.5 pb-[max(14px,env(safe-area-inset-bottom))] pt-5 lg:flex wide:hidden short:overflow-y-auto short:pt-3">
+    <aside className="scrollbar-thin sticky top-0 hidden h-dvh w-[72px] shrink-0 flex-col items-center border-r border-line bg-sidebar px-1.5 pb-[max(14px,env(safe-area-inset-bottom))] pt-5 lg:flex wide:hidden short:overflow-y-auto short:pt-3">
       <Link to="/" className="mb-3 flex size-11 shrink-0 items-center justify-center text-accent short:mb-1" aria-label={`${SITE.name} 首页`}>
-        <RingMark className="size-7" />
+        <MarkEmblem className="size-7" />
       </Link>
       <nav className="flex w-full flex-col gap-1" aria-label="主导航">
         {rail().map((t) => {
@@ -60,15 +61,40 @@ function Rail({ dot }: { dot: boolean }) {
               key={t.key}
               to={t.to}
               aria-current={on ? "page" : undefined}
-              className={`relative flex h-14 shrink-0 flex-col items-center justify-center gap-[3px] rounded-control text-[11px] transition-colors duration-150 short:h-12 ${
+              title={t.label}
+              className={`relative flex h-14 shrink-0 flex-col items-center justify-center gap-[3px] text-[11px] transition-colors duration-150 short:h-12 ${
                 on ? "bg-accent/10 font-semibold text-ink dark:bg-accent-soft" : "font-medium text-ink-3 hover:bg-bg-sunk hover:text-ink"
               }`}
             >
+              {on && <span aria-hidden="true" className="absolute inset-y-1 left-0 w-[2px] bg-accent" />}
               <span className={on ? "text-accent" : ""}>
                 <Icon size={20} />
               </span>
-              <span className="max-w-full truncate">{t.label}</span>
+              <span className="hidden max-w-full truncate min-[820px]:block">{t.label}</span>
               {dot && t.changelog && <span className="absolute right-2 top-2 size-1.5 rounded-full bg-hot" aria-label="有新的更新" />}
+            </IntentLink>
+          );
+        })}
+      </nav>
+      <nav className="mt-auto flex w-full flex-col gap-1 border-t border-line pt-2" aria-label="站点">
+        {railBottom().map((t) => {
+          const on = railIsActive(t, pathname, tab ?? home);
+          const Icon = t.icon;
+          return (
+            <IntentLink
+              key={t.key}
+              to={t.to}
+              aria-current={on ? "page" : undefined}
+              title={t.label}
+              className={`relative flex h-14 shrink-0 flex-col items-center justify-center gap-[3px] text-[11px] transition-colors duration-150 short:h-12 ${
+                on ? "bg-accent/10 font-semibold text-ink dark:bg-accent-soft" : "font-medium text-ink-3 hover:bg-bg-sunk hover:text-ink"
+              }`}
+            >
+              {on && <span aria-hidden="true" className="absolute inset-y-1 left-0 w-[2px] bg-accent" />}
+              <span className={on ? "text-accent" : ""}>
+                <Icon size={20} />
+              </span>
+              <span className="hidden max-w-full truncate min-[820px]:block">{t.label}</span>
             </IntentLink>
           );
         })}
@@ -89,21 +115,27 @@ export function Sidebar({ changelogVersion }: { changelogVersion: string | null 
         <Link to="/" className="mb-4 flex h-[50px] shrink-0 items-center px-1 text-ink" aria-label={`${SITE.name} 首页`}>
           <Wordmark size={26} />
         </Link>
-        <nav className="scrollbar-thin -mx-1 flex-1 overflow-y-auto px-1 short:flex-none short:overflow-visible" aria-label="主导航">
-          {sidebar().map((section) => {
-            // Only the most specific entry of a section is lit, so a detail page does not light the list above it too.
-            const lit = activeSidebarItem(section.items, pathname);
-            return (
-              <div key={section.title}>
-                <div className="px-2.5 pb-1 pt-3.5 text-[11px] text-ink-4">{section.title}</div>
-                <div className="flex flex-col gap-1">
-                  {section.items.map((item) => (
-                    <SideLink key={item.to} item={item} dot={dot} active={item.to === lit?.to} />
-                  ))}
+        <nav className="scrollbar-thin -mx-1 flex flex-1 flex-col overflow-y-auto px-1 short:flex-none short:overflow-visible" aria-label="主导航">
+          {(() => {
+            // The reader's lanes sit at the top; the site's own pages (settings, about, log, feedback)
+            // are pinned to the foot of the column, separated by a hairline.
+            const sections = sidebar();
+            const last = sections.length - 1;
+            return sections.map((section, index) => {
+              // Only the most specific entry of a section is lit, so a detail page does not light the list above it too.
+              const lit = activeSidebarItem(section.items, pathname);
+              return (
+                <div key={section.title} className={index === last ? "mt-auto border-t border-line pt-2" : ""}>
+                  <div className="px-2.5 pb-1 pt-3.5 text-[11px] text-ink-4">{section.title}</div>
+                  <div className="flex flex-col gap-1">
+                    {section.items.map((item) => (
+                      <SideLink key={item.to} item={item} dot={dot} active={item.to === lit?.to} />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </nav>
         <div className="mt-2 space-y-2.5 px-1 pt-1">
           {SITE.github && (
