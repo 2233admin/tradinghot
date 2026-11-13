@@ -161,7 +161,8 @@ const ScrollProgress = ({
   }
 
   const size = open ? openSize : collapsedSize
-  const radius = open ? 26 : (collapsedSize?.height ?? 32) / 2
+  // This site's language is square corners, so the reference's pill radius is not taken.
+  const radius = "var(--radius-tile)";
   // The site's language is square corners, so the reference's squircle is dropped.
 const squircle = ""
 
@@ -209,7 +210,7 @@ const squircle = ""
           animate={{
             width: size.width,
             height: size.height,
-            borderRadius: 2,
+            borderRadius: "var(--radius-tile)",
           }}
           transition={reduceMotion ? { duration: 0 } : SIZE_SPRING}
         >
@@ -237,7 +238,7 @@ const squircle = ""
                         type="button"
                         onClick={() => selectSection(s.id)}
                         className={cn(
-                          "relative flex w-full items-center gap-3 rounded-[14px] px-3 py-2 text-left text-sm font-medium leading-none transition-colors",
+                          "relative flex w-full items-center gap-3 rounded-tile px-3 py-2 text-left text-sm font-medium leading-none transition-colors",
                           squircle,
                           isActive
                             ? "text-ink"
@@ -248,7 +249,7 @@ const squircle = ""
                           <motion.span
                             layoutId={`${layoutId}-active`}
                             className={cn(
-                              "absolute inset-0 rounded-[14px] bg-ink/10",
+                              "absolute inset-0 rounded-tile bg-ink/10",
                               squircle
                             )}
                             transition={
@@ -258,7 +259,7 @@ const squircle = ""
                         )}
                         <motion.span
                           className={cn(
-                            "relative h-1.5 w-1.5 shrink-0 rounded-[2px]",
+                            "relative h-1.5 w-1.5 shrink-0 rounded-mark",
                             isActive ? "bg-ink" : "bg-ink/30"
                           )}
                           initial={
