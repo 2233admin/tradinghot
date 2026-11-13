@@ -23,9 +23,11 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (q && q.trim()) throw redirect(`/all${url.search}`);
   const filters = readFilters(url.searchParams);
   const upstream = new Headers();
-  const data = await loadOr404<TimelineResponse>(listPath("/api/site/timeline", filterParams(filters)), { responseHeaders: upstream, signal: request.signal });
-  // The aside carries what is hot right now; the ranking page has the same list.
-  const hot = await loadOr404<HotResponse>("/api/site/hot", { signal: request.signal }).catch(() => null);
+  // The feed and the ranking the aside shows are fetched together: the aside carries what is hot right now.
+  const [data, hot] = await Promise.all([
+    loadOr404<TimelineResponse>(listPath("/api/site/timeline", filterParams(filters)), { responseHeaders: upstream, signal: request.signal }),
+    loadOr404<HotResponse>("/api/site/hot", { signal: request.signal }).catch(() => null),
+  ]);
   // A minute at most, here and on /all: new selections must not wait longer at the edge or in a browser.
   return cachedPage(60, { data, filters, hot }, upstream);
 }
