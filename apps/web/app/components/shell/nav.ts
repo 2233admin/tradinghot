@@ -10,6 +10,8 @@ import {
 export interface NavItem {
   to: string;
   label: string;
+  /** The name the collapsed rail shows, where the full one does not fit. */
+  short?: string;
   icon: (p: { size?: number }) => ReactNode;
   /** Match the path exactly (the home page). */
   end?: boolean;
@@ -22,9 +24,9 @@ const SECTIONS: Array<{ title: string; items: NavItem[] }> = [
     title: "内容",
     items: [
       { to: "/", label: "精选", icon: MarkFeatured, end: true },
-      { to: "/all", label: subjectAfter("全部", "动态"), icon: MarkAll },
+      { to: "/all", label: subjectAfter("全部", "动态"), short: "全部", icon: MarkAll },
       { to: "/hot", label: "热点榜", icon: MarkHot },
-      { to: "/daily", label: withSubject("日报"), icon: MarkDaily },
+      { to: "/daily", label: withSubject("日报"), short: "日报", icon: MarkDaily },
       { to: "/topics", label: "主题", icon: MarkTopics },
       { to: "/starred", label: "收藏", icon: MarkStar },
     ],
@@ -32,11 +34,11 @@ const SECTIONS: Array<{ title: string; items: NavItem[] }> = [
   {
     title: "更多",
     items: [
-      { to: "/agent", label: "Agent 接入", icon: MarkAgent },
+      { to: "/agent", label: "Agent 接入", short: "Agent", icon: MarkAgent },
       { to: "/sources", label: "数据源", icon: MarkSources },
       { to: "/settings", label: "设置", icon: MarkSettings },
       { to: "/about", label: "关于", icon: MarkAbout },
-      { to: "/changelog", label: "更新日志", icon: MarkLog, changelog: true },
+      { to: "/changelog", label: "更新日志", short: "日志", icon: MarkLog, changelog: true },
       { to: "/feedback", label: "反馈", icon: MarkFeedback },
     ],
   },
@@ -138,6 +140,14 @@ export function rail(): Tab[] {
   if (!inNav("/all")) return all;
   const at = all.findIndex((t) => t.key === "featured") + 1;
   return [...all.slice(0, at), { key: "all", to: "/all", label: "全部", icon: MarkAll }, ...all.slice(at)];
+}
+
+/**
+ * The same entries in the same order as the full sidebar: the reader's lanes at the top, the site's own
+ * pages at the foot. The collapsed rail and the full column are one navigation, not two.
+ */
+export function navGroups(): { title: string; items: NavItem[] }[] {
+  return sidebar().map((section) => ({ title: section.title, items: section.items }));
 }
 
 /**

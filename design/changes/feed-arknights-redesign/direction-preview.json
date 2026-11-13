@@ -1,6 +1,6 @@
 {
   "schema": "design-pipeline.direction-preview.v1",
-  "changeId": "tradinghot",
+  "changeId": "feed-arknights-redesign",
   "applicability": {
     "status": "waived",
     "reason": "single-user-direction"
