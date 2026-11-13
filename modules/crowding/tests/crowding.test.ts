@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { after, test } from "node:test";
+import { closeDb } from "@aihot/backend/db";
 import { parseFeed, FeedError } from "../feed.ts";
 import { loadCrowding, storeFeed } from "../server.ts";
+
+after(closeDb);
 
 const readyFeed = {
   schema_version: 1,
