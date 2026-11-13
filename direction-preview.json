@@ -1,0 +1,15 @@
+{
+  "schema": "design-pipeline.direction-preview.v1",
+  "changeId": "tradinghot",
+  "applicability": {
+    "status": "waived",
+    "reason": "single-user-direction"
+  },
+  "comparison": null,
+  "directions": [],
+  "decision": {
+    "status": "waived",
+    "selectedDirectionId": null,
+    "rationale": "明日方舟 / Arknights as the design language and palette, per the owner (2026-11-14). The mockup in design/changes/feed-arknights-redesign/graybox/feed-arknights.html is the agreed first look; the implementation follows DESIGN.md. Waiver evidence: The owner named one direction on 2026-11-14: 「我们还是用二次元公司，用明日方舟的设计方式和配色」 and accepted a static mockup of it (「你给我一个静态稿子没问题」). There is no direction to choose between, so the three-sources preview is waived rather than previewed with its own candidates. The draw that ran for the record (web #19 Swiss极致黑白, east #07 中国传统色·节气色谱) is kept in design/changes/feed-arknights-redesign/directions.md, read through the owner's context: the Swiss structure (square edges, one colour, an instrument band) informs the build; the solar-term palette is the cream theme the owner ruled out."
+  }
+}

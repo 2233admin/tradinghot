@@ -286,10 +286,24 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
-  /* Quiet scrollbars for side columns that scroll on their own. */
+  /* Quiet scrollbars for side columns that scroll on their own: a slim square rule, not the browser's chunky one. */
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: var(--line-strong) transparent;
+    scrollbar-color: color-mix(in srgb, var(--ink-3) 45%, transparent) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--ink-3) 40%, transparent);
+    border-radius: 0;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--ink-3) 65%, transparent);
   }
   /* <details> without the native marker (source lists, method notes). */
   .disclosure > summary {
