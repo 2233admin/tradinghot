@@ -1,5 +1,7 @@
 // The daily crowding page: the most crowded 50 stocks the public Bagholder 50 index names after each
 // close, what the index itself did, and what the reading is for.
+import { beijingStamp } from "@aihot/contracts/time";
+import { AnimatedCounter } from "@aihot/web/components/ui/animated-counter";
 import { useLoaderData } from "react-router";
 import { crowdingSnapshotSchema } from "../types.ts";
 
@@ -29,8 +31,7 @@ export function meta() {
 const percent = (value: number) => `${value >= 0 ? "+" : ""}${(value * 100).toFixed(2)}%`;
 
 /** The site's times are Beijing's; the api answers in UTC. */
-const beijing = (iso: string) =>
-  new Date(Date.parse(iso) + 8 * 60 * 60 * 1000).toISOString().slice(0, 16).replace("T", " ");
+const beijing = (iso: string) => beijingStamp(iso);
 
 export default function CrowdingPage() {
   const snapshot = useLoaderData<typeof loader>();
@@ -69,7 +70,7 @@ export default function CrowdingPage() {
       {snapshot.index && (
         <div className="card mb-4 flex flex-wrap items-baseline gap-x-6 gap-y-2 px-4 py-3 text-[13px] text-ink-3">
           <span>
-            指数点位 <b className="num font-semibold text-ink">{snapshot.index.point.toFixed(4)}</b>
+            指数点位 <b className="num font-semibold text-ink"><AnimatedCounter value={snapshot.index.point} decimals={4} /></b>
           </span>
           <span>
             年化 <b className={snapshot.index.annualizedReturn >= 0 ? "num font-semibold text-ok-ink" : "num font-semibold text-hot"}>
@@ -107,7 +108,7 @@ export default function CrowdingPage() {
                 <div className={item.todayReturn >= 0 ? "num text-[13.5px] font-semibold text-hot" : "num text-[13.5px] font-semibold text-ok-ink"}>
                   {percent(item.todayReturn)}
                 </div>
-                <div className="num mt-0.5 text-[11.5px] text-ink-4">拥挤分 {item.score.toFixed(3)}</div>
+                <div className="num mt-0.5 text-[11.5px] text-ink-4">拥挤分 <AnimatedCounter value={item.score} decimals={3} /></div>
               </div>
             </li>
           ))}

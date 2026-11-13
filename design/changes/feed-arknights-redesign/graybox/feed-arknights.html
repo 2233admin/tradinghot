@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<title>股市热点 · 全部动态（明日方舟语言 · 静态稿）</title>
+<style>
+  :root {
+    --ground:#0f1116; --panel:#15181e; --card:#191d24; --card-hi:#1e232b;
+    --line:rgba(255,255,255,.075); --line-2:rgba(255,255,255,.14);
+    --accent:#a3c4d5; --accent-dim:rgba(163,196,213,.20); --accent-glow:rgba(163,196,213,.10);
+    --text:#eef2f5; --muted:#9aa6b0; --faint:#69737e;
+    --sans:"Noto Sans CJK SC","PingFang SC",system-ui,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--text); font-family:var(--sans);
+    font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  .shell { display:grid; grid-template-columns:76px minmax(0,1fr); min-height:100vh; }
+  /* Left rail: square marks, hairline separators, no rounded soft-UI vocabulary. */
+  .rail-nav { background:var(--panel); border-right:1px solid var(--line); padding:18px 0; position:sticky; top:0; height:100vh; }
+  .mark { width:40px; height:40px; margin:0 auto 22px; border:1px solid var(--accent); color:var(--accent);
+    display:grid; place-items:center; font-family:var(--mono); font-size:13px; letter-spacing:.02em; }
+  .nav a { display:block; text-align:center; padding:11px 4px; color:var(--faint); text-decoration:none;
+    font-size:11px; letter-spacing:.06em; border-left:2px solid transparent; }
+  .nav a.on { color:var(--accent); border-left-color:var(--accent); background:var(--accent-glow); }
+  .nav hr { border:0; border-top:1px solid var(--line); margin:12px 14px; }
+  main { min-width:0; padding:22px 26px 60px; }
+  .wrap { max-width:1040px; margin:0 auto; }
+  h1 { font-size:23px; font-weight:600; margin:0 0 4px; letter-spacing:.01em; }
+  .meta { color:var(--faint); font-size:12px; margin-bottom:16px; }
+  /* Two filter rows: channels, then categories. Each scrolls; the cut edge fades. */
+  .tabs { display:flex; gap:2px; overflow-x:auto; scrollbar-width:thin;
+    scrollbar-color:rgba(255,255,255,.16) transparent; padding-bottom:6px; }
+  .tabs::-webkit-scrollbar { height:5px; }
+  .tabs::-webkit-scrollbar-thumb { background:rgba(255,255,255,.16); border-radius:0; }
+  .tabs .t { flex:0 0 auto; padding:5px 11px; font-size:12.5px; color:var(--muted); text-decoration:none;
+    border:1px solid transparent; border-radius:0; white-space:nowrap; }
+  .tabs .t.on { color:var(--accent); border-color:var(--accent-dim); background:var(--accent-glow); }
+  .cats { margin-top:6px; }
+  .cats .t { font-size:12px; color:var(--faint); padding:4px 9px; }
+  .cats .t.on { color:var(--text); border-color:var(--line-2); background:transparent; }
+  .row { display:flex; align-items:center; gap:10px; margin:20px 0 10px; }
+  .row .day { font-family:var(--mono); font-size:15px; letter-spacing:.10em; text-transform:uppercase; color:var(--text); }
+  .row .sub { font-size:11.5px; color:var(--faint); }
+  .row .rule { flex:1; height:1px; background:var(--line); }
+  ul { list-style:none; margin:0; padding:0; }
+  .slot { display:grid; grid-template-columns:64px 22px minmax(0,1fr); align-items:start; }
+  .slot .t { font-family:var(--mono); font-size:12.5px; color:var(--accent); padding-top:13px; letter-spacing:.02em; }
+  .rail { position:relative; height:100%; }
+  .rail i { position:absolute; left:9px; top:16px; width:7px; height:7px; background:var(--accent); }
+  .rail::after { content:""; position:absolute; left:12px; top:26px; bottom:-4px; width:1px; background:var(--line-2); }
+  .slot:last-child .rail::after { display:none; }
+  .card { background:var(--card); border:1px solid var(--line); padding:11px 13px 10px; margin-bottom:8px; }
+  .card:hover { background:var(--card-hi); border-color:var(--line-2); }
+  .card header { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .src { font-size:11.5px; color:var(--muted); }
+  .ch { font-size:10.5px; letter-spacing:.08em; color:var(--accent); border:1px solid var(--accent-dim);
+    padding:1px 6px; }
+  .ch-x { color:#d7c39a; border-color:rgba(215,195,154,.28); }
+  .ch-forum { color:#a8b6a0; border-color:rgba(168,182,160,.26); }
+  .score { margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--accent); }
+  .card h3 { margin:0 0 5px; font-size:15.5px; font-weight:600; line-height:1.45; letter-spacing:.005em; }
+  .sum { margin:0; color:var(--muted); font-size:12.5px; line-height:1.6;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .card footer { display:flex; align-items:center; gap:6px; margin-top:8px; }
+  .tag { font-size:10.5px; color:var(--faint); border:1px solid var(--line); padding:1px 6px; }
+  .orig { margin-left:auto; font-size:11px; color:var(--faint); }
+  .note { margin-top:22px; padding:14px 16px; border:1px solid var(--line); background:var(--panel);
+    color:var(--muted); font-size:12.5px; }
+  .note b { color:var(--accent); font-weight:600; }
+
+  /* Layout-only capture (?graybox=1): the structure with every material and colour suppressed. */
+  body.graybox { --ground:#ffffff; --panel:#f2f2f2; --card:#ffffff; --card-hi:#f2f2f2;
+    --line:#c9c9c9; --line-2:#9a9a9a; --accent:#9a9a9a; --accent-dim:#d0d0d0; --accent-glow:transparent;
+    --text:#2a2a2a; --muted:#5c5c5c; --faint:#8a8a8a; filter:grayscale(1); }
+  body.graybox .mark { border-color:#9a9a9a; color:#2a2a2a; }
+  body.graybox .rail i { background:#2a2a2a; }
+  body.graybox .card { box-shadow:none; }
+</style></head>
+<body>
+<script>if (location.search.includes("graybox=1")) document.body.classList.add("graybox");</script>
+<div class="shell">
+  <aside class="rail-nav">
+    <div class="mark">股市</div>
+    <nav class="nav">
+      <a href="#">精选</a><a href="#" class="on">全部</a><a href="#">热点</a><a href="#">日报</a>
+      <hr><a href="#">主题</a><a href="#">信源</a><a href="#">关于</a>
+    </nav>
+  </aside>
+  <main><div class="wrap">
+    <h1>全部股市动态</h1>
+    <div class="meta">从 72 个信源里挑出的动态 · 按事件发生的时间排</div>
+    <div class="tabs">
+      <a class="t on" href="#">全部</a><a class="t" href="#">资讯</a><a class="t" href="#">X 大V</a>
+      <a class="t" href="#">散户闲聊</a><a class="t" href="#">一手</a>
+    </div>
+    <div class="tabs cats">
+      <a class="t" href="#">美股</a><a class="t" href="#">A股</a><a class="t" href="#">港股</a>
+      <a class="t" href="#">宏观数据</a><a class="t" href="#">债券与利率</a><a class="t" href="#">能源</a>
+      <a class="t" href="#">贵金属</a><a class="t" href="#">大宗商品</a><a class="t" href="#">加密货币</a>
+      <a class="t" href="#">地缘政治</a><a class="t" href="#">外汇</a><a class="t" href="#">其他</a>
+    </div>
+    <div class="row"><span class="day">11月14日</span><span class="sub">星期三 · 264 条</span><span class="rule"></span></div>
+    <ul>
+    <li class="slot">
+      <time class="t">02:51</time>
+      <span class="rail"><i></i></span>
+      <article class="card">
+        <header>
+          <span class="src">格隆汇 · 快讯</span>
+          <span class="ch ch-news">资讯</span>
+          <span class="score">82</span>
+        </header>
+        <h3>美联储戴利：通胀持续恶化 进一步加息很可能有必要</h3>
+        <p class="sum">格隆汇11月14日｜美联储旧金山联储主席戴利周五表示，鉴于通胀形势恶化，美联储很可能需要进一步加息。她指出，核心CPI连续三个月环比上涨约0.3%，高于与美联储2%通胀目标相符的0.2%或以下水平。她尤其担忧剔除住房后的服务业通胀走势不佳，因为这类价格通常具有较强粘性。企业投入成本不断上升，越来越多生产商表示利润空间已难以消化成本压力，正考虑将成本转嫁给消费者。戴利表示，她将在12月会议及未来会议</p>
+        <footer>
+          <span class="tag">美股</span><span class="tag">宏观</span>
+          <span class="orig">原文 →</span>
+        </footer>
+      </article>
+    </li>
+    <li class="slot">
+      <time class="t">02:49</time>
+      <span class="rail"><i></i></span>
+      <article class="card">
+        <header>
+          <span class="src">华尔街见闻 · 快讯</span>
+          <span class="ch ch-news">资讯</span>
+          <span class="score">82</span>
+        </header>
+        <h3>英伟达势创18个月来最差单周表现，市值蒸发逾6200亿美元</h3>
+        <p class="sum">英伟达股价势将创下逾18个月来最差单周表现，在黄仁勋从这家芯片巨头离职后，公司股价持续承压。 英伟达周五一度下跌4.7%，本周累计跌幅扩大至约14%，势将创下2025年4月以来最差单周表现，当时美国总统特朗普宣布大范围加征关税的计划，引发全球股市震荡。英伟达本周市值已蒸发逾6200亿美元，这一损失超过标普500指数中97%的成分股各自的市值。</p>
+        <footer>
+          <span class="tag">美股</span><span class="tag">宏观</span>
+          <span class="orig">原文 →</span>
+        </footer>
+      </article>
+    </li>
+    <li class="slot">
+      <time class="t">02:43</time>
+      <span class="rail"><i></i></span>
+      <article class="card">
+        <header>
+          <span class="src">华尔街见闻 · 快讯</span>
+          <span class="ch ch-news">资讯</span>
+          <span class="score">82</span>
+        </header>
+        <h3>Anthropic因“Mythos”模型遭商标侵权起诉</h3>
+        <p class="sum">一家名为Mythos的软件公司周五在美国弗吉尼亚州联邦法院起诉Anthropic，指控该人工智能公司对“Mythos”一词的使用侵犯了其商标权。 运营着面向非营利组织软件平台的Mythos公司告诉法院，Anthropic的Mythos AI模型将造成市场混淆，并使其遭受“重大且不可弥补的损害”。Mythos公司请求法院判令未指明金额的损害赔偿，并下达法院命令禁止Anthropic使用“Mythos</p>
+        <footer>
+          <span class="tag">美股</span><span class="tag">宏观</span>
+          <span class="orig">原文 →</span>
+        </footer>
+      </article>
+    </li>
+    <li class="slot">
+      <time class="t">02:40</time>
+      <span class="rail"><i></i></span>
+      <article class="card">
+        <header>
+          <span class="src">华尔街见闻 · 快讯</span>
+          <span class="ch ch-news">资讯</span>
+          <span class="score">82</span>
+        </header>
+        <h3>美联储加息预期升温，黄金恐创6月以来最差单周表现</h3>
+        <p class="sum">随着交易员押注能源驱动的持续性通胀将促使美联储进一步收紧政策，黄金正走向6月以来最差单周表现，这对这种贵金属构成严峻挑战。在上一交易日暴跌至13个月低点后，黄金周五小幅走高，但周跌幅仍达4.6%，势必创6月初以来最大单周跌幅。</p>
+        <footer>
+          <span class="tag">美股</span><span class="tag">宏观</span>
+          <span class="orig">原文 →</span>
+        </footer>
+      </article>
+    </li>
+    <li class="slot">
+      <time class="t">02:37</time>
+      <span class="rail"><i></i></span>
+      <article class="card">
+        <header>
+          <span class="src">格隆汇 · 快讯</span>
+          <span class="ch ch-news">资讯</span>
+          <span class="score">82</span>
+        </header>
+        <h3>夜盘主力合约收盘</h3>
+        <p class="sum">格隆汇11月14日｜截至2:30收盘，沪金主力合约收跌0.21%，报836元/克，沪银主力合约收跌2.16%，报11799元/千克，SC原油主力合约收涨1.63%，报617元/桶。</p>
+        <footer>
+          <span class="tag">美股</span><span class="tag">宏观</span>
+          <span class="orig">原文 →</span>
+        </footer>
+      </article>
+    </li>
+    <li class="slot">
+      <time class="t">02:23</time>
+      <span class="rail"><i></i></span>
+      <article class="card">
+        <header>
+          <span class="src">新浪财经 · 滚动</span>
+          <span class="ch ch-news">资讯</span>
+          <span class="score">82</span>
+        </header>
+        <h3>欧洲股市收于历史新高，本周累涨2.4%创7月以来最佳表现</h3>
+        <p class="sum">11月13日，欧洲股市小幅收涨，泛欧斯托克600指数收于历史最高水平，本周累计上涨2.4%，创7月以来最大单周涨幅。尽管矿业及科技股下跌...</p>
+        <footer>
+          <span class="tag">美股</span><span class="tag">宏观</span>
+          <span class="orig">原文 →</span>
+        </footer>
+      </article>
+    </li>
+    <li class="slot">
+      <time class="t">02:23</time>
+      <span class="rail"><i></i></span>
+      <article class="card">
+        <header>
+          <span class="src">华尔街见闻 · 快讯</span>
+          <span class="ch ch-news">资讯</span>
+          <span class="score">82</span>
+        </header>
+        <h3>稳市活水持续涌入，着力增强A股内在稳定性</h3>
+        <p class="sum">政策引导与市场力量同频共振，转化为A股内在稳定力量。11月6日召开的国务院常务会议提出“完善资本市场稳市机制”，释放明确的政策呵护市场信号。受访机构人士认为，随着中长期资金入市渠道持续拓宽、稳市工具体系日益完善，A股抵御外部冲击、平滑波动的韧性将有望稳步增强。</p>
+        <footer>
+          <span class="tag">美股</span><span class="tag">宏观</span>
+          <span class="orig">原文 →</span>
+        </footer>
+      </article>
+    </li>
+    <li class="slot">
+      <time class="t">02:20</time>
+      <span class="rail"><i></i></span>
+      <article class="card">
+        <header>
+          <span class="src">财联社 · 电报</span>
+          <span class="ch ch-news">资讯</span>
+          <span class="score">82</span>
+        </header>
+        <h3>五国及欧盟机构将代表欧洲参与下一轮乌克兰问题谈判</h3>
+        <p class="sum">【五国及欧盟机构将代表欧洲参与下一轮乌克兰问题谈判】财联社11月14日电，欧盟领导人非正式会议在爱尔兰首都都柏林举行。欧洲理事会主席科斯塔在会议结束后表示，欧盟各成员国领导人当天一致同意，德国、法国、意大利、波兰、英国和欧盟各机构将代表欧洲参与乌克兰问题谈判。</p>
+        <footer>
+          <span class="tag">美股</span><span class="tag">宏观</span>
+          <span class="orig">原文 →</span>
+        </footer>
+      </article>
+    </li></ul>
+    <div class="note">
+      <b>静态稿</b>：明日方舟的语言 —— 冷蓝 <b>#a3c4d5</b> 作唯一强调色、<b>#0f1116</b> 深底、面板 <b>#191d24</b>、
+      发丝线分割、方角无圆角；时刻与分数用仪表字体（Oswald / Novecento 的位置），中文用 Noto Sans CJK SC；
+      间距落在 3–7px 的密集基准上。数据为线上真实条目。
+    </div>
+  </div></main>
+</div>
+</body></html>

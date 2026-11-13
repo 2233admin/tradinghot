@@ -1,0 +1,171 @@
+{
+  "schema": "design-pipeline.palette-evidence.v1",
+  "targetId": "arknights",
+  "sourceUrl": "https://arknights.global/",
+  "status": "pending",
+  "capturedAt": "2026-11-13T18:52:19.419Z",
+  "sources": {
+    "domComputed": {
+      "status": "ready",
+      "evidencePaths": [
+        "extraction.json"
+      ],
+      "colors": [
+        {
+          "hex": "#ffffff",
+          "role": "background dominant",
+          "region": "background of 11 visible elements, 46% of the background group, largest body"
+        },
+        {
+          "hex": "#a3c4d5",
+          "role": "background dominant",
+          "region": "background of 3 visible elements, 35% of the background group, largest div.page-discover"
+        },
+        {
+          "hex": "#3b3b3b",
+          "role": "background accent",
+          "region": "background of 9 visible elements, 19% of the background group, largest div.home-footer"
+        },
+        {
+          "hex": "#ffffff",
+          "role": "text dominant",
+          "region": "text of 33 visible elements, 69% of the text group, largest p"
+        },
+        {
+          "hex": "#262626",
+          "role": "text dominant",
+          "region": "text of 13 visible elements, 27% of the text group, largest a"
+        },
+        {
+          "hex": "#18d1ff",
+          "role": "text accent",
+          "region": "text of 1 visible element, 2% of the text group, largest span.active"
+        },
+        {
+          "hex": "#a6b8bd",
+          "role": "text incidental",
+          "region": "text of 1 visible element, 2% of the text group, largest span"
+        },
+        {
+          "hex": "#ffffff",
+          "role": "border dominant",
+          "region": "border of 21 visible elements, 54% of the border group, largest div.square"
+        },
+        {
+          "hex": "#262626",
+          "role": "border dominant",
+          "region": "border of 18 visible elements, 46% of the border group, largest div.news-img"
+        }
+      ]
+    },
+    "rasterMedia": {
+      "status": "pending",
+      "evidencePaths": [],
+      "regions": [],
+      "colors": []
+    }
+  },
+  "semanticRoles": [
+    {
+      "role": "background",
+      "sourceColor": "#ffffff",
+      "targetToken": "--color-background"
+    },
+    {
+      "role": "surface",
+      "sourceColor": "#3b3b3b",
+      "targetToken": "--color-surface"
+    },
+    {
+      "role": "text",
+      "sourceColor": "#ffffff",
+      "targetToken": "--color-text"
+    },
+    {
+      "role": "border",
+      "sourceColor": "#ffffff",
+      "targetToken": "--color-border"
+    },
+    {
+      "role": "primary",
+      "sourceColor": "#a3c4d5",
+      "targetToken": "--color-primary"
+    }
+  ],
+  "relationships": {
+    "coverage": [
+      {
+        "role": "background",
+        "min": 0.46,
+        "max": 0.47
+      },
+      {
+        "role": "surface",
+        "min": 0.18,
+        "max": 0.19
+      },
+      {
+        "role": "text",
+        "min": 0.68,
+        "max": 0.69
+      },
+      {
+        "role": "border",
+        "min": 0.53,
+        "max": 0.54
+      },
+      {
+        "role": "primary",
+        "min": 0.35,
+        "max": 0.36
+      }
+    ],
+    "luminanceHierarchy": [
+      "background",
+      "border",
+      "text",
+      "primary",
+      "surface"
+    ],
+    "saturationPosture": "neutral base with 2 saturated colours (primary #a3c4d5, HSL saturation 0.37); highest saturation 1",
+    "temperaturePosture": "cool: chromatic colours centre on hue 200°; untinted neutrals (mean b* 0)"
+  },
+  "targetProjectTokens": [
+    {
+      "token": "--color-background",
+      "value": "#ffffff",
+      "sourceRole": "background"
+    },
+    {
+      "token": "--color-surface",
+      "value": "#3b3b3b",
+      "sourceRole": "surface"
+    },
+    {
+      "token": "--color-text",
+      "value": "#ffffff",
+      "sourceRole": "text"
+    },
+    {
+      "token": "--color-border",
+      "value": "#ffffff",
+      "sourceRole": "border"
+    },
+    {
+      "token": "--color-primary",
+      "value": "#a3c4d5",
+      "sourceRole": "primary"
+    }
+  ],
+  "notes": [
+    "Measured by reference extract from DOM computed styles at 1440x900 (254 visible elements; colours closer than CIEDE2000 15 merged).",
+    "Coverage is each role's share of its own group: backgrounds weighted by element area, text and borders by element count.",
+    "Raster-media palette is pending: measure the screenshot and imagery as a separate source, compare it with this DOM palette, judge the roles, then set both sources and the evidence status to ready.",
+    "5 cross-origin stylesheet(s) could not be read for custom properties.",
+    "(low confidence) background surfaces: #dde3e4 (CIEDE2000 6.7), #e4eaeb (CIEDE2000 5.4), #e4eced (CIEDE2000 5.6) merged into #ffffff; on a dark or tinted site this may be a designed surface step, so check the raw members in extraction.json before dropping it",
+    "(low confidence) background surfaces: #a6b8bd (CIEDE2000 6.1) merged into #a3c4d5; on a dark or tinted site this may be a designed surface step, so check the raw members in extraction.json before dropping it",
+    "(low confidence) background surfaces: #1a1a1a (CIEDE2000 10.5) merged into #3b3b3b; on a dark or tinted site this may be a designed surface step, so check the raw members in extraction.json before dropping it",
+    "(low confidence) heading font: no named family appears on two or more heading or display elements",
+    "(low confidence) spacing grid: no 8 px or 4 px base covers 80% of the measured spacing values"
+  ]
+}

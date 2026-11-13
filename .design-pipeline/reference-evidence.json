@@ -1,0 +1,152 @@
+{
+  "schema": "design-pipeline.reference-evidence.v2",
+  "id": "arknights-web-2026-11-14",
+  "source": {
+    "availability": "resolved",
+    "path": "https://arknights.global/",
+    "kind": "live-page",
+    "width": 1440,
+    "height": 900,
+    "sha256": "0bbd6d9858a57e4e38c48fde5170e9562073927cd42ebbcdfecfda2d70e23e62"
+  },
+  "classification": {
+    "objectDimensionality": "2d",
+    "cameraModel": "none",
+    "interactionModel": "navigable",
+    "outputSurface": "screen-space-ui",
+    "runtimeFamily": "web: static marketing page with a script-rendered shell (React Router SSR for our own site)"
+  },
+  "spatialCues": {
+    "thickness": {
+      "present": true,
+      "evidence": "Hairline borders and one-pixel rules carry the structure; the measured borders are white at low coverage (53-54%), not blocks."
+    },
+    "occlusion": {
+      "present": false,
+      "evidence": "The page is flat UI: nothing overlaps another element in depth."
+    },
+    "contactShadows": {
+      "present": false,
+      "evidence": "No drop shadows were measured; separation comes from value steps between #1a1a1a, #3b3b3b and the ground."
+    },
+    "bevelHighlights": {
+      "present": false,
+      "evidence": "No gradients or bevels on the measured panels; the surfaces are flat fills."
+    },
+    "perspectiveConvergence": {
+      "present": false,
+      "evidence": "A screen-space page: nothing converges in perspective."
+    },
+    "depthOfField": {
+      "present": false,
+      "evidence": "Everything on the page is equally sharp."
+    }
+  },
+  "route": "2d",
+  "confidence": 0.82,
+  "requiredArtifacts": [
+    "reference.md",
+    "reference-evidence.json",
+    "graybox.png",
+    "design.md"
+  ],
+  "approval": {
+    "status": "approved",
+    "evidence": "Owner, 2026-11-14: 「我们还是用二次元公司，用明日方舟的设计方式和配色」「你给我一个静态稿子没问题」. The reference is 明日方舟 / Arknights, and the owner accepted the static mockup before implementation."
+  },
+  "intent": {
+    "role": "inspiration",
+    "requestedFidelity": "directional-inspiration",
+    "effectiveFidelity": "directional-inspiration",
+    "downgrade": {
+      "status": "not-requested",
+      "evidence": "The owner asked for the Arknights design language and palette, not a copy of its site; nothing was downgraded."
+    },
+    "reconstructionArtifact": ".design-pipeline/reference/arknights/reference.md"
+  },
+  "composition": {
+    "uniform": false,
+    "regions": [
+      {
+        "id": "masthead",
+        "rows": 1,
+        "columns": 2,
+        "breaksFrom": [],
+        "contents": "站名与主导航：深底上的冷蓝字标，一行频道"
+      },
+      {
+        "id": "feed",
+        "rows": 1,
+        "columns": 3,
+        "breaksFrom": [
+          "masthead"
+        ],
+        "contents": "时间轴：左侧 64px 时刻栏 + 发丝线轨道 + 卡片栏（1fr）"
+      },
+      {
+        "id": "filter",
+        "rows": 2,
+        "columns": 1,
+        "breaksFrom": [
+          "masthead"
+        ],
+        "contents": "筛选：频道一行、类别一行，各自可横向滚动"
+      }
+    ]
+  },
+  "graybox": {
+    "capture": "graybox.png",
+    "capturedAt": "2026-11-14T03:14:00+08:00",
+    "runtimeMode": {
+      "mechanism": "query-parameter",
+      "token": "graybox=1",
+      "disables": [
+        "materials",
+        "glow",
+        "bloom",
+        "depth-of-field",
+        "scanlines",
+        "grading",
+        "emissive",
+        "optical",
+        "texture"
+      ]
+    },
+    "viewport": {
+      "width": 1440,
+      "height": 1100
+    },
+    "suppressed": [
+      "materials",
+      "glow",
+      "bloom",
+      "depth-of-field",
+      "scanlines",
+      "grading"
+    ],
+    "comparison": {
+      "mode": "qualitative",
+      "regions": [
+        {
+          "id": "masthead",
+          "finding": "The reference's masthead is a hairline-separated cold-blue wordmark; ours is a 40 px square mark on the rail with a single accent rule.",
+          "status": "matches"
+        },
+        {
+          "id": "feed",
+          "finding": "A continuous rule with a square marker per item is the reference's structure; ours keeps the 64 px instrument column and the 7 px square dot.",
+          "status": "matches"
+        },
+        {
+          "id": "filter",
+          "finding": "The reference separates navigation from content by hairlines, not by filled pills; our two filter rows keep square tabs on the hairline ground.",
+          "status": "matches"
+        }
+      ]
+    },
+    "approval": {
+      "status": "approved",
+      "evidence": "Owner, 2026-11-14: 「我们还是用二次元公司，用明日方舟的设计方式和配色」「你给我一个静态稿子没问题」. The mockup was rendered from the live feed and shown for sign-off."
+    }
+  }
+}

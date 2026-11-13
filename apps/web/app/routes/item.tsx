@@ -26,6 +26,7 @@ import { OutlineSheet } from "../components/ui/OutlineSheet";
 import { scrollToAnchor } from "../lib/motion";
 import { takePreview } from "../features/item/preview";
 import { IconArrowLeft, IconCopy, IconDownload, IconExternal, IconImage, IconList, IconMenu, IconMore, IconShare } from "../components/icons";
+import { ScrollProgress } from "../components/ui/scroll-progress";
 import { BarButton, PhoneBar } from "../components/shell/PhoneBar";
 import { isPhone, type Screen } from "../components/shell/screens";
 
@@ -490,6 +491,9 @@ function ItemView({ item, followups }: Loaded) {
             {moreMenu}
           </div>
         </div>
+        {/* The reading progress, from Rare UI: the ring fills as you read; the outline's entries, when there
+            are any, are the sections it can jump to. */}
+        <ScrollProgress sections={item.outline.map((o) => ({ id: o.id, label: o.text }))} className="hidden lg:block" />
         <article className="pb-6 pt-3 lg:pt-2 2xl:pt-1">
           <div className={`flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-ink-3 2xl:hidden ${isX ? "" : "mb-3"}`}>
             <span className="font-semibold text-ink-2">{isX ? item.x!.authorName : item.source.name}</span>

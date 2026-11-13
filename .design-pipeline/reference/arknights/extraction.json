@@ -1,0 +1,434 @@
+{
+  "schema": "design-pipeline.reference-extraction.v1",
+  "targetId": "arknights",
+  "url": "https://arknights.global/",
+  "finalUrl": "https://arknights.global/",
+  "httpStatus": 200,
+  "capturedAt": "2026-11-13T18:52:19.419Z",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "browser": {
+    "executable": "/opt/microsoft/msedge/msedge",
+    "version": "Edg/157.0.4341.57"
+  },
+  "fontStatus": "loaded",
+  "elementsMeasured": 254,
+  "elementLimitReached": false,
+  "overlaysDismissed": [],
+  "uncoveredShare": 0.131,
+  "method": {
+    "clusterDeltaE2000": 15,
+    "nearMergeDeltaE2000": 3,
+    "dominantShare": 0.25,
+    "accentShare": 0.05,
+    "saturatedFloor": 0.5,
+    "sizeClusterPx": 0.5
+  },
+  "palette": {
+    "background": [
+      {
+        "hex": "#ffffff",
+        "share": 0.4643,
+        "tier": "dominant",
+        "count": 11,
+        "weight": 37.58,
+        "members": [
+          "#ffffff",
+          "#dde3e4",
+          "#e4eaeb",
+          "#e4eced"
+        ],
+        "nearMerges": [
+          {
+            "hex": "#dde3e4",
+            "deltaE": 6.7
+          },
+          {
+            "hex": "#e4eaeb",
+            "deltaE": 5.4
+          },
+          {
+            "hex": "#e4eced",
+            "deltaE": 5.6
+          }
+        ],
+        "region": "body",
+        "vars": []
+      },
+      {
+        "hex": "#a3c4d5",
+        "share": 0.3504,
+        "tier": "dominant",
+        "count": 3,
+        "weight": 28.36,
+        "members": [
+          "#a3c4d5",
+          "#a6b8bd"
+        ],
+        "nearMerges": [
+          {
+            "hex": "#a6b8bd",
+            "deltaE": 6.1
+          }
+        ],
+        "region": "div.page-discover",
+        "vars": []
+      },
+      {
+        "hex": "#3b3b3b",
+        "share": 0.1853,
+        "tier": "accent",
+        "count": 9,
+        "weight": 15,
+        "members": [
+          "#3b3b3b",
+          "#1a1a1a",
+          "#404040",
+          "#434343"
+        ],
+        "nearMerges": [
+          {
+            "hex": "#1a1a1a",
+            "deltaE": 10.5
+          }
+        ],
+        "region": "div.home-footer",
+        "vars": []
+      }
+    ],
+    "text": [
+      {
+        "hex": "#ffffff",
+        "share": 0.6875,
+        "tier": "dominant",
+        "count": 33,
+        "weight": 33,
+        "members": [
+          "#ffffff",
+          "#cccccc"
+        ],
+        "nearMerges": [
+          {
+            "hex": "#cccccc",
+            "deltaE": 11.1
+          }
+        ],
+        "region": "p",
+        "vars": []
+      },
+      {
+        "hex": "#262626",
+        "share": 0.2708,
+        "tier": "dominant",
+        "count": 13,
+        "weight": 13,
+        "members": [
+          "#262626",
+          "#343434",
+          "#181818"
+        ],
+        "nearMerges": [
+          {
+            "hex": "#343434",
+            "deltaE": 4.5
+          },
+          {
+            "hex": "#181818",
+            "deltaE": 4.4
+          }
+        ],
+        "region": "a",
+        "vars": []
+      },
+      {
+        "hex": "#18d1ff",
+        "share": 0.0208,
+        "tier": "accent",
+        "count": 1,
+        "weight": 1,
+        "members": [
+          "#18d1ff"
+        ],
+        "region": "span.active",
+        "vars": []
+      },
+      {
+        "hex": "#a6b8bd",
+        "share": 0.0208,
+        "tier": "incidental",
+        "count": 1,
+        "weight": 1,
+        "members": [
+          "#a6b8bd"
+        ],
+        "region": "span",
+        "vars": []
+      }
+    ],
+    "border": [
+      {
+        "hex": "#ffffff",
+        "share": 0.5385,
+        "tier": "dominant",
+        "count": 21,
+        "weight": 21,
+        "members": [
+          "#ffffff"
+        ],
+        "region": "div.square",
+        "vars": []
+      },
+      {
+        "hex": "#262626",
+        "share": 0.4615,
+        "tier": "dominant",
+        "count": 18,
+        "weight": 18,
+        "members": [
+          "#262626",
+          "#302a2f",
+          "#404040",
+          "#000000",
+          "#323232"
+        ],
+        "nearMerges": [
+          {
+            "hex": "#302a2f",
+            "deltaE": 5.8
+          },
+          {
+            "hex": "#404040",
+            "deltaE": 8.4
+          },
+          {
+            "hex": "#000000",
+            "deltaE": 9.3
+          },
+          {
+            "hex": "#323232",
+            "deltaE": 3.8
+          }
+        ],
+        "region": "div.news-img",
+        "vars": []
+      }
+    ]
+  },
+  "roles": [
+    {
+      "role": "background",
+      "group": "background",
+      "hex": "#ffffff",
+      "share": 0.4643,
+      "tier": "dominant"
+    },
+    {
+      "role": "surface",
+      "group": "background",
+      "hex": "#3b3b3b",
+      "share": 0.1853,
+      "tier": "accent"
+    },
+    {
+      "role": "text",
+      "group": "text",
+      "hex": "#ffffff",
+      "share": 0.6875,
+      "tier": "dominant"
+    },
+    {
+      "role": "border",
+      "group": "border",
+      "hex": "#ffffff",
+      "share": 0.5385,
+      "tier": "dominant"
+    },
+    {
+      "role": "primary",
+      "group": "background",
+      "hex": "#a3c4d5",
+      "share": 0.3504,
+      "tier": "dominant"
+    }
+  ],
+  "type": {
+    "scale": [
+      {
+        "size": "10px",
+        "px": 10,
+        "count": 4,
+        "lineHeight": null,
+        "fontWeight": "400",
+        "fontFamily": "NotoSansCJKsc-Regular"
+      },
+      {
+        "size": "12px",
+        "px": 12,
+        "count": 6,
+        "lineHeight": null,
+        "fontWeight": "400",
+        "fontFamily": "NotoSansCJKsc-Medium"
+      },
+      {
+        "size": "13.5px",
+        "px": 13.5,
+        "count": 1,
+        "lineHeight": null,
+        "fontWeight": "400",
+        "fontFamily": "Oswald-Bold"
+      },
+      {
+        "size": "15px",
+        "px": 15,
+        "count": 14,
+        "lineHeight": "21px",
+        "fontWeight": "400",
+        "fontFamily": "Oswald-Bold"
+      },
+      {
+        "size": "16px",
+        "px": 16,
+        "count": 2,
+        "lineHeight": null,
+        "fontWeight": "400",
+        "fontFamily": "Novecentowide-Medium"
+      },
+      {
+        "size": "16.5px",
+        "px": 16.5,
+        "count": 6,
+        "lineHeight": "25px",
+        "fontWeight": "400",
+        "fontFamily": "NotoSansCJKsc-Regular"
+      },
+      {
+        "size": "17.5px",
+        "px": 17.5,
+        "count": 1,
+        "lineHeight": "17.5px",
+        "fontWeight": "400",
+        "fontFamily": "Oswald-Bold"
+      },
+      {
+        "size": "18px",
+        "px": 18,
+        "count": 2,
+        "lineHeight": null,
+        "fontWeight": "400",
+        "fontFamily": null
+      },
+      {
+        "size": "19.5px",
+        "px": 19.5,
+        "count": 3,
+        "lineHeight": "19.5px",
+        "fontWeight": "400",
+        "fontFamily": "Oswald-DemiBold"
+      },
+      {
+        "size": "20.5px",
+        "px": 20.5,
+        "count": 7,
+        "lineHeight": "16.5px",
+        "fontWeight": "400",
+        "fontFamily": "Oswald-Bold"
+      },
+      {
+        "size": "22.5px",
+        "px": 22.5,
+        "count": 1,
+        "lineHeight": null,
+        "fontWeight": "400",
+        "fontFamily": null
+      },
+      {
+        "size": "52.5px",
+        "px": 52.5,
+        "count": 1,
+        "lineHeight": null,
+        "fontWeight": "400",
+        "fontFamily": null
+      }
+    ],
+    "body": "15px",
+    "families": {
+      "heading": null,
+      "body": "Oswald-Bold"
+    }
+  },
+  "spacing": {
+    "scale": [
+      {
+        "value": "3px",
+        "px": 3,
+        "count": 24
+      },
+      {
+        "value": "4px",
+        "px": 4,
+        "count": 26
+      },
+      {
+        "value": "6px",
+        "px": 6,
+        "count": 8
+      },
+      {
+        "value": "7px",
+        "px": 7,
+        "count": 14
+      },
+      {
+        "value": "7.5px",
+        "px": 7.5,
+        "count": 13
+      },
+      {
+        "value": "10px",
+        "px": 10,
+        "count": 14
+      },
+      {
+        "value": "10.5px",
+        "px": 10.5,
+        "count": 14
+      },
+      {
+        "value": "11.5px",
+        "px": 11.5,
+        "count": 8
+      },
+      {
+        "value": "15px",
+        "px": 15,
+        "count": 16
+      },
+      {
+        "value": "19.5px",
+        "px": 19.5,
+        "count": 14
+      },
+      {
+        "value": "28px",
+        "px": 28,
+        "count": 14
+      },
+      {
+        "value": "40px",
+        "px": 40,
+        "count": 17
+      }
+    ],
+    "grid": null
+  },
+  "cssVariables": [],
+  "lowConfidence": [
+    "background surfaces: #dde3e4 (CIEDE2000 6.7), #e4eaeb (CIEDE2000 5.4), #e4eced (CIEDE2000 5.6) merged into #ffffff; on a dark or tinted site this may be a designed surface step, so check the raw members in extraction.json before dropping it",
+    "background surfaces: #a6b8bd (CIEDE2000 6.1) merged into #a3c4d5; on a dark or tinted site this may be a designed surface step, so check the raw members in extraction.json before dropping it",
+    "background surfaces: #1a1a1a (CIEDE2000 10.5) merged into #3b3b3b; on a dark or tinted site this may be a designed surface step, so check the raw members in extraction.json before dropping it",
+    "heading font: no named family appears on two or more heading or display elements",
+    "spacing grid: no 8 px or 4 px base covers 80% of the measured spacing values"
+  ]
+}
