@@ -10,7 +10,7 @@ import { enqueue, QUEUES, shutdownSignal } from "../jobs/queue.ts";
 import { queueProcessing } from "../jobs/content.ts";
 import { BudgetExceededError, ProviderRejectedError, completeReceipt } from "../providers/receipts.ts";
 import { usesBrowserXSearch } from "../providers/socialdata.ts";
-import { browserXQuota, BrowserXThrottleError } from "../providers/x-browser.ts";
+import { BrowserXThrottleError, browserXQuota } from "../providers/x-quota.ts";
 import { fetchRss } from "./rss.ts";
 import { fetchDetail, fetchWebList, isCallToActionTitle, needsTitle, type DetailNeed } from "./web-list.ts";
 import { unsupportedConfig } from "./config-keys.ts";
@@ -465,7 +465,7 @@ export async function collectSource(sourceId: string, opts: { force?: boolean; x
     // Browser X cannot resume the observed page, so retain it all as first-import history.
     if (firstImport && !coverageUnverified) candidates = candidates.slice(0, Number(source.config._aihot?.initialBackfillLimit ?? 30));
     const cachedImports = new Map<string, boolean>();
-    const coverageError = coverageUnverified ? "opencli X search coverage is unverified"
+    const coverageError = coverageUnverified ? "browser X search coverage is unverified"
       : paginationLimited ? "JSON listing reached its page limit; coverage is unverified" : undefined;
     if (source.config._aihot?.fast === true) {
       if (!source.config.pagination) await cacheFast(source, candidates.filter((c) => admits(c) || !c.publishedAt && !!source.config.publishedAfter && Number(d?.maxFetches ?? 0) > 0), firstImport, cacheRules!);

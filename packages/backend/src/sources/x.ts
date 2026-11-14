@@ -140,10 +140,10 @@ export interface XFetch extends Omit<XRead, "tweets"> {
  * the old watermark, so nothing in between is skipped. Without a watermark (a source's very first
  * fetch) one page is read: its import is bounded anyway.
  */
-export async function readXSearch(base: string, opts: { lastId: string | null; backlog: XBacklog[]; subject: string; type?: "Latest" | "Top"; fast?: boolean }): Promise<XRead> {
+export async function readXSearch(base: string, opts: { lastId: string | null; backlog: XBacklog[]; subject: string; type?: "Latest" | "Top"; fast?: boolean; via?: "opencli" | "kaze" | "browsermcp" }): Promise<XRead> {
   const { lastId } = opts;
   if (usesBrowserXSearch()) {
-    const res = await searchTweets(base, { purpose: "source_fetch", subject: opts.subject, window: windowKey(opts.fast ? 1 : 30), type: opts.type ?? "Latest" });
+    const res = await searchTweets(base, { purpose: "source_fetch", subject: opts.subject, window: windowKey(opts.fast ? 1 : 30), type: opts.type ?? "Latest", via: opts.via });
     const seen = new Set<string>();
     const tweets = res.tweets.filter((t) => !t.retweeted_status && !seen.has(t.id_str) && !!seen.add(t.id_str));
     // The browser's search answers with the newest posts it shows and no since_id bound. When the oldest of
@@ -254,6 +254,7 @@ export async function fetchXSearch(source: SourceRow, since?: string): Promise<X
     subject: `source:${source.id}`,
     type: source.config.searchType ?? "Latest",
     fast: source.config._aihot?.fast === true,
+    via: source.config.via === "kaze" || source.config.via === "browsermcp" ? source.config.via : undefined,
   });
   const own = read.coverageUnverified && SHARDABLE.test(String(source.config.query ?? "")) ? xHandle(source.config)?.toLowerCase() : null;
   return { candidates: tweets.filter((tweet) => !own || tweet.user.screen_name.toLowerCase() === own).map(tweetToCandidate), ...read };

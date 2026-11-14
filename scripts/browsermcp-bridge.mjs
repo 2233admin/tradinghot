@@ -28,7 +28,19 @@ let active = 0;
 const waiting = [];
 
 function accepted(request) {
-  if (!request || typeof request !== 'object' || Object.keys(request).some(k => k !== 'source' && k !== 'url')) return null;
+  if (!request || typeof request !== 'object') return null;
+  const keys = Object.keys(request);
+  // The X search is the one rule that takes a query instead of a fixed page: it runs in the
+  // browser session the user is signed into, in a tab of its own.
+  if (request.source === 'x-search') {
+    if (keys.some(k => k !== 'source' && k !== 'query' && k !== 'limit')) return null;
+    const query = request.query;
+    const limit = request.limit ?? 20;
+    if (typeof query !== 'string' || query.length === 0 || query.length > 512) return null;
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) return null;
+    return { kind: 'x-search', query, limit };
+  }
+  if (keys.some(k => k !== 'source' && k !== 'url')) return null;
   const rule = Object.hasOwn(sources, request.source) ? sources[request.source] : null;
   if (!rule || typeof request.url !== 'string' || request.url.length > 2048) return null;
   try {
@@ -162,8 +174,29 @@ function browserScript(target) {
     answer`;
 }
 
+// The X search runs in the browser's own session through BrowserMCP's X adapter, in a tab of
+// its own that is closed again right away: the tab the user works in is never touched.
+function xSearchScript(target) {
+  return `
+    const target = ${JSON.stringify(target)};
+    const t = await browser.tabs.new();
+    let answer;
+    try {
+      const found = await sites.twitter.search({ query: target.query, limit: target.limit, sort: 'latest' });
+      answer = { ok: true, url: 'https://x.com/search?q=' + encodeURIComponent(target.query), rows: Array.isArray(found?.rows) ? found.rows : [] };
+    } catch (e) {
+      answer = { ok: false, code: 'unavailable', reason: String((e && e.message) || e).slice(0, 200) };
+    } finally {
+      try { await t.close(); } catch {}
+    }
+    answer`;
+}
+
 function readPage(target, signal) {
   return new Promise((resolve) => {
+    // The X search waits for the browser's own search page, which takes longer than a body read.
+    const isSearch = target.kind === 'x-search';
+    const code = isSearch ? xSearchScript(target) : browserScript(target);
     const child = spawn(launcher, ['stdio'], { stdio: ['pipe', 'pipe', 'ignore'], env: { HOME: os.homedir(), PATH: process.env.PATH || '/usr/bin:/bin', XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR || '', LANG: process.env.LANG || 'C.UTF-8' } });
     let pending = '';
     let settled = false;
@@ -176,7 +209,7 @@ function readPage(target, signal) {
       resolve(value);
     };
     const abort = () => finish({ ok: false, code: 'unavailable' });
-    const timer = setTimeout(abort, timeoutMs);
+    const timer = setTimeout(abort, isSearch ? 60_000 : timeoutMs);
     signal.addEventListener('abort', abort, { once: true });
     child.on('error', abort);
     child.on('exit', () => finish({ ok: false, code: 'unavailable' }));
@@ -192,7 +225,7 @@ function readPage(target, signal) {
         try { message = JSON.parse(line); } catch { return abort(); }
         if (message.id === 1 && message.result) {
           child.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
-          child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'js', arguments: { code: browserScript(target), timeoutMs: 25000, maxChars: responseLimit } } }) + '\n');
+          child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'js', arguments: { code, timeoutMs: isSearch ? 45_000 : 25000, maxChars: responseLimit } } }) + '\n');
         } else if (message.id === 2) {
           try {
             const text = message.result?.content?.find((x) => x.type === 'text')?.text ?? '';

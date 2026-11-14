@@ -6,6 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import { BROWSER_X_SEARCHES_PER_HOUR, BrowserXThrottleError, browserRowsToTweets, browserXQuota, resetBrowserXSession, searchTweetsInBrowser } from "../packages/backend/src/providers/x-browser.ts";
 import { HttpStatusError } from "../packages/backend/src/lib/http-fetch.ts";
+import { adapterRowToTweet } from "../packages/backend/src/providers/x-adapter.ts";
 import { readXSearch } from "../packages/backend/src/sources/x.ts";
 
 test("opencli rows map to tweets the X collector understands", () => {
@@ -167,4 +168,27 @@ console.log(JSON.stringify(ids.map((id) => ({ id, author: "example", text: "post
     else process.env.SOCIALDATA_API_KEY = previousKey;
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("BrowserMCP's X adapter rows map to the tweets the collector reads", () => {
+  const tweet = adapterRowToTweet({
+    id: "1794017562484524803",
+    author: "Example",
+    name: "Example",
+    text: "A post",
+    created_at: "Fri Nov 06 20:22:10 +0000 2026",
+    links: ["https://example.com/a"],
+    media: ["https://pbs.twimg.com/media/one.jpg"],
+  });
+  assert.equal(tweet.id_str, "1794017562484524803");
+  assert.equal(tweet.user.screen_name, "Example");
+  assert.equal(tweet.user.name, "Example");
+  assert.equal(tweet.full_text, "A post");
+  assert.equal(new Date(tweet.tweet_created_at).toISOString(), "2026-11-06T20:22:10.000Z");
+  assert.equal(tweet.entities?.media?.[0]?.media_url_https, "https://pbs.twimg.com/media/one.jpg");
+  assert.equal(tweet.entities?.media?.[0]?.type, "photo");
+  assert.equal(tweet.entities?.urls?.[0]?.expanded_url, "https://example.com/a");
+  // A video's own file is kept as the file; the site shows its still and never pretends it plays here.
+  const video = adapterRowToTweet({ id: "2", author: "example", text: "clip", created_at: "Fri Nov 06 20:22:10 +0000 2026", media: ["https://video.twimg.com/clip.mp4"] });
+  assert.equal(video.entities?.media?.[0]?.type, "video");
 });

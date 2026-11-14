@@ -19,7 +19,7 @@ const KEYS: Record<SourceRow["kind"], string[]> = {
     "urlTemplate", "urlTemplateFallback", "rawDropKeys", "requireBoolean", "minNumeric", "pagination", "truthSocial",
   ],
   // X accounts are mostly read in shards, which apply only these.
-  x_search: [...PUBLISHER, "_aihot", "ingestNoiseFilter", "itemUrlPrefixRewrite", "query", "searchType", "channel"],
+  x_search: [...PUBLISHER, "_aihot", "ingestNoiseFilter", "itemUrlPrefixRewrite", "query", "searchType", "channel", "via"],
   mp_account: [...PUBLISHER, "wxid", "ghid", "nickname"],
   // An external source is fed by a collector: which one, and which of the collector's sources.
   external: [...PUBLISHER, "collector", "collectorId"],
@@ -60,7 +60,7 @@ const VALUES: Record<string, string[]> = {
   publisherRole: ["organization", "person"],
   adapter: ["mimo_home", "barrons_market"],
   parseMode: ["html", "markdown", "docusaurus_changelog", "markdown_changelog", "intercom_changelog"],
-  via: ["opencli"],
+  via: ["opencli", "kaze", "browsermcp"],
   bodyVia: ["browsermcp"],
 };
 

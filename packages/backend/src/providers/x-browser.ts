@@ -5,19 +5,16 @@ import { HttpStatusError } from "../lib/http-fetch.ts";
 import type { SdMedia, SdTweet } from "./socialdata.ts";
 import { openCliProfile, runOpenCli } from "./opencli.ts";
 
-/**
- * The browser session is shared by every account: X limits how many searches one logged-in session
- * may start, and a refusal costs the whole session a long cooldown. The searches of an hour are
- * therefore counted here, and a refusal rests the session instead of being charged to one account.
- * Sixty accounts read every two hours need thirty searches an hour; the rest of the budget is the
- * room a first fetch and a retry need.
- */
-export const BROWSER_X_SEARCHES_PER_HOUR = 40;
-/** How long the session rests after X refused a search (opencli's own advice: 15-30 minutes). */
-export const BROWSER_X_COOLDOWN_MS = 15 * 60_000;
-/** The smallest gap between two searches of the session, so a burst never looks like scraping. */
-const BROWSER_X_MIN_GAP_MS = 3_000;
-const HOUR_MS = 3_600_000;
+export {
+  BROWSER_X_COOLDOWN_MS,
+  BROWSER_X_SEARCHES_PER_HOUR,
+  BrowserXThrottleError,
+  browserXQuota,
+  permitBrowserXSearch,
+  resetBrowserXSession,
+  restBrowserXSession,
+} from "./x-quota.ts";
+import { permitBrowserXSearch, restBrowserXSession } from "./x-quota.ts";
 
 const TweetRow = z.object({
   id: z.union([z.string(), z.number()]),
@@ -46,78 +43,6 @@ export interface BrowserTweetOptions {
   /** Browser Bridge profile; the adapter's default when null. */
   profile?: string | null;
   timeoutMs?: number;
-}
-
-/**
- * The session cannot search right now: its quota is spent, or it rests after a refusal. No account
- * is at fault, so the collector records a throttle instead of a failed source.
- */
-export class BrowserXThrottleError extends Error {
-  /** When the session may search again. */
-  readonly until: number;
-  constructor(message: string, until: number) {
-    super(message);
-    this.until = until;
-  }
-}
-
-export interface BrowserXQuota {
-  /** Searches the session may still start in this hour. */
-  remaining: number;
-  /** When the session may search again after a refusal. */
-  cooldownUntil: number;
-}
-
-let windowStart = Date.now();
-let searchesThisWindow = 0;
-let lastSearchAt = 0;
-let cooldownUntil = 0;
-/** Permits are handed out one at a time, so two workers never start a search at the same moment. */
-let permits: Promise<unknown> = Promise.resolve();
-
-/** What the session may still do: the searches left in this hour and when it rests. */
-export function browserXQuota(now = Date.now()): BrowserXQuota {
-  if (now - windowStart >= HOUR_MS) {
-    windowStart = now;
-    searchesThisWindow = 0;
-  }
-  return { remaining: Math.max(0, BROWSER_X_SEARCHES_PER_HOUR - searchesThisWindow), cooldownUntil };
-}
-
-/**
- * The session's own state is cleared: a new login or a fresh quota window starts the hour over, and the
- * rest after a refusal ends with it.
- */
-export function resetBrowserXSession(): void {
-  windowStart = Date.now();
-  searchesThisWindow = 0;
-  lastSearchAt = 0;
-  cooldownUntil = 0;
-}
-
-const sleep = async (ms: number) => {
-  const { promise, resolve } = Promise.withResolvers<void>();
-  setTimeout(resolve, ms);
-  await promise;
-};
-
-/** Waits for the session's turn: outside a cooldown, inside this hour's budget, and spaced out. */
-async function permit(): Promise<void> {
-  const turn = permits.then(async () => {
-    const now = Date.now();
-    if (now < cooldownUntil) {
-      throw new BrowserXThrottleError(`browser X session rests until ${new Date(cooldownUntil).toISOString()}`, cooldownUntil);
-    }
-    if (browserXQuota(now).remaining <= 0) {
-      throw new BrowserXThrottleError("browser X session search budget for this hour is spent", windowStart + HOUR_MS);
-    }
-    const gap = lastSearchAt + BROWSER_X_MIN_GAP_MS - now;
-    if (gap > 0) await sleep(gap);
-    lastSearchAt = Date.now();
-    searchesThisWindow += 1;
-  });
-  permits = turn.then(() => undefined, () => undefined);
-  await turn;
 }
 
 /**
@@ -188,7 +113,7 @@ export async function searchTweetsInBrowser(opts: BrowserTweetOptions): Promise<
   const query = opts.query.replace(/\s*since_id:\S+/g, "").trim();
   if (!query) return [];
   const profile = opts.profile ?? process.env.X_OPENCLI_PROFILE ?? null;
-  await permit();
+  await permitBrowserXSearch();
   let stdout: string;
   try {
     stdout = await runOpenCli(
@@ -199,7 +124,7 @@ export async function searchTweetsInBrowser(opts: BrowserTweetOptions): Promise<
   } catch (error) {
     // A refusal by X rests the whole session: the quota it spent is the session's, not one account's.
     if (error instanceof Error && /^opencli failed: (?:HTTP 429:|ok: false error: code: \S+ message: (?:>[-+]? )?['"]?HTTP 429:)/.test(error.message)) {
-      cooldownUntil = Date.now() + BROWSER_X_COOLDOWN_MS;
+      restBrowserXSession();
       throw new HttpStatusError(429, error.message);
     }
     throw error;
