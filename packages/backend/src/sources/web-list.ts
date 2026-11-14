@@ -381,11 +381,70 @@ async function fromMimoHome(html: string, base: string, source: SourceRow): Prom
   throw new FetchError("mimo_home: no Blog list in the homepage's chunks");
 }
 
+/**
+ * barrons.com/market-data (config.adapter "barrons_market"). The market page lists its articles as
+ * headlines, but the moment each was published is only in the page's own state (window.__STATE__),
+ * where every article carries its headline, its summary, its byline and the epoch it was published at.
+ * The rendered timestamp element is filled in by script and is empty in the HTML, so the listing's own
+ * state is where the time comes from.
+ */
+export function fromBarronsMarket(html: string, base: string, source: SourceRow): Candidate[] {
+  const marker = "window.__STATE__ = ";
+  const start = html.indexOf(marker);
+  if (start < 0) throw new FetchError("barrons_market: the page carries no state");
+  const bodyStart = start + marker.length;
+  const end = html.indexOf("</script>", bodyStart);
+  if (end < 0) throw new FetchError("barrons_market: the page's state is not closed");
+  const raw = html.slice(bodyStart, end).trim().replace(/;$/, "");
+  let state: unknown;
+  try {
+    state = JSON.parse(raw);
+  } catch {
+    throw new FetchError("barrons_market: the page's state is not JSON");
+  }
+  const out: Candidate[] = [];
+  const seen = new Set<string>();
+  const visit = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      for (const item of node) visit(item);
+      return;
+    }
+    if (!node || typeof node !== "object") return;
+    const record = node as { type?: unknown; data?: Record<string, unknown> };
+    const data = record.data;
+    if (record.type === "article" && data && typeof data.url === "string") {
+      const url = absolute(data.url, base);
+      const title = collapseWhitespace(typeof data.headline === "string" ? data.headline : "");
+      const epoch = typeof data.timestamp === "number" ? data.timestamp : Number.NaN;
+      if (url && title && !seen.has(url) && allowed(url, source)) {
+        seen.add(url);
+        const at = Number.isFinite(epoch) ? new Date(epoch > 1e12 ? epoch : epoch * 1000) : null;
+        const summary = typeof data.summary === "string" ? collapseWhitespace(data.summary) : "";
+        const byline = typeof data.byline === "string" ? collapseWhitespace(data.byline).replace(/^By\s+/i, "") : "";
+        out.push({
+          url,
+          title,
+          ...(summary ? { excerpt: summary.slice(0, 2000) } : {}),
+          ...(byline ? { author: byline } : {}),
+          publishedAt: at,
+          publicationTime: at ? at.toISOString() : null,
+        });
+      }
+    }
+    for (const value of Object.values(node as Record<string, unknown>)) visit(value);
+  };
+  visit(state);
+  return out;
+}
+
 export async function fetchWebList(source: SourceRow): Promise<Candidate[]> {
   const { text, viaJina, base } = await fetchListingText(source);
-  const mode = source.config.adapter === "mimo_home" ? "mimo_home" : source.config.parseMode ?? (viaJina ? "markdown" : "html");
+  const mode = source.config.adapter === "mimo_home" ? "mimo_home"
+    : source.config.adapter === "barrons_market" ? "barrons_market"
+    : source.config.parseMode ?? (viaJina ? "markdown" : "html");
   let out: Candidate[];
   if (mode === "mimo_home") out = await fromMimoHome(text, base, source);
+  else if (mode === "barrons_market") out = fromBarronsMarket(text, base, source);
   else if (mode === "markdown") out = fromMarkdown(text, base, source);
   else if (mode === "docusaurus_changelog") out = fromDocusaurusChangelog(text, base, source);
   else if (mode === "markdown_changelog") out = fromMarkdownChangelog(text, base, source);

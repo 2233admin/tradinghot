@@ -146,7 +146,16 @@ export async function readXSearch(base: string, opts: { lastId: string | null; b
     const res = await searchTweets(base, { purpose: "source_fetch", subject: opts.subject, window: windowKey(opts.fast ? 1 : 30), type: opts.type ?? "Latest" });
     const seen = new Set<string>();
     const tweets = res.tweets.filter((t) => !t.retweeted_status && !seen.has(t.id_str) && !!seen.add(t.id_str));
-    return { tweets, receiptIds: [], lastId, backlog: opts.backlog, pages: 1, truncated: false, coverageUnverified: true, backlogPages: 0, dropped: 0 };
+    // The browser's search answers with the newest posts it shows and no since_id bound. When the oldest of
+    // them is older than the watermark, the whole stretch since the watermark was in hand and the watermark
+    // moves to the newest post seen; while the oldest is still newer, more posts may be missing between, so
+    // the watermark stays and the next round reads on. A first read has no stretch to miss, so it moves too.
+    const ids = tweets.map((t) => t.id_str).filter((id) => /^\d+$/.test(id)).sort((a, b) => (BigInt(a) < BigInt(b) ? -1 : 1));
+    const newest = ids.at(-1) ?? null;
+    const oldest = ids[0] ?? null;
+    const watermark = lastId && /^\d+$/.test(lastId) ? BigInt(lastId) : null;
+    const covered = newest !== null && (watermark === null || (oldest !== null && BigInt(oldest) < watermark));
+    return { tweets, receiptIds: [], lastId: covered ? newest : lastId, backlog: opts.backlog, pages: 1, truncated: false, coverageUnverified: true, backlogPages: 0, dropped: 0 };
   }
   // One stretch per query, and none left over for days. A shard's stretches travel with its accounts, so
   // regrouping can leave copies of the same query at different positions in several shards, each of them

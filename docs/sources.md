@@ -2,6 +2,10 @@
 
 信源在后台“信源”页管理：新建、试抓一次看看抓到什么、改频率、启停、看失败原因和最近的条目。首次启动时，`industry/sources.json` 里的示范信源会被导入。
 
+桌面端“主题”是来源看板，默认显示全部 NewsNow 来源和已启用的公开站内来源；“热门”页也有入口。卡片按需读取，后台仍独立按计划采集。NewsNow 热榜显示排名，未提供发布时间的不写具体时间；站内卡片显示最近 7 天的公开入库内容，状态不正常的来源会标明。来源选择和关注只保存在当前浏览器。
+
+来源之间的聚合关系会保留在名称中：例如“路透社 · Finviz 聚合”和“TheStreet · Google News 聚合”只覆盖第三方列出的文章，不是原站官方完整接口；“开盘啦 · 最新资讯”和“Barron's · 市场页面”只覆盖相应公开栏目，不代表快讯或完整站点。
+
 ## 六种信源
 
 | 类型 | 适合 | 需要 |
@@ -120,6 +124,8 @@ Discord 没有公开订阅，频道由你自己的机器人读：
 
 可选：`summaryIsBody`（确认文字订阅里的摘要就是全文时，将 RSS 的 `description`、Atom 的 `summary` 当正文，不再去抓原文页）、`allowCategories` / `denyCategories`（按订阅里的分类过滤）。
 
+`headers` 可给 RSS 列表请求补充站点要求的请求头，例如 FinancialJuice 需要浏览器兼容的 `user-agent`；不要把凭据写进信源配置。带认证等敏感请求头时，重定向仍受同源限制。
+
 所有信源的 YouTube、Vimeo 视频播放页都不作为文章正文提取。Media RSS 的视频描述保留为摘要，即使设置了 `summaryIsBody` 也不会把描述当成视频字幕；订阅通过 `content` / `content:encoded` 提供的真实文字仍可使用。其他文章中嵌入视频，不影响文章本身的正文读取。
 
 文章正文中的原生视频保留安全的媒体地址和候选格式，使用浏览器控件手动播放。视频文件由浏览器直连原站，封面沿用图片代理；不自动播放、不循环，预加载提示设为 `none`，但浏览器不保证交互前完全没有请求。没有媒体地址和可用封面的播放器只保留后备文字。Markdown 和允许再分发的全文 RSS 保留视频结构，能否播放取决于阅读器；动态平台播放器和 iframe 不在此范围。
@@ -162,8 +168,9 @@ Discord 没有公开订阅，频道由你自己的机器人读：
 - `itemSelector` 在整个页面找条目；`linkSelector`、`titleSelector` 在每个条目内取第一个匹配节点，也可以匹配条目自身。选 `.news-list` 只会得到一个容器，通常只取到第一条新闻；只写 `div` 又会混入嵌套容器。要选重复出现的新闻节点。
 - `authorSelector` 可选，在每个条目内取第一个匹配节点的文字作为作者；不要选包含多个作者或其他内容的外层容器。
 - 链接取自 `href`；`/posts/first` 等相对链接按列表重定向后的最终地址解析，也可用 `baseUrl` 指定基准地址。标题取节点文字。重复链接会合并；Markdown 列表先出现“Read more”等按钮、后出现真实标题时，使用真实标题。指向列表自身的链接通常会跳过。
-- 日期在条目内查找 `publishedAtSelector`，依次尝试 `datetime`、`content`、`title` 属性和文字，无法解析的提示文字不会遮住同一节点的有效日期。没有时区的日期时间可用 `publishedAtUtcOffset`（默认 `+08:00`）；自带时区的时间保留原时区语义，纯 `YYYY-MM-DD` 按 UTC 零点读。不完整的月份、产品版本号和不存在的日历日期不作为发布日期。
+- 日期在条目内查找 `publishedAtSelector`，依次尝试 `datetime`、`content`、`title` 属性和文字，无法解析的提示文字不会遮住同一节点的有效日期。没有时区的日期时间可用 `publishedAtUtcOffset`（默认 `+08:00`）；它也可以写成时区名（`America/New_York`），这时按该时区自己的夏令时读。列表只印时刻（`07:08PM`）时按“最近一次这样的时刻”读：当天该时刻，还没到就退到前一天；只印月日（`Nov-12`）时按最近的一次这样的日子读，还没到的日子退到上一年。自带时区的时间保留原时区语义，纯 `YYYY-MM-DD` 按 UTC 零点读。不完整的月份、产品版本号和不存在的日历日期不作为发布日期。
 - `parseMode`：普通网页默认 `html`；`markdown` 按 Markdown 链接读；`docusaurus_changelog` 读更新日志标题；`intercom_changelog` 按 Intercom 帮助中心的日期章节读取标题和正文，每节保留自己的网址锚点，默认按 UTC 日历日读取，也可指定 `publishedAtUtcOffset`。需要 Jina 时，显式把 `url` 写成 `https://r.jina.ai/https://目标站/路径` 并配置 `JINA_API_KEY`，不是抓不到就自动切换。Jina 默认返回 Markdown；要继续使用 CSS 选择器，显式设 `parseMode: "html"`。
+- `adapter`：页面结构特殊时用站点自己的读法。`mimo_home` 读小米 MiMo 首页的脚本分块，`barrons_market` 读 Barron's 市场数据页 `window.__STATE__` 里每篇文章自己的标题、摘要、作者和发布时间戳（页面渲染出来的时间是脚本填的，HTML 里是空的）。
 - `detail`：列表缺日期、标题或摘要时抓详情页补齐（`publishedAtSelector`、`titleSelector`、`summarySelector` 等）。`maxFetches` 是每轮最多读几篇详情页，不设时为 0，即一篇都不读：每读一篇就多一次请求，所以要信源自己声明。读取失败或本轮 `maxFetches` 用完的条目，后续抓取继续补全；补元数据时保留已确认的正文。已有真实标题不会因为列表仍写“Read the Blog”而被换回按钮文字，也不会仅因标题较长再次读取详情。需要强制使用详情标题时设置 `titleAuthoritative: true`。详情页和正文提取读到不带时区的时间时，先用 `detail.publishedAtUtcOffset`，未设则继承信源的 `publishedAtUtcOffset`，两处都未设时默认 `+08:00`。RSS、JSON 列表也可以用 `detail`。
 - Jina 列表的 `detail.titleRegex`、`publishedAtRegex` 匹配 Jina 文本，可共用同一次详情响应；CSS 选择器读取原站 HTML。应按实际可读取的页面选择规则。
 - `allowUrlPrefixes` / `denyUrlPrefixes`：只收某些路径下的文章。

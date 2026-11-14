@@ -1,0 +1,175 @@
+{
+  "schema": "design-pipeline.palette-evidence.v1",
+  "targetId": "newsnow-busiyi-world",
+  "sourceUrl": "https://newsnow.busiyi.world/",
+  "status": "pending",
+  "capturedAt": "2026-11-13T22:56:47.201Z",
+  "sources": {
+    "domComputed": {
+      "status": "ready",
+      "evidencePaths": [
+        "extraction.json"
+      ],
+      "colors": [
+        {
+          "hex": "#2a2a2b",
+          "role": "background dominant",
+          "region": "background of 137 visible elements, 53% of the background group, largest body"
+        },
+        {
+          "hex": "#375376",
+          "role": "background accent",
+          "region": "background of 13 visible elements, 17% of the background group, largest div.flex"
+        },
+        {
+          "hex": "#743e3f",
+          "role": "background accent",
+          "region": "background of 9 visible elements, 14% of the background group, largest body"
+        },
+        {
+          "hex": "#2e6a45",
+          "role": "background accent",
+          "region": "background of 8 visible elements, 9% of the background group, largest div.flex"
+        },
+        {
+          "hex": "#4ade80",
+          "role": "background accent",
+          "region": "background of 6 visible elements, 2% of the background group, largest button.btn"
+        },
+        {
+          "hex": "#f87171",
+          "role": "background accent",
+          "region": "background of 5 visible elements, 2% of the background group, largest button.i-ph:arrow-counter-clockwise-duotone"
+        },
+        {
+          "hex": "#60a5fa",
+          "role": "background accent",
+          "region": "background of 4 visible elements, 1% of the background group, largest button.btn"
+        },
+        {
+          "hex": "#d4d4d4",
+          "role": "text dominant",
+          "region": "text of 263 visible elements, 87% of the text group, largest span.mr-2"
+        },
+        {
+          "hex": "#888888",
+          "role": "text accent",
+          "region": "text of 31 visible elements, 10% of the text group, largest span.text-xs"
+        },
+        {
+          "hex": "#4ade80",
+          "role": "text accent",
+          "region": "text of 3 visible elements, 1% of the text group, largest span.text-sm"
+        },
+        {
+          "hex": "#f87171",
+          "role": "text accent",
+          "region": "text of 2 visible elements, 1% of the text group, largest a.px-2"
+        },
+        {
+          "hex": "#dc2626",
+          "role": "text accent",
+          "region": "text of 1 visible element, 0% of the text group, largest span.color-primary-6"
+        },
+        {
+          "hex": "#60a5fa",
+          "role": "text accent",
+          "region": "text of 1 visible element, 0% of the text group, largest span.text-sm"
+        }
+      ]
+    },
+    "rasterMedia": {
+      "status": "pending",
+      "evidencePaths": [],
+      "regions": [],
+      "colors": []
+    }
+  },
+  "semanticRoles": [
+    {
+      "role": "background",
+      "sourceColor": "#2a2a2b",
+      "targetToken": "--color-background"
+    },
+    {
+      "role": "text",
+      "sourceColor": "#d4d4d4",
+      "targetToken": "--color-text"
+    },
+    {
+      "role": "text-muted",
+      "sourceColor": "#888888",
+      "targetToken": "--color-text-muted"
+    },
+    {
+      "role": "primary",
+      "sourceColor": "#60a5fa",
+      "targetToken": "--color-primary"
+    }
+  ],
+  "relationships": {
+    "coverage": [
+      {
+        "role": "background",
+        "min": 0.53,
+        "max": 0.54
+      },
+      {
+        "role": "text",
+        "min": 0.87,
+        "max": 0.88
+      },
+      {
+        "role": "text-muted",
+        "min": 0.1,
+        "max": 0.11
+      },
+      {
+        "role": "primary",
+        "min": 0.01,
+        "max": 0.02
+      }
+    ],
+    "luminanceHierarchy": [
+      "text",
+      "primary",
+      "text-muted",
+      "background"
+    ],
+    "saturationPosture": "neutral base with 11 saturated colours (primary #60a5fa, HSL saturation 0.94); highest saturation 0.94",
+    "temperaturePosture": "cool: chromatic colours centre on hue 200°; untinted neutrals (mean b* -0.2)"
+  },
+  "targetProjectTokens": [
+    {
+      "token": "--color-background",
+      "value": "#2a2a2b",
+      "sourceRole": "background"
+    },
+    {
+      "token": "--color-text",
+      "value": "#d4d4d4",
+      "sourceRole": "text"
+    },
+    {
+      "token": "--color-text-muted",
+      "value": "#888888",
+      "sourceRole": "text-muted"
+    },
+    {
+      "token": "--color-primary",
+      "value": "#60a5fa",
+      "sourceRole": "primary"
+    }
+  ],
+  "notes": [
+    "Measured by reference extract from DOM computed styles at 1440x900 (719 visible elements; colours closer than CIEDE2000 15 merged).",
+    "Coverage is each role's share of its own group: backgrounds weighted by element area, text and borders by element count.",
+    "Raster-media palette is pending: measure the screenshot and imagery as a separate source, compare it with this DOM palette, judge the roles, then set both sources and the evidence status to ready.",
+    "(low confidence) border: no visible border was measured",
+    "(low confidence) background surfaces: #1c1c1e (CIEDE2000 4.5), #4f5258 (CIEDE2000 13.4), #1c1c1e (CIEDE2000 4.5), #1c1c1e (CIEDE2000 4.5) merged into #2a2a2b; on a dark or tinted site this may be a designed surface step, so check the raw members in extraction.json before dropping it",
+    "(low confidence) background surfaces: #304560 (CIEDE2000 5.2) merged into #375376; on a dark or tinted site this may be a designed surface step, so check the raw members in extraction.json before dropping it",
+    "(low confidence) background surfaces: #5e3637 (CIEDE2000 5.4) merged into #743e3f; on a dark or tinted site this may be a designed surface step, so check the raw members in extraction.json before dropping it",
+    "(low confidence) background surfaces: #2a563b (CIEDE2000 7) merged into #2e6a45; on a dark or tinted site this may be a designed surface step, so check the raw members in extraction.json before dropping it",
+    "(low confidence) heading font: no named family appears on two or more heading or display elements"
+  ]
+}

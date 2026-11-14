@@ -10,6 +10,7 @@ import { enqueue, QUEUES, shutdownSignal } from "../jobs/queue.ts";
 import { queueProcessing } from "../jobs/content.ts";
 import { BudgetExceededError, ProviderRejectedError, completeReceipt } from "../providers/receipts.ts";
 import { usesBrowserXSearch } from "../providers/socialdata.ts";
+import { browserXQuota, BrowserXThrottleError } from "../providers/x-browser.ts";
 import { fetchRss } from "./rss.ts";
 import { fetchDetail, fetchWebList, isCallToActionTitle, needsTitle, type DetailNeed } from "./web-list.ts";
 import { unsupportedConfig } from "./config-keys.ts";
@@ -26,6 +27,8 @@ export interface CollectResult {
   created: number;
   revised: number;
   error?: string;
+  /** The round succeeded, but it cannot prove it read the whole window; the note says what is unproven. */
+  note?: string;
   rateLimited?: boolean;
 }
 
@@ -304,13 +307,14 @@ async function recordFetch(db: Db, sourceId: string, runId: number, run: { found
     if (run.coverageError) {
       const error = run.coverageError;
       // The source answered; what it cannot prove is that it answered for the whole window. That is not a
-      // failed fetch, so the source stops counting as one and reads as degraded instead of failing.
+      // failed fetch, so the source stops counting as one and reads as degraded instead of failing, and the
+      // round keeps the note instead of an error: the run succeeded, its coverage is what is unproven.
       await db`UPDATE sources SET last_fetch_at = now(), last_ok_at = now(), fail_count = 0, last_error = ${error}, cursor = ${db.json(run.cursor as never)},
         health = 'degraded',
         next_fetch_at = now() + make_interval(mins => CASE WHEN config->'_aihot'->>'fast' = 'true' THEN 1 ELSE interval_minutes END),
         updated_at = now() WHERE id = ${sourceId}`;
-      await db`UPDATE fetch_runs SET status = 'failed', finished_at = now(), found_count = ${run.found}, new_count = ${run.created},
-        error = ${error}, detail = nullif(coalesce(detail,'{}'::jsonb) || coalesce(${detail}::jsonb,'{}'::jsonb),'{}'::jsonb) WHERE id = ${runId}`;
+      await db`UPDATE fetch_runs SET status = 'ok', finished_at = now(), found_count = ${run.found}, new_count = ${run.created},
+        detail = nullif(coalesce(detail,'{}'::jsonb) || coalesce(${detail}::jsonb,'{}'::jsonb) || jsonb_build_object('coverageNote', ${error}::text),'{}'::jsonb) WHERE id = ${runId}`;
       return;
     }
     await db`
@@ -335,6 +339,19 @@ async function recordFetch(db: Db, sourceId: string, runId: number, run: { found
     WHERE id = ${sourceId}`;
   await db`UPDATE fetch_runs SET status = 'failed', finished_at = now(), found_count = ${run.found}, new_count = ${run.created},
               error = ${run.error}, detail = nullif(coalesce(detail,'{}'::jsonb) || coalesce(${detail}::jsonb,'{}'::jsonb),'{}'::jsonb) WHERE id = ${runId}`;
+}
+
+/**
+ * The browser session rests (its quota is spent, or X refused a search): the account was not read and
+ * nothing about it failed. The round is skipped and the account stays due; its health and its failure
+ * count do not move, so one account's turn does not become another's failure.
+ */
+async function recordThrottled(db: Db, sourceId: string, runId: number, message: string, detail: object | null): Promise<void> {
+  const note = db.json(detail as never);
+  await db`UPDATE sources SET last_fetch_at = now(), next_fetch_at = now() + interval '10 minutes', updated_at = now()
+    WHERE id = ${sourceId} AND health IN ('ok', 'degraded', 'unknown')`;
+  await db`UPDATE fetch_runs SET status = 'skipped', finished_at = now(), error = ${message},
+    detail = nullif(coalesce(${note}::jsonb,'{}'::jsonb) || jsonb_build_object('throttled', true),'{}'::jsonb) WHERE id = ${runId}`;
 }
 
 class StaleSourceError extends Error {
@@ -427,12 +444,12 @@ export async function collectSource(sourceId: string, opts: { force?: boolean; x
       candidates = x.candidates;
       paidReceiptIds = x.receiptIds;
       coverageUnverified = x.coverageUnverified;
-      if (!coverageUnverified) {
-        if (x.lastId && !(nextCursor.lastTweetId && BigInt(String(nextCursor.lastTweetId)) > BigInt(x.lastId))) nextCursor.lastTweetId = x.lastId;
-        // A search longer than one run keeps its position for the next runs (shown in the admin).
-        if (x.backlog.length) nextCursor.xBacklog = x.backlog;
-        else delete nextCursor.xBacklog;
-      }
+      // The watermark moves when the read covered the stretch since it; the browser's read moves it only
+      // then. The coverage note stays, so the site keeps saying that completeness is unproven.
+      if (x.lastId && !(nextCursor.lastTweetId && BigInt(String(nextCursor.lastTweetId)) > BigInt(x.lastId))) nextCursor.lastTweetId = x.lastId;
+      // A search longer than one run keeps its position for the next runs (shown in the admin).
+      if (x.backlog.length) nextCursor.xBacklog = x.backlog;
+      else delete nextCursor.xBacklog;
       detail = { pages: x.pages, truncated: x.truncated, coverageUnverified, backlog: x.backlog.length, backlogPages: x.backlogPages, dropped: x.dropped };
     }
     found = candidates.length;
@@ -537,6 +554,7 @@ export async function collectSource(sourceId: string, opts: { force?: boolean; x
     }
 
     if (firstImport) nextCursor.initializedAt = new Date().toISOString();
+    // The time of a complete read: a partial one must not claim the window was covered.
     if (!coverageError) nextCursor.lastOkAt = new Date().toISOString();
     await sql.begin(async (tx) => {
       if (source.kind === "x_search" || source.config.pagination) await lockSourceCursor(tx, source);
@@ -544,12 +562,17 @@ export async function collectSource(sourceId: string, opts: { force?: boolean; x
       for (const receiptId of paidReceiptIds) await completeReceipt(tx, receiptId);
     });
     return coverageError
-      ? { sourceId, status: "failed", found, created, revised, error: coverageError }
+      ? { sourceId, status: "ok", found, created, revised, note: coverageError }
       : { sourceId, status: "ok", found, created, revised };
   } catch (error) {
     if (shutdownSignal.signal.aborted) throw error;
     const message = String(error instanceof Error ? error.message : error).slice(0, 1000);
     const rateLimited = (error instanceof HttpStatusError || error instanceof ProviderRejectedError) && error.status === 429;
+    if (error instanceof BrowserXThrottleError) {
+      // The shared session rests; this account is not at fault and did not fail.
+      await recordThrottled(sql, sourceId, run!.id, message, null);
+      return { sourceId, status: "skipped", found, created, revised, error: message };
+    }
     if (error instanceof StaleSourceError) {
       await sql`UPDATE fetch_runs SET status = 'failed', finished_at = now(), found_count = ${found}, new_count = ${created}, error = ${message} WHERE id = ${run!.id}`;
     } else {
@@ -691,7 +714,8 @@ async function scheduleXShards(): Promise<number> {
     if (!shard.sourceIds.some((id) => due.has(id))) continue;
     const sent = await sql.begin(async (tx) => {
       const id = await enqueue(QUEUES.fetchXShard, { key: shard.key, sourceIds: shard.sourceIds }, { singletonKey: shard.key }, tx);
-      if (id) await tx`UPDATE sources SET next_fetch_at = now() + interval '10 minutes' WHERE id IN ${sql(shard.sourceIds)}`;
+      if (id) await tx`UPDATE sources SET next_fetch_at = now() + make_interval(mins => CASE WHEN config->'_aihot'->>'fast' = 'true' THEN 1 ELSE interval_minutes END)
+        WHERE id IN ${sql(shard.sourceIds)}`;
       return id;
     });
     if (sent) enqueued += 1;

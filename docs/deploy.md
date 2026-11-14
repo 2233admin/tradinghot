@@ -28,7 +28,7 @@ docker compose up -d --build
 
 启动后打开 `http://服务器地址:3000`，后台在 `/admin`，用管理员密码登录。第一次启动会导入示范信源，一两分钟后开始出现内容；第一次导入的一百多条资料大约半小时处理完（每条都要预筛、评分、结构化、写标题摘要，再归组）。
 
-`docker compose` 会起五个容器：`db`（PostgreSQL 17）、`setup`（每次启动先跑数据库迁移和种子数据，然后退出）、`api`、`worker`（抓取、模型处理、定时任务）、`web`（网页）。`web` 只接收网站地址、API 地址等网页配置，通过 HTTP 读取 API；数据库、模型和管理员密钥，以及数据卷，只交给后端容器。
+`docker compose` 会起六个容器：`db`（PostgreSQL 17）、`setup`（每次启动先跑数据库迁移和种子数据，然后退出）、`api`、`worker`（抓取、模型处理、定时任务）、`newsnow`（NewsNow 适配器自托管服务）、`web`（网页）。`web` 只接收网站地址、API 地址等网页配置，通过 HTTP 读取 API；数据库、模型和管理员密钥，以及数据卷，只交给后端容器。`newsnow` 不碰数据库也不拿密钥：它只负责读各个站点，把读到的内容和读的时间交给 `api` 和 `worker`；它读不到某个站点时，`worker` 记下失败原因，站点页面照常可用。
 
 ### 在中国大陆的服务器上
 
@@ -260,6 +260,19 @@ docker compose logs -f --tail 100 api worker web
 
 后台的“运行”页能看到每个定时任务最近的结果，“信源”页能看到每个信源的抓取状况。
 
+### 读浏览器里才有的正文（BrowserMCP 桥）
+
+有些页面的正文只有浏览器渲染出来才有：东方财富股吧的单条帖子、集思录的正文、Truth Social 的官方接口。信源配置里写 `"bodyVia": "browsermcp"` 后，worker 会请本机的浏览器读这些页面，而不是直接抓 HTML。
+
+桥是一个只读的小服务，跑在宿主机上（容器够不到宿主机，只能读挂进来的套接字）：
+
+```bash
+BROWSERMCP_BRIDGE_SOCKET=$HOME/.local/state/tradinghot/browsermcp/bridge.sock \
+  node scripts/browsermcp-bridge.mjs
+```
+
+它只接受三种请求：论坛单帖的正文、社区列表、Truth Social 官方账号的接口；其他地址一律拒绝。套接字目录必须私有（0700，属于运行服务的用户）。worker 侧把同一个目录挂进容器并设 `BROWSERMCP_BRIDGE_SOCKET`，浏览器扩展（BrowserMCP）要装在真正装浏览器的机器上并保持登录状态。桥不可用时该信源这一轮读不到正文，资料仍以标题入库，正文标为未确认。
+
 ### 管理员会话与配置变更
 
 会话绑定登录方式、登录时的管理员凭据或飞书身份。修改管理员密码、飞书管理员名单或会话密钥后，应重启所有 API 进程，使它们加载相同的新配置；只编辑配置文件不代表正在运行的进程已生效，混用旧代码或旧配置的进程不能提供统一撤权。
@@ -307,8 +320,11 @@ npm run build -w @aihot/web
 
 NODE_ENV=production node --env-file=.env apps/api/src/main.ts          # 接口，3001 端口
 NODE_ENV=production node --env-file=.env apps/worker/src/main.ts       # 后台任务
+NODE_ENV=production node modules/newsnow/service.ts                    # NewsNow 适配器服务，3002 端口
 cd apps/web && NODE_ENV=production node --env-file=../../.env server.ts   # 网页，3000 端口
 ```
+
+NewsNow 适配器服务是一个单独的进程：`api` 和 `worker` 通过 `NEWSNOW_BASE_URL` 读它（默认 `http://127.0.0.1:3002`，docker compose 里已经指向 `newsnow` 容器）。不启动它，站点照常可用，只是 `worker` 读不到 NewsNow 的信源，后台的「信源」里也会记下失败原因。
 
 三个进程都要带 `NODE_ENV=production`。api 和 worker 不带它就按开发环境运行：启动时不检查生产密钥和管理员密码，`DEV_AUTH_ROLE` 免登录也会生效。
 

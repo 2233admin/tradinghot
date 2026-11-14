@@ -619,6 +619,7 @@
         "authorSelector": ".username .fs16-bold",
         "publishedAtSelector": ".fs13-ash",
         "publishedAtUtcOffset": "+08:00",
+        "bodyVia": "browsermcp",
         "channel": "forum",
         "allowUrlPrefixes": ["https://www.jiuyangongshe.com/a/"],
         "_aihot": {
@@ -791,6 +792,7 @@
         "linkSelector": "h4 a",
         "titleSelector": "h4 a",
         "publishedAtUtcOffset": "+08:00",
+        "bodyVia": "browsermcp",
         "channel": "forum",
         "allowUrlPrefixes": ["https://www.jisilu.cn/question/"],
         "detail": {
@@ -1490,6 +1492,7 @@
         "authorSelector": "cite.aut a",
         "publishedAtSelector": "cite.date",
         "publishedAtUtcOffset": "+08:00",
+        "bodyVia": "browsermcp",
         "channel": "forum",
         "allowUrlPrefixes": ["https://guba.eastmoney.com/news,"],
         "_aihot": { "initialBackfillLimit": 30, "fast": true }
@@ -1499,6 +1502,678 @@
       "interval_minutes": 30,
       "tags": ["股吧", "A股"],
       "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-10jqka-news",
+      "name": "同花顺 · 要闻",
+      "kind": "web_list",
+      "config": {
+        "url": "https://news.10jqka.com.cn/gdxw_list/index.shtml",
+        "parseMode": "html",
+        "itemSelector": ".list-con > ul > li",
+        "linkSelector": ".arc-title a",
+        "titleSelector": ".arc-title a",
+        "summarySelector": ".arc-cont",
+        "publishedAtSelector": ".arc-title span",
+        "publishedAtUtcOffset": "+08:00",
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["财经", "A股"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-thepaper-hot",
+      "name": "澎湃新闻 · 热点要闻",
+      "kind": "json_list",
+      "config": {
+        "url": "https://api.thepaper.cn/contentapi/wwwIndex/rightSidebar",
+        "mode": "json_api",
+        "headers": {
+          "accept": "application/json",
+          "referer": "https://www.thepaper.cn/"
+        },
+        "itemsPath": "data.hotNews",
+        "titlePaths": ["name"],
+        "publishedAtPath": "pubTimeLong",
+        "publishedAtUnit": "epoch_ms",
+        "externalIdPath": "contId",
+        "urlTemplate": "https://www.thepaper.cn/newsDetail_forward_{raw:contId}",
+        "_aihot": {
+          "initialBackfillLimit": 20
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["媒体"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-ifeng-finance",
+      "name": "凤凰网财经 · 要闻",
+      "kind": "json_list",
+      "config": {
+        "url": "https://finance.ifeng.com/",
+        "mode": "html_window_var",
+        "windowVar": "allData",
+        "itemsPath": "newsData",
+        "titlePaths": ["title"],
+        "publishedAtPath": "newsTime",
+        "publishedAtUtcOffset": "+08:00",
+        "externalIdPath": "base62Id",
+        "urlTemplate": "{raw:url}",
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["媒体", "财经"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-tencent-724",
+      "name": "腾讯新闻 · 7×24 快讯",
+      "kind": "json_list",
+      "config": {
+        "url": "https://i.news.qq.com/web_backend/v2/getTagInfo?tagId=aUSrwbpch2A%3D",
+        "mode": "json_api",
+        "headers": {
+          "accept": "application/json",
+          "referer": "https://news.qq.com/"
+        },
+        "itemsPath": "data.tabs.0.articleList",
+        "titlePaths": ["title", "desc"],
+        "summaryPaths": ["desc"],
+        "authorPaths": ["media_info.chl_name"],
+        "publishedAtPath": "publish_time",
+        "publishedAtUtcOffset": "+08:00",
+        "externalIdPath": "id",
+        "urlTemplate": "{raw:link_info.url}",
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 10,
+      "tags": ["快讯", "宏观"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-zaobao-realtime",
+      "name": "联合早报 · 实时",
+      "kind": "web_list",
+      "config": {
+        "url": "https://www.zaobao.com.sg/realtime",
+        "parseMode": "html",
+        "itemSelector": "ul.card-listing > li",
+        "linkSelector": "a[href^='/news/']",
+        "titleSelector": "h2.card-header",
+        "allowUrlPrefixes": ["https://www.zaobao.com.sg/news/"],
+        "publishedAtUtcOffset": "+08:00",
+        "detail": {
+          "maxFetches": 20,
+          "publishedAtRegex": "\"datePublished\":\"([^\"]+)\"",
+          "publishedAtAuthoritative": true
+        },
+        "_aihot": {
+          "initialBackfillLimit": 20
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["媒体", "亚洲"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-cankaoxiaoxi",
+      "name": "参考消息 · 中国",
+      "kind": "json_list",
+      "config": {
+        "url": "http://china.cankaoxiaoxi.com/json/channel/zhongguo/list.json",
+        "mode": "json_api",
+        "headers": {
+          "accept": "application/json",
+          "referer": "http://china.cankaoxiaoxi.com/"
+        },
+        "itemsPath": "list",
+        "titlePaths": ["data.title"],
+        "summaryPaths": ["data.description"],
+        "publishedAtPath": "data.publishTime",
+        "publishedAtUtcOffset": "+08:00",
+        "externalIdPath": "data.id",
+        "urlTemplate": "{raw:data.url}",
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["媒体"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-fund-eastmoney-news",
+      "name": "天天基金 · 基金要闻",
+      "kind": "web_list",
+      "config": {
+        "url": "https://fund.eastmoney.com/a/cjjyw.html",
+        "parseMode": "html",
+        "itemSelector": ".infos ul > li",
+        "linkSelector": "a",
+        "titleSelector": "a",
+        "publishedAtSelector": "span",
+        "publishedAtUtcOffset": "+08:00",
+        "allowUrlPrefixes": ["https://fund.eastmoney.com/a/"],
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["财经", "A股"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-eastmoney-news",
+      "name": "东方财富 · 财经要闻",
+      "kind": "json_list",
+      "config": {
+        "url": "https://np-listapi.eastmoney.com/comm/web/getNewsByColumns?client=web&biz=web_news_col&column=350&order=1&needInteractData=0&page_index=1&page_size=25&req_trace=1",
+        "mode": "json_api",
+        "headers": {
+          "accept": "application/json",
+          "referer": "https://finance.eastmoney.com/"
+        },
+        "itemsPath": "data.list",
+        "titlePaths": ["title"],
+        "summaryPaths": ["summary"],
+        "authorPaths": ["mediaName"],
+        "publishedAtPath": "showTime",
+        "publishedAtUtcOffset": "+08:00",
+        "externalIdPath": "code",
+        "urlTemplate": "{raw:uniqueUrl}",
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["财经", "A股"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-fastbull-news",
+      "name": "法布财经 · 要闻",
+      "kind": "web_list",
+      "config": {
+        "url": "https://www.fastbull.com/cn/news",
+        "parseMode": "html",
+        "itemSelector": "a.trending_type",
+        "linkSelector": "a.trending_type",
+        "titleSelector": "h4.title",
+        "summarySelector": "p.brief",
+        "publishedAtSelector": "span.new_time",
+        "publishedAtAttribute": "data-date",
+        "allowUrlPrefixes": ["https://www.fastbull.com/cn/news-detail/"],
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["财经", "媒体"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-bilibili-popular",
+      "name": "哔哩哔哩 · 热门视频",
+      "kind": "json_list",
+      "config": {
+        "url": "https://api.bilibili.com/x/web-interface/popular?ps=30&pn=1",
+        "mode": "json_api",
+        "headers": {
+          "accept": "application/json",
+          "referer": "https://www.bilibili.com/",
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+        },
+        "itemsPath": "data.list",
+        "titlePaths": ["title"],
+        "summaryPaths": ["desc"],
+        "authorPaths": ["owner.name"],
+        "publishedAtPath": "pubdate",
+        "publishedAtUnit": "epoch_s",
+        "externalIdPath": "bvid",
+        "urlTemplate": "https://www.bilibili.com/video/{raw:bvid}",
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "hot_signal",
+      "interval_minutes": 60,
+      "tags": ["社区"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-v2ex-topics",
+      "name": "V2EX · 最新主题",
+      "kind": "json_list",
+      "config": {
+        "url": "https://www.v2ex.com/api/topics/latest.json",
+        "mode": "json_api",
+        "titlePaths": ["title"],
+        "summaryPaths": ["content"],
+        "authorPaths": ["member.username"],
+        "publishedAtPath": "created",
+        "publishedAtUnit": "epoch_s",
+        "externalIdPath": "id",
+        "urlTemplate": "{raw:url}",
+        "channel": "forum",
+        "_aihot": {
+          "initialBackfillLimit": 30
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["论坛", "科技"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "intl-mktnews-flash",
+      "name": "MKTNews · 快讯",
+      "kind": "json_list",
+      "config": {
+        "url": "https://api.mktnews.net/api/flash?type=0&limit=50",
+        "mode": "json_api",
+        "headers": {
+          "accept": "application/json",
+          "referer": "https://mktnews.net/"
+        },
+        "itemsPath": "data",
+        "titlePaths": ["data.title", "data.content"],
+        "summaryPaths": ["data.content"],
+        "publishedAtPath": "time",
+        "externalIdPath": "id",
+        "urlTemplate": "https://mktnews.net/flashDetail.html?id={raw:id}",
+        "_aihot": {
+          "initialBackfillLimit": 50
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 10,
+      "tags": ["快讯", "宏观"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-aibase-news",
+      "name": "AIbase · 快讯",
+      "kind": "json_list",
+      "config": {
+        "url": "https://www.aibase.com/zh/news",
+        "mode": "html_json_key",
+        "jsonKey": "initialArticles",
+        "itemsPath": "initialArticles",
+        "titlePaths": ["title"],
+        "summaryPaths": ["description"],
+        "publishedAtPath": "addtime",
+        "publishedAtUtcOffset": "+08:00",
+        "externalIdPath": "Id",
+        "urlTemplate": "https://www.aibase.com/zh/news/{raw:Id}",
+        "_aihot": {
+          "initialBackfillLimit": 20
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": ["科技", "AI"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-readhub",
+      "name": "Readhub",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://readhub.cn/rss",
+        "_aihot": {
+          "initialBackfillLimit": 20
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": ["科技"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-ithome",
+      "name": "IT之家",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://www.ithome.com/rss/",
+        "_aihot": {
+          "initialBackfillLimit": 20
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": ["科技"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-solidot",
+      "name": "Solidot",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://www.solidot.org/index.rss",
+        "_aihot": {
+          "initialBackfillLimit": 20
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": ["科技"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-sspai",
+      "name": "少数派",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://sspai.com/feed",
+        "_aihot": {
+          "initialBackfillLimit": 10
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": ["科技", "社区"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-kaopu",
+      "name": "靠谱新闻",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://kaopunews.com/feed.xml",
+        "_aihot": {
+          "initialBackfillLimit": 20
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": ["媒体", "快讯"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-hackernews",
+      "name": "Hacker News · 第三方 RSS",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://hnrss.org/frontpage?count=30",
+        "channel": "forum",
+        "_aihot": {
+          "initialBackfillLimit": 20
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": ["论坛", "科技"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-yahoo-finance",
+      "name": "雅虎财经 · 市场",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://feeds.finance.yahoo.com/rss/2.0/headline?s=^GSPC&region=US&lang=en-US",
+        "_aihot": {
+          "initialBackfillLimit": 15
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": ["媒体", "财经"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-wsj-markets",
+      "name": "华尔街日报 · 市场",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://feeds.content.dowjones.io/public/rss/RSSMarketsMain",
+        "_aihot": {
+          "initialBackfillLimit": 20
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": ["媒体", "财经"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-bloomberg-markets",
+      "name": "彭博社 · 市场",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://www.bloomberg.com/feeds/markets/news.rss",
+        "_aihot": {
+          "initialBackfillLimit": 15
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": ["媒体", "财经"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-financialjuice",
+      "name": "FinancialJuice",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://www.financialjuice.com/feed.ashx?xy=rss",
+        "headers": {
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36"
+        },
+        "_aihot": {
+          "initialBackfillLimit": 15
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 15,
+      "tags": ["媒体", "快讯"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-finbold",
+      "name": "Finbold",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://finbold.com/feed/",
+        "_aihot": {
+          "initialBackfillLimit": 10
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 180,
+      "tags": ["媒体", "财经"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "cn-kaipanla-news",
+      "name": "开盘啦 · 最新资讯",
+      "kind": "web_list",
+      "config": {
+        "url": "https://www.kaipanla.com/latest-news/1",
+        "parseMode": "html",
+        "itemSelector": "a.article-item",
+        "linkSelector": "a.article-item",
+        "titleSelector": ".title",
+        "publishedAtSelector": ".create-time",
+        "publishedAtUtcOffset": "+08:00",
+        "allowUrlPrefixes": ["https://www.kaipanla.com/article/"],
+        "detail": {
+          "maxFetches": 20,
+          "publishedAtSelector": ".create-time",
+          "publishedAtAuthoritative": true
+        },
+        "_aihot": { "initialBackfillLimit": 20 }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 15,
+      "tags": ["A股", "资讯"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "web-finviz-news",
+      "name": "Finviz · 新闻聚合",
+      "kind": "web_list",
+      "config": {
+        "url": "https://finviz.com/news.ashx",
+        "parseMode": "html",
+        "itemSelector": "tr.news_table-row",
+        "linkSelector": ".news_link-cell a",
+        "titleSelector": ".news_link-cell a",
+        "publishedAtSelector": "td.news_date-cell",
+        "publishedAtUtcOffset": "America/New_York",
+        "_aihot": { "initialBackfillLimit": 30 }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 15,
+      "tags": ["财经", "新闻聚合"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "web-reuters-finviz",
+      "name": "路透社 · Finviz 聚合",
+      "kind": "web_list",
+      "config": {
+        "url": "https://finviz.com/news.ashx",
+        "parseMode": "html",
+        "itemSelector": "tr.news_table-row",
+        "linkSelector": ".news_link-cell a",
+        "titleSelector": ".news_link-cell a",
+        "publishedAtSelector": "td.news_date-cell",
+        "publishedAtUtcOffset": "America/New_York",
+        "allowUrlPrefixes": ["https://www.reuters.com/", "https://reuters.com/"],
+        "_aihot": { "initialBackfillLimit": 20 }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 15,
+      "tags": ["财经", "第三方聚合"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "web-barrons-markets",
+      "name": "Barron's · 市场页面",
+      "kind": "web_list",
+      "config": {
+        "url": "https://www.barrons.com/market-data",
+        "adapter": "barrons_market",
+        "allowUrlPrefixes": ["https://www.barrons.com/articles/"],
+        "_aihot": { "initialBackfillLimit": 10 }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": ["财经", "市场"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "rss-thestreet-google",
+      "name": "TheStreet · Google News 聚合",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://news.google.com/rss/search?q=site%3Athestreet.com%20when%3A7d&hl=en-US&gl=US&ceid=US%3Aen",
+        "_aihot": { "initialBackfillLimit": 30 }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 15,
+      "tags": ["财经", "第三方聚合"],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "truthsocial-donald-trump",
+      "name": "Truth Social：Donald Trump (@realDonaldTrump)",
+      "kind": "json_list",
+      "config": {
+        "url": "https://truthsocial.com/api/v1/accounts/107780257626128497/statuses",
+        "mode": "truth_social",
+        "truthSocial": {
+          "account": "realDonaldTrump",
+          "accountId": "107780257626128497",
+          "pages": 2
+        },
+        "externalIdPath": "id",
+        "_aihot": {
+          "initialBackfillLimit": 20,
+          "fast": true
+        }
+      },
+      "tier": "T2",
+      "participation_mode": "editorial",
+      "interval_minutes": 1,
+      "tags": ["Truth Social", "官方"],
+      "site_fulltext": true,
       "syndicate_fulltext": false
     }
   ]

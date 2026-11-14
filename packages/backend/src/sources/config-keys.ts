@@ -5,10 +5,10 @@ import type { SourceRow } from "./types.ts";
 
 // Rules applied in collect.ts to every kind read through collectSource.
 const PUBLISHER = ["publisherRole", "publisherUrlPrefixes", "publisherRequiresDiscovery"];
-const COLLECTED = [...PUBLISHER, "_aihot", "allowUrlPrefixes", "denyUrlPrefixes", "ingestNoiseFilter", "itemUrlPrefixRewrite", "sortByPublishedAt", "detail", "fetchPublicContent", "publishedAfter", "acceptLanguage", "via", "profile", "session", "channel"];
+const COLLECTED = [...PUBLISHER, "_aihot", "allowUrlPrefixes", "denyUrlPrefixes", "ingestNoiseFilter", "itemUrlPrefixRewrite", "sortByPublishedAt", "detail", "fetchPublicContent", "publishedAfter", "acceptLanguage", "via", "bodyVia", "profile", "session", "channel"];
 
 const KEYS: Record<SourceRow["kind"], string[]> = {
-  rss: [...COLLECTED, "feedUrl", "summaryIsBody", "preserveUrlFragment", "allowCategories", "denyCategories", "publishedAtUtcOffset"],
+  rss: [...COLLECTED, "feedUrl", "headers", "summaryIsBody", "preserveUrlFragment", "allowCategories", "denyCategories", "publishedAtUtcOffset"],
   web_list: [
     ...COLLECTED, "url", "baseUrl", "parseMode", "adapter", "cacheToleranceSeconds", "linksStartLine", "preserveUrlFragment",
     "itemSelector", "linkSelector", "titleSelector", "summarySelector", "authorSelector", "publishedAtSelector", "publishedAtAttribute", "publishedAtRegex", "publishedAtUtcOffset",
@@ -16,13 +16,22 @@ const KEYS: Record<SourceRow["kind"], string[]> = {
   json_list: [
     ...COLLECTED, "url", "mode", "method", "headers", "bodyJson", "bodyForm", "jsonKey", "windowVar", "itemsPath", "itemsObjectValues",
     "titlePaths", "summaryPaths", "summaryTemplate", "summaryIsBody", "authorPaths", "publishedAtPath", "publishedAtUnit", "publishedAtUtcOffset", "externalIdPath",
-    "urlTemplate", "urlTemplateFallback", "rawDropKeys", "requireBoolean", "minNumeric", "pagination",
+    "urlTemplate", "urlTemplateFallback", "rawDropKeys", "requireBoolean", "minNumeric", "pagination", "truthSocial",
   ],
   // X accounts are mostly read in shards, which apply only these.
   x_search: [...PUBLISHER, "_aihot", "ingestNoiseFilter", "itemUrlPrefixRewrite", "query", "searchType", "channel"],
   mp_account: [...PUBLISHER, "wxid", "ghid", "nickname"],
-  external: [...PUBLISHER],
+  // An external source is fed by a collector: which one, and which of the collector's sources.
+  external: [...PUBLISHER, "collector", "collectorId"],
 };
+
+// The generic JSON mapping: how a plain JSON listing is read into posts. Truth Social's own adapter
+// reads the platform's posts itself, so a config that also carries these keys would be half ignored.
+const GENERIC_JSON_KEYS = [
+  "jsonKey", "windowVar", "itemsPath", "itemsObjectValues", "titlePaths", "summaryPaths", "summaryTemplate", "summaryIsBody",
+  "authorPaths", "publishedAtPath", "publishedAtUnit", "publishedAtUtcOffset", "urlTemplate", "urlTemplateFallback",
+  "requireBoolean", "minNumeric", "bodyJson", "bodyForm", "method", "pagination",
+];
 
 // Objects with fixed keys (headers and bodyJson are request data, free-form).
 const NESTED: Record<string, string[]> = {
@@ -31,6 +40,8 @@ const NESTED: Record<string, string[]> = {
   itemUrlPrefixRewrite: ["from", "to"],
   requireBoolean: ["path", "equals"],
   minNumeric: ["path", "min"],
+  // Truth Social: the account read, and the window one run reads (pages of the platform's listing).
+  truthSocial: ["account", "accountId", "pages"],
   detail: [
     "maxFetches", "publishedAtSelector", "publishedAtRegex", "publishedAtUtcOffset", "publishedAtAuthoritative", "upgradeDatePrecision",
     "titleSelector", "titleRegex", "titleAuthoritative", "summarySelector", "preserve", "bodyUrlSuffix",
@@ -47,9 +58,10 @@ const preserveRules = (value: unknown) => Array.isArray(value) && value.every((r
 
 const VALUES: Record<string, string[]> = {
   publisherRole: ["organization", "person"],
-  adapter: ["mimo_home"],
+  adapter: ["mimo_home", "barrons_market"],
   parseMode: ["html", "markdown", "docusaurus_changelog", "markdown_changelog", "intercom_changelog"],
   via: ["opencli"],
+  bodyVia: ["browsermcp"],
 };
 
 // An Accept-Language value: language ranges with optional weights, e.g. "en-US,en;q=0.9".
@@ -86,11 +98,20 @@ export function unsupportedConfig(kind: SourceRow["kind"], config: Record<string
       if (typeof v !== "string") return false;
       try { const u = new URL(v); return /^https?:$/.test(u.protocol) && !u.username && !u.password && !u.search && !u.hash; } catch { return false; }
     }))) out.push(key);
+    else if (key === "mode" && value === "truth_social") {
+      // The Truth Social adapter reads the platform's posts itself; the generic mapping would be ignored.
+      for (const name of GENERIC_JSON_KEYS) if (name in config) out.push(name);
+    }
     else if (VALUES[key] && !VALUES[key]!.includes(String(value))) out.push(`${key}=${String(value)}`);
     else if (NESTED[key] && value && typeof value === "object") {
       if (key === "_aihot" && "fast" in value && typeof value.fast !== "boolean") out.push("_aihot.fast");
       for (const sub of Object.keys(value)) if (!NESTED[key]!.includes(sub)) out.push(`${key}.${sub}`);
       if (key === "detail" && "preserve" in value && !preserveRules((value as { preserve: unknown }).preserve)) out.push("detail.preserve");
+      if (key === "truthSocial") {
+        if ("account" in value && (typeof value.account !== "string" || !value.account.trim())) out.push("truthSocial.account");
+        if ("accountId" in value && (typeof value.accountId !== "string" || !/^\d+$/.test(value.accountId))) out.push("truthSocial.accountId");
+        if ("pages" in value && (typeof value.pages !== "number" || !Number.isSafeInteger(value.pages) || value.pages < 1 || value.pages > 3)) out.push("truthSocial.pages");
+      }
     }
   }
   return out;

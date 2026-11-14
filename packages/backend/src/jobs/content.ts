@@ -10,6 +10,7 @@ import { extractArticleBody, pageFetchable } from "../content/extract.ts";
 import { analyzeArticle } from "../editorial/analyze.ts";
 import { isHistorical } from "../content/materials.ts";
 import { publishArticle } from "../publication/publish.ts";
+import { BrowserMcpUnavailable } from "../providers/browsermcp.ts";
 import { BudgetExceededError, failedReceiptId, failureKind } from "../providers/receipts.ts";
 import { readsWhole } from "../sources/uses.ts";
 import { enqueue, QUEUES, shutdownSignal, work } from "./queue.ts";
@@ -30,6 +31,8 @@ interface Route {
   /** Not an editorial source: no analysis; the post goes straight to event grouping as discussion evidence. */
   signal: boolean;
   historical: boolean;
+  browserBody: boolean;
+  browserPriority: number;
 }
 
 /**
@@ -52,7 +55,8 @@ async function route(articleId: string, db: Db): Promise<Route | null> {
   const wantsBody = row.config.fetchPublicContent === true || !!row.config.detail || row.kind === "web_list";
   const needsPage = whole && pageFetchable(row.url, row.kind) && (wantsBody || row.bare);
   const needsXArticle = row.kind === "x_search" && (whole || (row.participation_mode === "hot_signal" && !historical));
-  return { step: pending && (needsPage || needsXArticle) ? "extract" : "analyze", signal, historical };
+  return { step: pending && (needsPage || needsXArticle) ? "extract" : "analyze", signal, historical,
+    browserBody: row.config.bodyVia === "browsermcp", browserPriority: Math.floor(row.discovered_at.getTime() / 60_000) };
 }
 
 /**
@@ -83,7 +87,8 @@ export async function queueProcessing(articleId: string, opts: { step?: Step; at
   if (!queued) return null;
   // Extraction and the sweep only carry articleId; retain the current evaluation's paid identity.
   const attemptTag = queued.processing_attempt_tag ?? undefined;
-  if (step === "extract") return enqueue(QUEUES.extractBody, { articleId }, { singletonKey: articleId, priority: r.historical ? PRIORITY.history : PRIORITY.live }, opts.db);
+  if (step === "extract") return enqueue(r.browserBody ? QUEUES.extractBrowserBody : QUEUES.extractBody, { articleId },
+    { singletonKey: articleId, priority: r.browserBody ? r.browserPriority : r.historical ? PRIORITY.history : PRIORITY.live }, opts.db);
   if (r.signal && !attemptTag) {
     return enqueue(QUEUES.group, { articleId, signalOnly: true }, { singletonKey: articleId, priority: groupingPriority(r) }, opts.db);
   }
@@ -213,36 +218,46 @@ export async function registerContentJobs(boss: PgBoss) {
  * Body extraction before analysis. Failures are retried a few times; after that the article is judged
  * on the excerpt it has ("unconfirmed" body, never a wrong one).
  */
-export async function registerExtractionJobs(boss: PgBoss) {
-  await work(boss, QUEUES.extractBody, { localConcurrency: 4, pollingIntervalSeconds: 2 }, async ({ articleId }) => {
-    const [input] = await sql<{ revision: number }[]>`SELECT revision FROM articles WHERE id = ${articleId}`;
-    if (!input) return { state: "missing" };
-    try {
-      const state = await extractArticleBody(articleId);
-      // Extraction's failures do not count against the analysis that follows (a new revision starts over anyway).
-      if (state !== "skipped") await sql`UPDATE articles SET processing_attempts = 0, processing_retry_at = NULL WHERE id = ${articleId} AND revision = ${input.revision}`;
-      // A newer revision may still need a body after this task's result was discarded.
-      await queueProcessing(articleId);
-      return { state };
-    } catch (error) {
-      // A deploy is not the article's failure: pg-boss retries this job after the restart, as for analysis.
-      if (shutdownSignal.signal.aborted) throw error;
-      const message = String(error instanceof Error ? error.message : error).slice(0, 500);
-      const [a] = await sql<{ processing_attempts: number }[]>`
-        UPDATE articles SET processing_attempts = processing_attempts + 1, processing_error = ${`extract: ${message}`},
-          processing_queued_at = NULL, processing_retry_at = now() + interval '10 minutes'
-        WHERE id = ${articleId} AND revision = ${input.revision} AND body_status <> 'ok' RETURNING processing_attempts`;
-      if (!a) {
-        await queueProcessing(articleId);
-        return { state: "skipped" };
-      }
-      if (a.processing_attempts < MAX_EXTRACT_FAILURES) return { state: "retrying" };
-      await sql`UPDATE articles SET body_status = 'unconfirmed', processing_attempts = 0, processing_retry_at = NULL
-        WHERE id = ${articleId} AND revision = ${input.revision} AND body_status = 'pending'`;
-      await queueProcessing(articleId);
-      return { state: "unconfirmed" };
+export async function processExtraction({ articleId }: { articleId: string }) {
+  const [input] = await sql<{ revision: number }[]>`SELECT revision FROM articles WHERE id = ${articleId}`;
+  if (!input) return { state: "missing" };
+  try {
+    const state = await extractArticleBody(articleId);
+    // Extraction's failures do not count against the analysis that follows (a new revision starts over anyway).
+    if (state !== "skipped") await sql`UPDATE articles SET processing_attempts = 0, processing_retry_at = NULL WHERE id = ${articleId} AND revision = ${input.revision}`;
+    // A newer revision may still need a body after this task's result was discarded.
+    await queueProcessing(articleId);
+    return { state };
+  } catch (error) {
+    // A deploy is not the article's failure: pg-boss retries this job after the restart, as for analysis.
+    if (shutdownSignal.signal.aborted) throw error;
+    if (error instanceof BrowserMcpUnavailable) {
+      const waiting = await sql`UPDATE articles SET processing_state = 'new', processing_error = 'extract: browser reader unavailable',
+        processing_queued_at = NULL, processing_retry_at = now() + interval '1 minute'
+        WHERE id = ${articleId} AND revision = ${input.revision} AND body_status <> 'ok' RETURNING id`;
+      if (!waiting.length) await queueProcessing(articleId);
+      return { state: waiting.length ? "waiting" : "skipped" };
     }
-  });
+    const message = String(error instanceof Error ? error.message : error).slice(0, 500);
+    const [a] = await sql<{ processing_attempts: number }[]>`
+      UPDATE articles SET processing_attempts = processing_attempts + 1, processing_error = ${`extract: ${message}`},
+        processing_queued_at = NULL, processing_retry_at = now() + interval '10 minutes'
+      WHERE id = ${articleId} AND revision = ${input.revision} AND body_status <> 'ok' RETURNING processing_attempts`;
+    if (!a) {
+      await queueProcessing(articleId);
+      return { state: "skipped" };
+    }
+    if (a.processing_attempts < MAX_EXTRACT_FAILURES) return { state: "retrying" };
+    await sql`UPDATE articles SET body_status = 'unconfirmed', processing_attempts = 0, processing_retry_at = NULL
+      WHERE id = ${articleId} AND revision = ${input.revision} AND body_status = 'pending'`;
+    await queueProcessing(articleId);
+    return { state: "unconfirmed" };
+  }
+}
+
+export async function registerExtractionJobs(boss: PgBoss) {
+  await work(boss, QUEUES.extractBody, { localConcurrency: 4, pollingIntervalSeconds: 2 }, processExtraction);
+  await work(boss, QUEUES.extractBrowserBody, { localConcurrency: 2, pollingIntervalSeconds: 2 }, processExtraction);
 }
 
 /**

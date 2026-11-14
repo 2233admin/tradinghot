@@ -29,6 +29,7 @@ interface ArticleRow {
   backfill: boolean;
   body_status: string;
   body_text: string | null;
+  verified_forum_body: boolean;
   x_post: XPostData | null;
   x_article: { text?: string } | null;
   grouped_at: Date | null;
@@ -240,9 +241,10 @@ export async function republishTx(tx: Tx, articleId: string, options: PublishOpt
 
 export async function publishArticleTx(tx: Tx, articleId: string, options: PublishOptions = {}): Promise<PublishResult | null> {
   const [article] = await tx<ArticleRow[]>`
-    SELECT id, source_id, url, title, language, published_at, discovered_at, timeline_at, backfill, body_status,
-           body_text, x_post, x_article, grouped_at, grouping_status, selection_adds_value
-    FROM articles WHERE id = ${articleId} FOR UPDATE`;
+    SELECT a.id, a.source_id, a.url, a.title, a.language, a.published_at, a.discovered_at, a.timeline_at, a.backfill, a.body_status,
+           a.body_text, a.x_post, a.x_article, a.grouped_at, a.grouping_status, a.selection_adds_value,
+           EXISTS (SELECT 1 FROM verified_forum_bodies v WHERE v.article_id = a.id AND v.body_hash = md5(a.body_text)) AS verified_forum_body
+    FROM articles a WHERE a.id = ${articleId} FOR UPDATE`;
   if (!article) return null;
   // Explicit imports carry an already-public editorial decision, not a new pending judgement.
   if (options.releasedAt && article.grouping_status === "pending") {
@@ -286,10 +288,12 @@ export async function publishArticleTx(tx: Tx, articleId: string, options: Publi
   const judgedSelected = typeof f.selected === "boolean" ? (f.selected as boolean) : analysis?.selected ?? null;
   // Material from an isolated source reaches no public surface at all: not even a detail page.
   const visibility = source.participation_mode === "isolated" ? "withdrawn" : (override?.visibility ?? "public");
+  const channel = channelOf(source, !!article.x_post);
 
   // An undated archive has a readable detail page, but its discovery is not a news timestamp.
   // Explicit imports can retain an editorial decision already published elsewhere.
-  const eligible = isPoolEligible({ participationMode: source.participation_mode, relevance, title, summary, originalPost: !!original })
+  const eligible = isPoolEligible({ participationMode: source.participation_mode, relevance, title, summary,
+    originalPost: !!original || (channel === "forum" && article.body_status === "ok" && article.verified_forum_body) })
     && (!article.backfill || article.published_at !== null || !!options.releasedAt);
   const selectionCandidate = isSelectable(eligible, judgedSelected, source.tier);
   // Scoring nominates a report; a completed identity/value decision admits it to selection.
@@ -300,7 +304,6 @@ export async function publishArticleTx(tx: Tx, articleId: string, options: Publi
     && (f.selected === true || article.selection_adds_value !== false);
   const reason = selected ? pickString(f.reason, original ? null : analysis?.reason_zh ?? null) : null;
   const hasXPost = !!article.x_post;
-  const channel = channelOf(source, hasXPost);
   const hasBody = !!article.body_text || !!article.x_post?.text || !!article.x_post?.media?.length || !!article.x_post?.quoted?.text;
   const bodyMode = bodyModeOf(source, article.body_status, hasBody);
   const syndicate = mayRedistribute(source, bodyMode);

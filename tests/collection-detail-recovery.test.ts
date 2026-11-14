@@ -397,12 +397,15 @@ test("fast JSON pagination treats a nonempty final allowed page as unverified co
   jsonPages.set(third, { items: [] });
   try {
     const result = await collectSource(id);
-    assert.equal(result.status, "failed");
-    assert.match(result.error ?? "", /page limit; coverage is unverified/);
-    const [run] = await sql<{ status: string; error: string; detail: { paginationLimited: boolean } }[]>`
+    // The source answered and its pages were stored; what it cannot prove is that it answered for the
+    // whole window, so the round succeeds with a note instead of failing.
+    assert.equal(result.status, "ok");
+    assert.match(result.note ?? "", /page limit; coverage is unverified/);
+    const [run] = await sql<{ status: string; error: string | null; detail: { paginationLimited: boolean; coverageNote?: string } }[]>`
       SELECT status,error,detail FROM fetch_runs WHERE source_id = ${id} ORDER BY id DESC LIMIT 1`;
-    assert.equal(run!.status, "failed");
-    assert.match(run!.error, /page limit; coverage is unverified/);
+    assert.equal(run!.status, "ok");
+    assert.equal(run!.error, null);
+    assert.match(run!.detail.coverageNote ?? "", /page limit; coverage is unverified/);
     assert.equal(run!.detail.paginationLimited, true);
     assert.deepEqual([jsonReads.get(first), jsonReads.get(second), jsonReads.get(third) ?? 0], [1, 1, 0]);
     const cached = await sql<{ payload: { title: string } }[]>`

@@ -148,7 +148,7 @@ export async function fetchRss(source: SourceRow, opts: { force?: boolean } = {}
   // Config changes can alter parsing/filtering even when the upstream bytes did not change.
   const configHash = sha256(stableJson(source.config));
   const previous = !opts.force && source.cursor?.rss?.configHash === configHash ? source.cursor.rss as RssValidator : null;
-  const plain = { accept: "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8", ...languageHeaders(source.config.acceptLanguage) };
+  const plain = { accept: "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8", ...languageHeaders(source.config.acceptLanguage), ...source.config.headers };
   const headers: Record<string, string> = { ...plain };
   if (previous?.etag) headers["if-none-match"] = previous.etag;
   if (previous?.lastModified) headers["if-modified-since"] = previous.lastModified;

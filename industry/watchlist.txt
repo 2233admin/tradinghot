@@ -14,3 +14,66 @@
 # https://discord.com/channels/111111111111111111/222222222222222222 某财经社区·快讯 !fast
 # https://feeds.a.dj.com/rss/RSSMarketsMain.xml WSJ Markets
 # https://www.example.com/markets/ 某财经站
+
+# 要盯的 X 账号（每分钟检查一次）。这里只写账号本身，不写未经证实的身份或收益说法；
+# 显示名就是账号名，读者看到的原文和译文一律来自 X 本身。
+@aleabitoreddit !fast
+@leopoldasch !fast
+@xiaozhaolucky !fast
+@xiaomustock !fast
+@darrencao2024 !fast
+@TrendSpider !fast
+@asklivermore !fast
+@thestockwhale !fast
+@traderstewie !fast
+@TheTechInvest !fast
+@SuperLuckeee !fast
+@amitisinvesting !fast
+@memekiller365 !fast
+@jukan05 !fast
+@sinus84 !fast
+@guo_lin99725 !fast
+@pdicarlotrader !fast
+@hanking66 !fast
+@semianalysis_ !fast
+@cherrypayment !fast
+@jasonzx !fast
+@paradislabs !fast
+@biancoresearch !fast
+@michaeljmcnair !fast
+@balder13946731 !fast
+@spaceinvestor_d !fast
+@stockmktnewz !fast
+@preetkailon !fast
+@pelositracker !fast
+@fundaai !fast
+@sergeycyw !fast
+@rocky_bitcoin !fast
+@artofspecuycky !fast
+@nft_hu !fast
+@kovainvest !fast
+@dariocpx !fast
+@qinbafrank !fast
+@dacefupan !fast
+@paurooteri !fast
+@kotlinerbtc !fast
+@labubu_trader !fast
+@flyingwhale919 !fast
+@shanghaojin !fast
+@tj_research !fast
+@TraderS18 !fast
+@financelancelot !fast
+@sean_________ !fast
+@CathieDWood !fast
+@KobeissiLetter !fast
+@WOLF_Financial !fast
+@QuiverQuant !fast
+@Barchart !fast
+@Mr_Derivatives !fast
+@Banana3Stocks !fast
+@StockSavvyShay !fast
+@TheLongInvest !fast
+@MrMikeInvesting !fast
+@JesseCohenInv !fast
+@MapleStax !fast
+@DataDInvesting !fast

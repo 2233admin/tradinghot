@@ -236,6 +236,11 @@ test("a month and a day without a year is the most recent such moment", () => {
     // A moment already past belongs to this year, in the source's offset.
     assert.equal(iso("11-13 16:37"), new Date("2026-11-13T08:37:00.000Z").toISOString());
     assert.equal(iso("01-05 10:00"), new Date("2026-01-05T02:00:00.000Z").toISOString());
+    // 同花顺 prints the same date with Chinese month/day separators.
+    assert.equal(iso("11月13日 16:37"), new Date("2026-11-13T08:37:00.000Z").toISOString());
+    assert.equal(iso("12月25日 10:00"), new Date("2025-12-25T02:00:00.000Z").toISOString());
+    assert.equal(iso("11月13日 16:37", "-07:00"), new Date("2026-11-13T23:37:00.000Z").toISOString());
+    assert.equal(iso("11月32日 16:37"), null);
     // A day still ahead of now belongs to the year before.
     assert.equal(iso("12-25 10:00"), new Date("2025-12-25T02:00:00.000Z").toISOString());
     // Tonight, a few hours ahead, still belongs to this year.
@@ -246,6 +251,51 @@ test("a month and a day without a year is the most recent such moment", () => {
     for (const v of ["11-13", "13-13 10:00", "11-32 10:00", "11-13 25:00", "11-13 10:61"]) {
       assert.equal(iso(v), null, v);
     }
+  } finally {
+    Date.now = real;
+  }
+});
+
+test("a listing that prints only the time of day is the most recent such moment", () => {
+  // Finviz prints the hour of a news item on the day it ran ("07:08PM"), in New York time.
+  const now = new Date("2026-11-14T00:30:00.000Z");
+  const real = Date.now;
+  Date.now = () => now.getTime();
+  try {
+    assert.equal(iso("07:08PM", "America/New_York"), new Date("2026-11-14T00:08:00.000Z").toISOString());
+    assert.equal(iso("7:08 PM", "America/New_York"), new Date("2026-11-14T00:08:00.000Z").toISOString());
+    // An hour still ahead of now belongs to the day before: 23:30 had not happened on Nov 13 yet.
+    assert.equal(iso("11:30PM", "America/New_York"), new Date("2026-11-13T04:30:00.000Z").toISOString());
+    // A time inside other text is no date.
+    for (const v of ["at 07:08PM", "25:00PM", "07:61PM", "07:08PM in the morning"]) {
+      assert.equal(iso(v, "America/New_York"), null, v);
+    }
+  } finally {
+    Date.now = real;
+  }
+});
+
+test("a named zone keeps its own daylight-saving rule", () => {
+  assert.equal(iso("2026-07-04 12:00", "America/New_York"), new Date("2026-07-04T16:00:00.000Z").toISOString());
+  assert.equal(iso("2026-01-04 12:00", "America/New_York"), new Date("2026-01-04T17:00:00.000Z").toISOString());
+  assert.equal(iso("2026-07-04 12:00", "-04:00"), new Date("2026-07-04T16:00:00.000Z").toISOString());
+  assert.equal(iso("2026-07-04", "America/New_York"), new Date("2026-07-04T04:00:00.000Z").toISOString());
+  assert.equal(readPublicationDate("2026-07-04", "America/New_York").publicationTime, "2026-07-04");
+});
+
+test("a month and a day in words, without a year, is the most recent such day", () => {
+  const now = new Date("2026-11-14T02:00:00.000Z");
+  const real = Date.now;
+  Date.now = () => now.getTime();
+  try {
+    assert.equal(iso("Nov-12", "America/New_York"), new Date("2026-11-12T05:00:00.000Z").toISOString());
+    assert.equal(iso("Nov 12", "America/New_York"), new Date("2026-11-12T05:00:00.000Z").toISOString());
+    assert.equal(iso("Nov. 12", "America/New_York"), new Date("2026-11-12T05:00:00.000Z").toISOString());
+    // A day still ahead of now belongs to the year before.
+    assert.equal(iso("Dec-25", "America/New_York"), new Date("2025-12-25T05:00:00.000Z").toISOString());
+    assert.equal(readPublicationDate("Nov-12", "America/New_York").publicationTime, "2026-11-12");
+    // An impossible day is no date.
+    assert.equal(iso("Nov-32", "America/New_York"), null);
   } finally {
     Date.now = real;
   }

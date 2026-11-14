@@ -2,5 +2,6 @@
 import type { ServerModule } from "@aihot/backend/modules";
 import crowding from "@aihot/crowding/server";
 import movers from "@aihot/movers/server";
+import newsnow from "@aihot/newsnow/server";
 
-export const SERVER_MODULES: readonly ServerModule[] = [crowding, movers];
+export const SERVER_MODULES: readonly ServerModule[] = [crowding, movers, newsnow];

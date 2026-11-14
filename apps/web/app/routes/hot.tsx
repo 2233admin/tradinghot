@@ -282,6 +282,12 @@ export default function HotPage() {
           </p>
         )}
       </header>
+      <nav aria-label="来源看板" className="mb-4 border-y border-line-soft">
+        <IntentLink to="/topics" className="flex min-h-11 items-center justify-between gap-3 py-2 text-[13px] text-ink-2 hover:text-accent">
+          <span>来源看板 <span className="ml-2 text-ink-4">查看各平台热榜与最新动态</span></span>
+          <span aria-hidden="true">→</span>
+        </IntentLink>
+      </nav>
 
       {!lead ? (
         <div className="card rounded-sheet">

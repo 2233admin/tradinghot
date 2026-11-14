@@ -1,0 +1,17 @@
+{
+  "name": "@aihot/newsnow",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./module.ts",
+    "./types": "./types.ts",
+    "./server": "./server.ts",
+    "./service": "./service.ts"
+  },
+  "dependencies": {
+    "@aihot/backend": "*",
+    "@aihot/contracts": "*",
+    "cheerio": "1.2.0",
+    "fast-xml-parser": "5.11.1"
+  }
+}

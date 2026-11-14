@@ -7,6 +7,8 @@ and logo for your site.
 This repository also contains third-party material under its own terms:
 
 - assets/og-fonts/: Noto Sans SC, SIL Open Font License 1.1 (assets/og-fonts/LICENSE).
+- modules/newsnow/upstream/: the NewsNow source adapters, MIT (modules/newsnow/upstream/LICENSE).
+  See modules/newsnow/upstream/NOTICE for the upstream commit and what the port changed.
 
 The demo sources in industry/sources.json are public feeds of their publishers. Their content belongs
 to them; by default the site shows only a summary and a link to the original.

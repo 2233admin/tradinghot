@@ -1,0 +1,57 @@
+{
+  "schema": "design-pipeline.workflow-state.v1",
+  "deliverable": "ui",
+  "tier": "quick",
+  "mode": "replicate",
+  "director": "openai-codex/gpt-6.1-terra",
+  "assistedBy": "omp openai-codex/gpt-6.1-terra",
+  "decisions": {
+    "extractions": [
+      {
+        "verdict": "accept",
+        "inputs": {
+          "DESIGN.md": "sha256:d60ef1cf7a67a44e03dff48a9be41dac9c65a4305f6eb0b36b751a5fc5a0107e",
+          "MOTION.md": "sha256:fb2e0bbb54db18f7d7dbad82ff1714087a00c1e21bc2fee451433cb074cd050a",
+          "reference.md": "sha256:aee35c93a7271552ec44140c070dc9a450b1cad167a461b79c55a8f4915b4c4e",
+          "reference-evidence.json": "sha256:8beb6a24355d7a8ed2be82022188a0efa1b6b6ad210f68631d468a503e3f8ff1"
+        },
+        "note": "主题内容 现在的主题是空壳，替换成来源卡片，",
+        "at": "2026-11-13T23:46:28.219Z",
+        "by": "owner"
+      }
+    ],
+    "roles": [
+      {
+        "stage": "extract",
+        "by": "owner",
+        "verdict": "accept",
+        "answer": "主题内容 现在的主题是空壳，替换成来源卡片，",
+        "at": "2026-11-13T23:46:28.220Z"
+      }
+    ]
+  },
+  "gates": {},
+  "rules": [],
+  "createdAt": "2026-11-13T23:28:14.170Z",
+  "delegation": {
+    "reference": {
+      "to": "agent",
+      "set": "default"
+    },
+    "extract": {
+      "to": "owner",
+      "locked": true,
+      "set": "default"
+    },
+    "deliver": {
+      "to": "agent",
+      "set": "default"
+    },
+    "review": {
+      "to": "owner",
+      "locked": true,
+      "set": "default"
+    }
+  },
+  "updatedAt": "2026-11-13T23:46:28.220Z"
+}

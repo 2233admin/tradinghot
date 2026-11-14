@@ -396,7 +396,9 @@ console.log(JSON.stringify((JSON.parse(process.env.X_TEST_ROWS)[query] ?? []).sl
     for (const [i, id] of ids.entries()) await sql`INSERT INTO sources (id, name, kind, config, tier, participation_mode, cursor)
       VALUES (${id}, ${handles[i]!}, 'x_search', ${sql.json({ query: queries[i]!, searchType: "Latest" })}, 'T1', 'editorial', ${sql.json(cursors[i]!)})`;
     const result = await collectXShard(`browser-${T}`, ids);
-    assert.deepEqual([result.status, result.found, result.created], ["failed", 61, 61]);
+    // The browser read its accounts; what it cannot prove is that it read the whole window, so the
+    // round succeeds with a note instead of failing.
+    assert.deepEqual([result.status, result.found, result.created], ["ok", 61, 61]);
     assert.deepEqual(readFileSync(log, "utf8").trim().split("\n").map((line) => JSON.parse(line)).sort(), [...queries].sort());
     const sources = await sql<{ cursor: unknown }[]>`SELECT cursor FROM sources WHERE id IN ${sql(ids)} ORDER BY id`;
     assert.deepEqual(sources.map((source) => source.cursor), cursors);
@@ -411,9 +413,10 @@ console.log(JSON.stringify((JSON.parse(process.env.X_TEST_ROWS)[query] ?? []).sl
     const second = row(400, handle);
     process.env.X_TEST_ROWS = JSON.stringify({ [query]: initial });
     const firstResult = await collectSource(id);
-    assert.deepEqual([firstResult.status, firstResult.created], ["failed", 40]);
+    assert.deepEqual([firstResult.status, firstResult.created], ["ok", 40]);
+    assert.match(firstResult.note ?? "", /coverage is unverified/);
     process.env.X_TEST_ROWS = JSON.stringify({ [query]: [second, ...initial] });
-    assert.equal((await collectSource(id)).status, "failed");
+    assert.equal((await collectSource(id)).status, "ok");
     const articles = await sql<{ identity_key: string; backfill: boolean }[]>`
       SELECT identity_key, backfill FROM articles WHERE source_id = ${id} ORDER BY identity_key`;
     assert.equal(articles.filter((article) => article.backfill).length, 40);
@@ -421,7 +424,8 @@ console.log(JSON.stringify((JSON.parse(process.env.X_TEST_ROWS)[query] ?? []).sl
     const [initialized] = await sql<{ cursor: { initializedAt?: string; lastTweetId?: string }; minutes: number }[]>`
       SELECT cursor, round(extract(epoch FROM next_fetch_at - now()) / 60)::int AS minutes FROM sources WHERE id = ${id}`;
     assert.ok(initialized!.cursor.initializedAt);
-    assert.equal(initialized!.cursor.lastTweetId, undefined);
+    // A first read has no stretch to miss, so the watermark starts at the newest post it saw.
+    assert.equal(initialized!.cursor.lastTweetId, second.id);
     assert.equal(initialized!.minutes, 1);
   } finally {
     for (const key of keys) {

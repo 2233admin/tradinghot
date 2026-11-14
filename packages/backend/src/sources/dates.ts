@@ -21,14 +21,58 @@ function calendarDay(y: string | number, mo: string | number, d: string | number
 function atOffset(y: string | number, mo: string | number, d: string | number, h: string | number, mi: string | number, s: string | number, utcOffset: string): Date | null {
   if (!calendarDay(y, mo, d) || Number(h) > 23 || Number(mi) > 59 || Number(s) > 59) return null;
   const p = (n: string | number) => String(n).padStart(2, "0");
+  if (isZoneName(utcOffset)) {
+    // A named zone (America/New_York) keeps its own daylight-saving rule, so the wall-clock time
+    // is turned into an instant with the zone's offset at that moment.
+    try {
+      const wall = Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi), Number(s));
+      const first = wall - zoneOffsetMinutes(utcOffset, new Date(wall)) * 60000;
+      const second = wall - zoneOffsetMinutes(utcOffset, new Date(first)) * 60000;
+      const at = new Date(second);
+      return Number.isFinite(at.getTime()) ? at : null;
+    } catch {
+      return null;
+    }
+  }
   const t = Date.parse(`${y}-${p(mo)}-${p(d)}T${p(h)}:${p(mi)}:${p(s)}${utcOffset}`);
   return Number.isFinite(t) ? new Date(t) : null;
 }
 
 const DAY_MS = 86400000;
 
+/** True when the offset names a time zone (America/New_York) instead of a fixed offset (-05:00). */
+function isZoneName(utcOffset: string): boolean {
+  return !/^[+-]\d{2}:?\d{2}$/.test(utcOffset) && utcOffset !== "Z" && utcOffset !== "UTC";
+}
+
+/** A named zone's offset from UTC at that moment, in minutes (east of Greenwich is positive). */
+function zoneOffsetMinutes(zone: string, at: Date): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: zone, hour12: false,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  }).formatToParts(at);
+  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+  const wall = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour") % 24, get("minute"), get("second"));
+  return Math.round((wall - at.getTime()) / 60000);
+}
+
+/** The calendar day before the one named, as the same year, month and day. */
+function dayBefore(y: number, mo: number, d: number): { y: number; mo: number; d: number } {
+  const previous = new Date(Date.UTC(y, mo - 1, d) - DAY_MS);
+  return { y: previous.getUTCFullYear(), mo: previous.getUTCMonth() + 1, d: previous.getUTCDate() };
+}
+
 /** The current moment in a source's own offset: its year, month, day, hour and minute. */
 function nowInOffset(utcOffset: string, now = new Date(Date.now())): { y: number; mo: number; d: number; h: number; mi: number } {
+  if (isZoneName(utcOffset)) {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: utcOffset, hour12: false,
+      year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+    }).formatToParts(now);
+    const get = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+    return { y: get("year"), mo: get("month"), d: get("day"), h: get("hour") % 24, mi: get("minute") };
+  }
   const m = /^([+-])(\d{2}):?(\d{2})$/.exec(utcOffset);
   const minutes = m ? (m[1] === "-" ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3])) : -now.getTimezoneOffset();
   const t = new Date(now.getTime() + minutes * 60000);
@@ -47,16 +91,48 @@ export function parseLooseDate(value: string | null | undefined, utcOffset = "+0
   if (!v) return null;
   const compact = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/.exec(v);
   if (compact) return atOffset(compact[1]!, compact[2]!, compact[3]!, compact[4]!, compact[5]!, compact[6]!, utcOffset);
-  // "11-13 16:37": a month and a day without a year, the way a forum prints a post's time. It means the
-  // most recent such moment: a day still ahead of now belongs to the year before.
-  const monthDay = /^(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(v);
+  // A month and day without a year means the most recent such moment, including Chinese list dates.
+  const monthDay = /^(?:(\d{1,2})-(\d{1,2})|(\d{1,2})月(\d{1,2})日)[ T](\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(v);
   if (monthDay) {
-    const mo = Number(monthDay[1]), day = Number(monthDay[2]), hour = Number(monthDay[3]), minute = Number(monthDay[4]), second = Number(monthDay[5] ?? 0);
+    const mo = Number(monthDay[1] ?? monthDay[3]), day = Number(monthDay[2] ?? monthDay[4]), hour = Number(monthDay[5]), minute = Number(monthDay[6]), second = Number(monthDay[7] ?? 0);
     const now = nowInOffset(utcOffset);
     const thisYear = atOffset(now.y, mo, day, hour, minute, second, utcOffset);
     if (!thisYear) return null;
     const reference = atOffset(now.y, now.mo, now.d, now.h, now.mi, 0, utcOffset) ?? new Date();
     if (thisYear.getTime() - reference.getTime() > DAY_MS) return atOffset(now.y - 1, mo, day, hour, minute, second, utcOffset);
+    return thisYear;
+  }
+  // A listing that prints only the time of day ("07:08PM") means the most recent such moment:
+  // today at that time, or yesterday when today's moment has not come yet.
+  const clock = /^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AP]M)?$/i.exec(v);
+  if (clock) {
+    const meridiem = clock[4]?.toUpperCase();
+    let hour = Number(clock[1]);
+    if (meridiem) {
+      if (hour < 1 || hour > 12) return null;
+      hour = hour % 12 + (meridiem === "PM" ? 12 : 0);
+    } else if (hour > 23) return null;
+    const minute = Number(clock[2]), second = Number(clock[3] ?? 0);
+    const now = nowInOffset(utcOffset);
+    const today = atOffset(now.y, now.mo, now.d, hour, minute, second, utcOffset);
+    if (!today) return null;
+    if (today.getTime() - Date.now() > 60_000) {
+      const before = dayBefore(now.y, now.mo, now.d);
+      return atOffset(before.y, before.mo, before.d, hour, minute, second, utcOffset);
+    }
+    return today;
+  }
+  // A month and a day without a year ("Nov-12", "Nov 12") means the most recent such day.
+  const namedDay = /^([a-z]{3,9})\.?[-/\s](\d{1,2})$/i.exec(v);
+  if (namedDay) {
+    const month = Date.parse(`${namedDay[1]!.slice(0, 3)} 1, 2000 00:00:00 GMT`);
+    if (!Number.isFinite(month)) return null;
+    const mo = new Date(month).getUTCMonth() + 1, day = Number(namedDay[2]);
+    const now = nowInOffset(utcOffset);
+    const thisYear = atOffset(now.y, mo, day, 0, 0, 0, utcOffset);
+    if (!thisYear) return null;
+    const reference = atOffset(now.y, now.mo, now.d, 0, 0, 0, utcOffset) ?? new Date();
+    if (thisYear.getTime() - reference.getTime() > DAY_MS) return atOffset(now.y - 1, mo, day, 0, 0, 0, utcOffset);
     return thisYear;
   }
   const yearFirst = /(\d{4})[-/.年](\d{1,2})[-/.月](\d{1,2})日?(?:(?:T|\s*)(\d{1,2}):(\d{2})(?::(\d{2}))?)?/.exec(v);
@@ -122,6 +198,13 @@ const DAYS_BACK: Record<string, number> = { 今天: 0, 昨天: 1, 前天: 2, yes
 
 /** The calendar day `at` falls on in the given offset, as YYYY-MM-DD. */
 function dayAt(at: Date, utcOffset: string): string {
+  if (isZoneName(utcOffset)) {
+    try {
+      return new Intl.DateTimeFormat("en-CA", { timeZone: utcOffset, year: "numeric", month: "2-digit", day: "2-digit" }).format(at);
+    } catch {
+      return at.toISOString().slice(0, 10);
+    }
+  }
   const offsetMs = Date.UTC(2000, 0, 1) - atOffset(2000, 1, 1, 0, 0, 0, utcOffset)!.getTime();
   return new Date(at.getTime() + offsetMs).toISOString().slice(0, 10);
 }

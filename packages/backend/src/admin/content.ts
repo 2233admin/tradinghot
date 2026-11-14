@@ -389,7 +389,7 @@ async function refreshPresentation(id: string, options: Pick<AdminRerun, "previe
     if (entry?.bodyHtml && entry.bodyText) got = { html: entry.bodyHtml, text: entry.bodyText, images: entry.media ?? [] };
   }
   if (!got && pageFetchable(a.url, a.kind)) {
-    const page = await extractFromUrl(a.url, `article:${id}`, pageRules(a.config), { paidFallback: false });
+    const page = await extractFromUrl(a.url, `article:${id}`, pageRules(a.config, a.source_id), { paidFallback: false });
     // Match normal extraction: the publisher's existing cover has precedence over body images.
     if (page) got = { ...page, images: a.media.length ? a.media : page.images };
   }

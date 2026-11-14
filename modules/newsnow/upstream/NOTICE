@@ -1,0 +1,40 @@
+NewsNow
+Copyright (c) 2024 ourongxing (https://github.com/newsnext/newsnow, from https://github.com/ourongxing/newsnow)
+The code in sources/ and registry.json is licensed under the MIT License (LICENSE in this folder).
+
+Vendored on 2026-11-14 from
+  https://github.com/newsnext/newsnow @ 5da836c49c327f2c352216c5cbb4dea1abd9fcd3
+  (server/sources/** -> sources/, shared/sources.json -> registry.json)
+
+What the port changed, and why:
+
+- The Nuxt build injected defineSource, myFetch, $fetch, rss2json, parseRelativeDate,
+  tranformToUTC, md5, myCrypto and encodeBase64 into every adapter file. They live in runtime.ts
+  now, and each adapter imports the ones it uses. Other changes are listed below.
+- Requests use the existing guarded HTTP boundary (../fetch.ts): DNS and redirects are checked,
+  response size and total time are bounded, and credentials do not cross origins.
+- The dates are read by the engine's own readers (@aihot/backend/sources/dates) instead of dayjs:
+  a relative date ("3 minutes ago", "yesterday 15:46") and a calendar date in the source's own
+  offset are read the same way on every host. The three adapters that used dayjs directly
+  (_36kr.ts, qqvideo.ts, producthunt.ts) use the engine's Beijing date and the zone helper in
+  ../../dates.ts instead.
+- zaobao.ts decoded its GB2312 page with iconv-lite; Node's own TextDecoder does the same.
+- weibo.ts carried another person's session cookie (a hardcoded SUB= value). The hot list is
+  published as JSON for every reader (weibo.com/ajax/side/hotSearch), so the adapter reads that; the
+  words are the same the page prints. No credential of any person is in this folder.
+- aihot.ts read the public instance's feed with a reader id in the query; the id is gone.
+- A body that is JSON but is sent as plain text is read as JSON: some sites (Bilibili's hot words)
+  answer that way, and the adapters expect the object.
+- Steam's player ranking no longer labels the read time as publication time. V2EX and RSS use the
+  original publication time rather than the modification time; an unknown time stays unknown.
+- kuaishou.ts requests the HTML with a browser-compatible user agent; its endpoint otherwise
+  returns a JSON response instead of the page the upstream parser expects.
+- linuxdo.ts can read its public lists through this site's restricted BrowserMCP bridge when
+  configured; otherwise it keeps the upstream JSON request. No browser cookies leave the host.
+- Upstream's defineRSSHubSource (server/utils/source.ts) is not here: no adapter uses it, and it
+  would add a dependency on a third party's public RSSHub instance.
+
+Six adapters are not in upstream's registry (ghxi, smzdm, linuxdo, linuxdo-latest, linuxdo-hot,
+pcbeta-windows): their names and addresses are in ../registry.ts, so they can be read and shown like
+the others. Direct Linux DO requests can return 403; the optional browser bridge reads the public
+lists instead. The Windows board can return a challenge page; failures remain visible to the reader.

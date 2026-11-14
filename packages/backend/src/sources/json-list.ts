@@ -6,6 +6,7 @@ import { fetchListing } from "./listing-fetch.ts";
 import { browserJson } from "../providers/browser.ts";
 import { collapseWhitespace, stripTags } from "../lib/text.ts";
 import { readPublicationDate, type PublicationDate } from "./dates.ts";
+import { fetchTruthSocialStatuses } from "./truthsocial.ts";
 import { FetchError, type Candidate, type SourceRow } from "./types.ts";
 
 export function getPath(obj: unknown, path: string): unknown {
@@ -233,6 +234,9 @@ export async function fetchJsonList(source: SourceRow, opts: {
   onLimit?: () => void;
   onPageError?: (error: unknown) => void;
 } = {}): Promise<Candidate[]> {
+  // Truth Social's posts have a shape of their own (their own text, their media, their edits): read by
+  // its own adapter, which knows the platform's listing and its posts' own fields.
+  if (source.config.mode === "truth_social") return fetchTruthSocialStatuses(source, opts);
   const pagination = source.config.pagination;
   if (!pagination) return fetchJsonPage(source, String(source.config.url ?? ""));
   const url = new URL(String(source.config.url ?? ""));

@@ -70,6 +70,7 @@ const pages: Record<string, () => string> = {
   "/en/post": () => article("Improved token efficiency", "Agents now finish longer runs with fewer tokens. ".repeat(8)),
   "/zh/post": () => article("提升 token 效率", "智能体现在能用更少的 token 完成更长的运行。".repeat(12)),
   "/en/feed.xml": () => `<rss version="2.0"><channel><item><title>Improved token efficiency</title><link>${site}/en/post</link><pubDate>Wed, 23 Sep 2026 12:00:00 GMT</pubDate></item></channel></rss>`,
+  "/needs-user-agent.xml": () => pages["/en/feed.xml"]!(),
   // liquid.ai/blog/lfm3 was 8.7 MB: the framework inlines the whole page payload again as script.
   "/large/post": () => article("LFM3", `Benchmarks for the new models. ${"Each row compares the same task. ".repeat(12)}</p><table><tr><th>Benchmark</th><th>LFM3</th></tr><tr><td><p>LiveClaw</p></td><td><p>45.60</p></td></tr></table><p>`)
     .replace("</body>", `<script>${"x".repeat(9 * 1024 * 1024)}</script></body>`),
@@ -82,6 +83,10 @@ const languages: Array<{ path: string; language: string | undefined }> = [];
 const server = http.createServer((req, res) => {
   const path = req.url ?? "";
   languages.push({ path, language: req.headers["accept-language"] });
+  if (path === "/needs-user-agent.xml" && !req.headers["user-agent"]?.includes("Chrome/")) {
+    res.writeHead(429);
+    return res.end();
+  }
   if (path === "/en/post" && /^zh/.test(req.headers["accept-language"] ?? "")) {
     res.writeHead(307, { location: "/zh/post" });
     return res.end();
@@ -180,6 +185,15 @@ test("a listing that links other articles in its teasers takes only the links th
     "How Ed Sheeran's U.S. tour went off the rails in 3 weeks",
   ]);
   assert.equal(fromMarkdown(md, "https://example.org", source({ ...config, linksStartLine: undefined })).length, 5, "without the option prose links count");
+});
+
+test("an RSS source's request headers reach a feed that requires them", async () => {
+  const feedUrl = `${site}/needs-user-agent.xml`;
+  await assert.rejects(fetchRss(source({ feedUrl })), /429/);
+  const config = { feedUrl, headers: { "user-agent": "Mozilla/5.0 Chrome/155.0.0.0 Safari/537.36" } };
+  assert.deepEqual(unsupportedConfig("rss", config), []);
+  const result = await fetchRss(source(config));
+  assert.equal(result.candidates[0]?.title, "Improved token efficiency");
 });
 
 test("feed text that only teases the article is a summary: the page is fetched before judging", async () => {

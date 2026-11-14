@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import { after, test } from "node:test";
 import { config } from "@aihot/backend/config";
-import { fetchDetail, fromHtml } from "@aihot/backend/sources/web-list";
+import { fetchDetail, fromBarronsMarket, fromHtml } from "@aihot/backend/sources/web-list";
 
 const html = `<html><head><meta name="date" content="2026-09-11T19:58:33Z"></head><body>` +
   `<article><a href="/post">A real article</a><span title="Unix: 1789171113866">Sep 11, 2026</span></article></body></html>`;
@@ -57,4 +57,51 @@ test("generic detail metadata does not promote modified or unlabelled time eleme
   }
   const published = await fetchDetail(base + "/published", source, { date: true, title: false, summary: false });
   assert.equal(published.publishedAt?.toISOString(), "2020-02-15T00:00:00.000Z");
+});
+
+// Barron's market-data page: the headlines are in the HTML, but the moment each article was published
+// is only in the page's own state (window.__STATE__), where every article carries its headline, its
+// summary, its byline and the epoch it was published at.
+const barronsPage = (state: string) => `<!doctype html><html><head><title>Market Data</title></head><body>
+<h2 class="headline"><a href="https://www.barrons.com/articles/costco-an-ai-shelter-182f8c30">Costco: An AI Shelter?</a></h2>
+<div class="timestamp"></div>
+<script>
+      window.__STATE__ = ${state};
+    </script></body></html>`;
+
+const barronsSource = (config: Record<string, unknown> = {}) => ({
+  id: "web-barrons-markets",
+  kind: "web_list",
+  config: { url: "https://www.barrons.com/market-data", adapter: "barrons_market", allowUrlPrefixes: ["https://www.barrons.com/articles/"], ...config },
+}) as never;
+
+test("an article's own state carries its time, its summary and its byline", () => {
+  const items = fromBarronsMarket(barronsPage(JSON.stringify({
+    data: { rows: [{ type: "article", data: {
+      headline: "Costco: An AI Shelter?",
+      summary: "The big-box retailer could be a good defensive stock.",
+      byline: "By George Glover",
+      timestamp: 1794601200000,
+      url: "https://www.barrons.com/articles/costco-an-ai-shelter-182f8c30",
+    } }] },
+  })), "https://www.barrons.com/market-data", barronsSource());
+  assert.equal(items.length, 1);
+  assert.equal(items[0]!.title, "Costco: An AI Shelter?");
+  assert.equal(items[0]!.url, "https://www.barrons.com/articles/costco-an-ai-shelter-182f8c30");
+  assert.equal(items[0]!.publishedAt?.toISOString(), "2026-11-13T20:20:00.000Z");
+  assert.equal(items[0]!.publicationTime, "2026-11-13T20:20:00.000Z");
+  assert.equal(items[0]!.excerpt, "The big-box retailer could be a good defensive stock.");
+  assert.equal(items[0]!.author, "George Glover");
+});
+
+test("the same article twice in the page is one article, and another site's article is not this source's", () => {
+  const article = { type: "article", data: { headline: "Costco: An AI Shelter?", timestamp: 1794601200000, url: "https://www.barrons.com/articles/costco-an-ai-shelter-182f8c30" } };
+  const other = { type: "article", data: { headline: "Another site", timestamp: 1794601200000, url: "https://www.example.com/articles/other" } };
+  assert.equal(fromBarronsMarket(barronsPage(JSON.stringify({ a: [article], b: [article] })), "https://www.barrons.com/market-data", barronsSource()).length, 1);
+  assert.equal(fromBarronsMarket(barronsPage(JSON.stringify({ rows: [other] })), "https://www.barrons.com/market-data", barronsSource()).length, 0);
+});
+
+test("a page without a readable state fails the fetch instead of listing nothing", () => {
+  assert.throws(() => fromBarronsMarket("<html><body>no state here</body></html>", "https://www.barrons.com/market-data", barronsSource()), /barrons_market/);
+  assert.throws(() => fromBarronsMarket(barronsPage("{oops;"), "https://www.barrons.com/market-data", barronsSource()), /barrons_market/);
 });

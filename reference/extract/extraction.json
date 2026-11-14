@@ -1,0 +1,383 @@
+{
+  "schema": "design-pipeline.reference-extraction.v1",
+  "targetId": "newsnow-busiyi-world",
+  "url": "https://newsnow.busiyi.world/",
+  "finalUrl": "https://newsnow.busiyi.world/",
+  "httpStatus": 200,
+  "capturedAt": "2026-11-13T22:56:47.201Z",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "browser": {
+    "executable": "/usr/bin/chromium",
+    "version": "Chrome/155.0.8059.84"
+  },
+  "fontStatus": "loaded",
+  "elementsMeasured": 719,
+  "elementLimitReached": false,
+  "overlaysDismissed": [],
+  "uncoveredShare": 0.341,
+  "method": {
+    "clusterDeltaE2000": 15,
+    "nearMergeDeltaE2000": 3,
+    "dominantShare": 0.25,
+    "accentShare": 0.05,
+    "saturatedFloor": 0.5,
+    "sizeClusterPx": 0.5
+  },
+  "palette": {
+    "background": [
+      {
+        "hex": "#2a2a2b",
+        "share": 0.5327,
+        "tier": "dominant",
+        "count": 137,
+        "weight": 177.65,
+        "members": [
+          "#2a2a2b",
+          "#1c1c1e",
+          "#4f5258"
+        ],
+        "nearMerges": [
+          {
+            "hex": "#1c1c1e",
+            "deltaE": 4.5
+          },
+          {
+            "hex": "#4f5258",
+            "deltaE": 13.4
+          },
+          {
+            "hex": "#1c1c1e",
+            "deltaE": 4.5
+          },
+          {
+            "hex": "#1c1c1e",
+            "deltaE": 4.5
+          }
+        ],
+        "region": "body",
+        "vars": []
+      },
+      {
+        "hex": "#375376",
+        "share": 0.1733,
+        "tier": "accent",
+        "count": 13,
+        "weight": 57.8,
+        "members": [
+          "#375376",
+          "#304560"
+        ],
+        "nearMerges": [
+          {
+            "hex": "#304560",
+            "deltaE": 5.2
+          }
+        ],
+        "region": "div.flex",
+        "vars": []
+      },
+      {
+        "hex": "#743e3f",
+        "share": 0.1415,
+        "tier": "accent",
+        "count": 9,
+        "weight": 47.19,
+        "members": [
+          "#743e3f",
+          "#5e3637"
+        ],
+        "nearMerges": [
+          {
+            "hex": "#5e3637",
+            "deltaE": 5.4
+          }
+        ],
+        "region": "body",
+        "vars": []
+      },
+      {
+        "hex": "#2e6a45",
+        "share": 0.0925,
+        "tier": "accent",
+        "count": 8,
+        "weight": 30.83,
+        "members": [
+          "#2e6a45",
+          "#2a563b"
+        ],
+        "nearMerges": [
+          {
+            "hex": "#2a563b",
+            "deltaE": 7
+          }
+        ],
+        "region": "div.flex",
+        "vars": []
+      },
+      {
+        "hex": "#4ade80",
+        "share": 0.0182,
+        "tier": "accent",
+        "count": 6,
+        "weight": 6.05,
+        "members": [
+          "#4ade80"
+        ],
+        "region": "button.btn",
+        "vars": []
+      },
+      {
+        "hex": "#f87171",
+        "share": 0.0151,
+        "tier": "accent",
+        "count": 5,
+        "weight": 5.05,
+        "members": [
+          "#f87171"
+        ],
+        "region": "button.i-ph:arrow-counter-clockwise-duotone",
+        "vars": []
+      },
+      {
+        "hex": "#754b2a",
+        "share": 0.0146,
+        "tier": "incidental",
+        "count": 1,
+        "weight": 4.86,
+        "members": [
+          "#754b2a"
+        ],
+        "region": "div.flex",
+        "vars": []
+      },
+      {
+        "hex": "#60a5fa",
+        "share": 0.0121,
+        "tier": "accent",
+        "count": 4,
+        "weight": 4.04,
+        "members": [
+          "#60a5fa"
+        ],
+        "region": "button.btn",
+        "vars": []
+      }
+    ],
+    "text": [
+      {
+        "hex": "#d4d4d4",
+        "share": 0.8738,
+        "tier": "dominant",
+        "count": 263,
+        "weight": 263,
+        "members": [
+          "#d4d4d4"
+        ],
+        "region": "span.mr-2",
+        "vars": []
+      },
+      {
+        "hex": "#888888",
+        "share": 0.103,
+        "tier": "accent",
+        "count": 31,
+        "weight": 31,
+        "members": [
+          "#888888",
+          "#737373"
+        ],
+        "nearMerges": [
+          {
+            "hex": "#737373",
+            "deltaE": 8.1
+          }
+        ],
+        "region": "span.text-xs",
+        "vars": []
+      },
+      {
+        "hex": "#4ade80",
+        "share": 0.01,
+        "tier": "accent",
+        "count": 3,
+        "weight": 3,
+        "members": [
+          "#4ade80"
+        ],
+        "region": "span.text-sm",
+        "vars": []
+      },
+      {
+        "hex": "#f87171",
+        "share": 0.0066,
+        "tier": "accent",
+        "count": 2,
+        "weight": 2,
+        "members": [
+          "#f87171"
+        ],
+        "region": "a.px-2",
+        "vars": []
+      },
+      {
+        "hex": "#dc2626",
+        "share": 0.0033,
+        "tier": "accent",
+        "count": 1,
+        "weight": 1,
+        "members": [
+          "#dc2626"
+        ],
+        "region": "span.color-primary-6",
+        "vars": []
+      },
+      {
+        "hex": "#60a5fa",
+        "share": 0.0033,
+        "tier": "accent",
+        "count": 1,
+        "weight": 1,
+        "members": [
+          "#60a5fa"
+        ],
+        "region": "span.text-sm",
+        "vars": []
+      }
+    ],
+    "border": []
+  },
+  "roles": [
+    {
+      "role": "background",
+      "group": "background",
+      "hex": "#2a2a2b",
+      "share": 0.5327,
+      "tier": "dominant"
+    },
+    {
+      "role": "text",
+      "group": "text",
+      "hex": "#d4d4d4",
+      "share": 0.8738,
+      "tier": "dominant"
+    },
+    {
+      "role": "text-muted",
+      "group": "text",
+      "hex": "#888888",
+      "share": 0.103,
+      "tier": "accent"
+    },
+    {
+      "role": "primary",
+      "group": "background",
+      "hex": "#60a5fa",
+      "share": 0.0121,
+      "tier": "accent"
+    }
+  ],
+  "type": {
+    "scale": [
+      {
+        "size": "12px",
+        "px": 12,
+        "count": 34,
+        "lineHeight": "16px",
+        "fontWeight": "400",
+        "fontFamily": "Segoe UI Symbol"
+      },
+      {
+        "size": "14px",
+        "px": 14,
+        "count": 136,
+        "lineHeight": "20px",
+        "fontWeight": "400",
+        "fontFamily": "Segoe UI Symbol"
+      },
+      {
+        "size": "16px",
+        "px": 16,
+        "count": 122,
+        "lineHeight": "24px",
+        "fontWeight": "400",
+        "fontFamily": "Segoe UI Symbol"
+      },
+      {
+        "size": "20px",
+        "px": 20,
+        "count": 6,
+        "lineHeight": "28px",
+        "fontWeight": "700",
+        "fontFamily": "Segoe UI Symbol"
+      },
+      {
+        "size": "24px",
+        "px": 24,
+        "count": 3,
+        "lineHeight": "24px",
+        "fontWeight": "400",
+        "fontFamily": "Baloo 2"
+      }
+    ],
+    "body": "14px",
+    "families": {
+      "heading": null,
+      "body": "Segoe UI Symbol"
+    }
+  },
+  "spacing": {
+    "scale": [
+      {
+        "value": "4px",
+        "px": 4,
+        "count": 133
+      },
+      {
+        "value": "8px",
+        "px": 8,
+        "count": 471
+      },
+      {
+        "value": "12px",
+        "px": 12,
+        "count": 4
+      },
+      {
+        "value": "16px",
+        "px": 16,
+        "count": 108
+      },
+      {
+        "value": "20px",
+        "px": 20,
+        "count": 2
+      },
+      {
+        "value": "24px",
+        "px": 24,
+        "count": 6
+      },
+      {
+        "value": "96px",
+        "px": 96,
+        "count": 2
+      }
+    ],
+    "grid": {
+      "base": "8px",
+      "coverage": 0.81
+    }
+  },
+  "cssVariables": [],
+  "lowConfidence": [
+    "border: no visible border was measured",
+    "background surfaces: #1c1c1e (CIEDE2000 4.5), #4f5258 (CIEDE2000 13.4), #1c1c1e (CIEDE2000 4.5), #1c1c1e (CIEDE2000 4.5) merged into #2a2a2b; on a dark or tinted site this may be a designed surface step, so check the raw members in extraction.json before dropping it",
+    "background surfaces: #304560 (CIEDE2000 5.2) merged into #375376; on a dark or tinted site this may be a designed surface step, so check the raw members in extraction.json before dropping it",
+    "background surfaces: #5e3637 (CIEDE2000 5.4) merged into #743e3f; on a dark or tinted site this may be a designed surface step, so check the raw members in extraction.json before dropping it",
+    "background surfaces: #2a563b (CIEDE2000 7) merged into #2e6a45; on a dark or tinted site this may be a designed surface step, so check the raw members in extraction.json before dropping it",
+    "heading font: no named family appears on two or more heading or display elements"
+  ]
+}

@@ -15,6 +15,7 @@ import type { SourceRow } from "../sources/types.ts";
 import { onlyXArticleLink, xArticleText } from "../sources/x.ts";
 import { sanitizeBody, trimLeadingWidgets, trimTrailingChrome } from "./sanitize.ts";
 import { browserHtml } from "../providers/browser.ts";
+import { browserMcpBody } from "../providers/browsermcp.ts";
 import { contentHash, fillPublicationTime, reviseMaterial, updatePresentation, type MediaItem } from "./materials.ts";
 import { markdownBody } from "./markdown.ts";
 
@@ -174,12 +175,15 @@ export interface PageRules {
    * them. Each article gets its own session so two extractions never drive the same tab.
    */
   browser?: { session?: string; profile?: string | null };
+  /** A restricted browser reader for a source whose short posts are not ordinary articles. */
+  browserMcpSource?: string;
 }
 
-export const pageRules = (config: SourceRow["config"]): PageRules =>
+export const pageRules = (config: SourceRow["config"], sourceId?: string): PageRules =>
   ({
     utcOffset: articleUtcOffset(config), preserve: config.detail?.preserve, acceptLanguage: config.acceptLanguage, bodyUrlSuffix: config.detail?.bodyUrlSuffix,
     ...(config.via === "opencli" ? { browser: { session: typeof config.session === "string" ? config.session : undefined, profile: typeof config.profile === "string" ? config.profile : null } } : {}),
+    ...(config.bodyVia === "browsermcp" ? { browserMcpSource: sourceId ?? "" } : {}),
   });
 
 type Doc = ReturnType<typeof parseHTML>["document"];
@@ -449,6 +453,17 @@ function dropLayoutClasses(document: Doc) {
   }
 }
 
+function bodyImages(html: string): ExtractedBody["images"] {
+  const images: ExtractedBody["images"] = [];
+  for (const m of html.matchAll(/<img\b[^>]*\bsrc="([^"]+)"[^>]*>/gi)) {
+    const w = /\bwidth="(\d+)"/.exec(m[0]);
+    const h = /\bheight="(\d+)"/.exec(m[0]);
+    images.push({ kind: "image", url: m[1]!.replace(/&amp;/g, "&"), width: w ? Number(w[1]) : null, height: h ? Number(h[1]) : null });
+    if (images.length >= 12) break;
+  }
+  return images;
+}
+
 /** readable() on a page already parsed and checked (contentDocument). Readability changes the document. */
 export function readableDocument(document: Doc, url: string, rules: PageRules = {}): ExtractedBody | null {
   if (isVideoPageUrl(url)) return null;
@@ -478,20 +493,21 @@ export function readableDocument(document: Doc, url: string, rules: PageRules = 
     if (error instanceof UnavailablePageError) return null;
     throw error;
   }
-  const images: ExtractedBody["images"] = [];
-  for (const m of clean.matchAll(/<img\b[^>]*\bsrc="([^"]+)"[^>]*>/gi)) {
-    const w = /\bwidth="(\d+)"/.exec(m[0]);
-    const h = /\bheight="(\d+)"/.exec(m[0]);
-    images.push({ kind: "image", url: m[1]!.replace(/&amp;/g, "&"), width: w ? Number(w[1]) : null, height: h ? Number(h[1]) : null });
-    if (images.length >= 12) break;
-  }
-  return { html: clean, text, images, via: "readability", ...date };
+  return { html: clean, text, images: bodyImages(clean), via: "readability", ...date };
 }
 
 export async function extractFromUrl(url: string, subject: string, rules: PageRules = {}, opts: { paidFallback?: boolean } = {}): Promise<ExtractedBody | null> {
   if (isVideoPageUrl(url)) return null;
   const target = new URL(url);
   if (rules.bodyUrlSuffix) target.pathname += rules.bodyUrlSuffix;
+  if (rules.browserMcpSource !== undefined) {
+    const page = await browserMcpBody(rules.browserMcpSource, target.href);
+    if (!page) return null;
+    const html = sanitizeBody(page.html, target.href);
+    const text = stripTags(html).trim();
+    if (!text) return null;
+    return { html, text, images: bodyImages(html), via: "readability", ...readPublicationDate(page.date, rules.utcOffset) };
+  }
   // The source's own tab answers the site's challenge; a failure here still leaves the direct read.
   if (rules.browser) {
     try {
@@ -550,12 +566,12 @@ export function pageFetchable(url: string, sourceKind: string): boolean {
 
 /** Fetches and stores the body of one article. Unconfirmed bodies are recorded as such. */
 export async function extractArticleBody(articleId: string): Promise<"ok" | "unconfirmed" | "skipped"> {
-  const [a] = await sql<{ id: string; url: string; body_status: string; revision: number; x_post: { tweetId?: string } | null; config: SourceRow["config"] }[]>`
-    SELECT a.id, a.url, a.body_status, a.revision, a.x_post, s.config
+  const [a] = await sql<{ id: string; source_id: string; url: string; body_status: string; revision: number; x_post: { tweetId?: string } | null; config: SourceRow["config"] }[]>`
+    SELECT a.id, a.source_id, a.url, a.body_status, a.revision, a.x_post, s.config
     FROM articles a JOIN sources s ON s.id = a.source_id WHERE a.id = ${articleId}`;
   if (!a || a.body_status === "ok") return "skipped";
   if (a.x_post?.tweetId) return extractXArticle(a.id, a.x_post.tweetId, a.revision);
-  const got = await extractFromUrl(a.url, `article:${a.id}`, pageRules(a.config));
+  const got = await extractFromUrl(a.url, `article:${a.id}`, pageRules(a.config, a.source_id));
   if (!got) {
     return markUnconfirmed(articleId, a.revision);
   }
@@ -567,6 +583,10 @@ export async function extractArticleBody(articleId: string): Promise<"ok" | "unc
     if (!row) return "skipped";
     const time = a.config.detail?.publishedAtAuthoritative === true ? null : await fillPublicationTime(tx, articleId, got.publishedAt, undefined, got.publicationTime);
     const hash = contentHash({ title: row.title, bodyText: got.text, excerpt: row.excerpt });
+    if (a.config.bodyVia === "browsermcp") {
+      await tx`INSERT INTO verified_forum_bodies (article_id, body_hash) VALUES (${articleId}, md5(${got.text}))
+        ON CONFLICT (article_id) DO UPDATE SET body_hash = EXCLUDED.body_hash`;
+    }
     if (!time && hash === row.content_hash) {
       await updatePresentation(tx, articleId, { html: got.html, media: row.media.length ? row.media : got.images });
       await tx`UPDATE articles SET body_status = 'ok', updated_at = now() WHERE id = ${articleId}`;

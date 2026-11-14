@@ -1,0 +1,6 @@
+[core]
+project_name = "tradinghot"
+output_folder = "{project-root}/_bmad-output"
+
+[modules.founder]
+record_folder = "{project-root}/company"

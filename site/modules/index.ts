@@ -4,5 +4,6 @@
 import type { ModuleDeclaration } from "@aihot/contracts/modules";
 import crowding from "@aihot/crowding";
 import movers from "@aihot/movers";
+import newsnow from "@aihot/newsnow";
 
-export const MODULES: readonly ModuleDeclaration[] = [crowding, movers];
+export const MODULES: readonly ModuleDeclaration[] = [crowding, movers, newsnow];

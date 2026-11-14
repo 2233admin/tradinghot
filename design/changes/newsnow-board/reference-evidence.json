@@ -1,0 +1,48 @@
+{
+  "schema": "design-pipeline.reference-evidence.v2",
+  "id": "newsnow-board-2026-11-14",
+  "source": {
+    "availability": "resolved",
+    "path": "newsnow-reference.png",
+    "kind": "image",
+    "width": 1800,
+    "height": 1125,
+    "sha256": "142e241e2ec7a0cd85983d73c6b55c22b2129e8d7d3379131e1af17efae20e48"
+  },
+  "classification": {
+    "objectDimensionality": "2d",
+    "cameraModel": "none",
+    "interactionModel": "none",
+    "outputSurface": "screen-space-ui",
+    "runtimeFamily": "web: React Router and semantic HTML"
+  },
+  "spatialCues": {
+    "thickness": { "present": false, "evidence": "Flat screen-space cards, not physical thickness." },
+    "occlusion": { "present": false, "evidence": "The modal covers the page as a screen layer, not as spatial depth." },
+    "contactShadows": { "present": false, "evidence": "No real-world contact shadow is visible." },
+    "bevelHighlights": { "present": false, "evidence": "The panel surfaces have no physical bevel." },
+    "perspectiveConvergence": { "present": false, "evidence": "The three columns have parallel edges." },
+    "depthOfField": { "present": false, "evidence": "The reading surface is sharp throughout." }
+  },
+  "route": "2d",
+  "confidence": 0.95,
+  "requiredArtifacts": ["reference.md", "reference-evidence.json", "graybox.png", "design.md"],
+  "approval": {
+    "status": "approved",
+    "evidence": "用户指定 NewsNow 页面作为参考，并要求适配本站 UI 风格。"
+  },
+  "intent": {
+    "role": "constraint",
+    "requestedFidelity": "directional-inspiration",
+    "effectiveFidelity": "directional-inspiration",
+    "downgrade": { "status": "not-requested", "evidence": "用户要求参考并适配既有 UI，并未要求逐像素复刻。" },
+    "reconstructionArtifact": "reference.md"
+  },
+  "composition": {
+    "uniform": false,
+    "regions": [
+      { "id": "header", "rows": 1, "columns": 3, "breaksFrom": ["source-card"], "contents": "品牌、导航、页面操作" },
+      { "id": "source-card", "rows": 2, "columns": 1, "breaksFrom": ["header"], "contents": "来源标题与操作；有序新闻或热榜列表" }
+    ]
+  }
+}
