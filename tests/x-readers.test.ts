@@ -93,6 +93,24 @@ test("a timeline with nothing in it is an empty answer, not a failed account", a
   }
 });
 
+test("a full queue at the reader waits its turn instead of failing the account", async () => {
+  const bridge = await bridgeAnswering(() => ({ ok: false, code: "busy" }));
+  const previous = process.env.BROWSERMCP_BRIDGE_SOCKET;
+  try {
+    process.env.BROWSERMCP_BRIDGE_SOCKET = bridge.socketPath;
+    resetBrowserXSession();
+    await assert.rejects(() => searchTweetsInBrowserMcp({ query: "from:example", limit: 5 }), (error: Error) => {
+      assert.match(error.message, /queue is full/);
+      return true;
+    });
+  } finally {
+    if (previous === undefined) delete process.env.BROWSERMCP_BRIDGE_SOCKET;
+    else process.env.BROWSERMCP_BRIDGE_SOCKET = previous;
+    resetBrowserXSession();
+    await bridge.close();
+  }
+});
+
 test("a refusal by X rests the session instead of failing the account", async () => {
   const bridge = await bridgeAnswering(() => ({ ok: false, reason: "HTTP 429: rate-limited by Twitter (session quota)" }));
   const previous = process.env.BROWSERMCP_BRIDGE_SOCKET;

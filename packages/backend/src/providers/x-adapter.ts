@@ -98,6 +98,8 @@ async function browserXSearch(query: string, limit: number): Promise<XAdapterRow
         const reason = typeof value.reason === "string" ? value.reason : "the browser reader refused the search";
         // A refusal by X is the session's quota, so the whole session rests.
         if (/rate|quota|429/i.test(reason)) return fail(refusedByX(reason));
+        // The reader's queue is full: this account waits its turn, it is not at fault.
+        if (value.code === "busy") return fail(new BrowserXThrottleError("the browser reader's queue is full", Date.now() + 60_000));
         // A timeline with nothing in it is an empty answer, not a failure.
         if (reason.includes(EMPTY_TIMELINE)) {
           done = true;
