@@ -66,11 +66,9 @@ function browserScript(target) {
     let t = await browser.tabs.new();
     let answer;
     try {
-      let events = await t.cdp.watch('Fetch.requestPaused', { capacity: 100 });
-      let mainFrame = (await t.cdp.send('Page.getFrameTree')).frameTree.frame.id;
-      await t.cdp.send('Fetch.enable', { patterns: [{ urlPattern: '*', resourceType: 'Document' }] });
-      await browser.chrome.call('tabs.update', [Number(t.id), { url: target.url }]);
-      let count = 0, blocked = 0, complete = false;
+      // The page is read as it is: the browser loads it, its own scripts fill it in, and the
+      // reader waits for the text it wants. (Blocking the other documents over CDP hung in Kaze.)
+      await t.goto(target.url, { waitUntil: 'load' });
       const sameDocument = (a, b) => {
         try {
           const x = new URL(a), y = new URL(b);
@@ -78,35 +76,13 @@ function browserScript(target) {
           return norm(x) === norm(y);
         } catch { return false; }
       };
-      for (let end = Date.now() + 20000; Date.now() < end;) {
-        let batch = await events.read();
-        if (batch.dropped || batch.reset || batch.closed) throw Error('navigation interception lost');
-        for (let entry of batch.entries) {
-          let p = entry.params;
-          if (!p?.requestId) continue;
-          if (p.frameId === mainFrame) count++;
-          if (p.frameId === mainFrame && sameDocument(p.request.url, target.url)) await t.cdp.send('Fetch.continueRequest', { requestId: p.requestId });
-          else {
-            if (p.frameId === mainFrame) blocked++;
-            await t.cdp.send('Fetch.failRequest', { requestId: p.requestId, errorReason: 'BlockedByClient' });
-          }
-        }
-        let state = await browser.chrome.call('tabs.get', [Number(t.id)]);
-        // A cached page never asks the network, so the tab's own address is the proof it arrived.
-        if (state.status === 'complete' && (count > 0 || sameDocument(state.url, target.url))) { complete = true; break; }
-        await new Promise(r => setTimeout(r, 40));
-      }
-      if (!complete) {
+      for (let end = Date.now() + 12000; Date.now() < end;) {
+        const state = await t.evaluate(() => ({ url: location.href, ready: document.readyState })).catch(() => null);
         // A page that keeps loading never reports "complete": the document itself is enough.
-        for (let end = Date.now() + 12000; Date.now() < end;) {
-          let s = await t.evaluate(() => ({ ready: document.readyState, href: location.href })).catch(() => null);
-          if (s && sameDocument(s.href, target.url) && s.ready !== 'loading') { complete = true; break; }
-          await new Promise(r => setTimeout(r, 250));
-        }
+        if (state && sameDocument(state.url, target.url) && state.ready !== 'loading') break;
+        await new Promise(r => setTimeout(r, 250));
       }
-      if (!complete) throw Error('navigation did not complete');
-      if (blocked) answer = { ok: false, code: 'no_content' };
-      else if (target.kind === 'truth-api') {
+      if (target.kind === 'truth-api') {
         let v = await t.evaluate(async s => {
           const response = await fetch(s.apiUrl, { headers: { accept: 'application/json' } });
           if (!response.ok) return { status: response.status };
@@ -192,7 +168,12 @@ function xSearchScript(target) {
       const found = await sites.twitter.search({ query: target.query, limit: target.limit, sort: 'latest' });
       answer = { ok: true, url: 'https://x.com/search?q=' + encodeURIComponent(target.query), rows: Array.isArray(found?.rows) ? found.rows : [] };
     } catch (e) {
-      answer = { ok: false, code: 'unavailable', reason: String((e && e.message) || e).slice(0, 200) };
+      let reason = String((e && e.message) || e).slice(0, 200);
+      // A browser that is not signed in sends the search page to the sign-in page; the adapter
+      // reports that as a stale cursor, which says nothing to whoever reads the run.
+      const where = await t.evaluate(() => location.href).catch(() => '');
+      if (where && !/\\/search(\\?|$)/.test(where)) reason = 'X needs a signed-in session in this browser (the search page went to ' + where.slice(0, 120) + ')';
+      answer = { ok: false, code: 'unavailable', reason };
     } finally {
       try { await t.close(); } catch {}
     }
@@ -207,7 +188,7 @@ function listingScript(target) {
     const t = await browser.tabs.new();
     let answer;
     try {
-      await browser.chrome.call('tabs.update', [Number(t.id), { url: target.url }]);
+      await t.goto(target.url, { waitUntil: 'load' });
       let page = null;
       for (let end = Date.now() + 30000; Date.now() < end;) {
         page = await t.evaluate(() => {
