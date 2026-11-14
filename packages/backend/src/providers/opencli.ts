@@ -27,13 +27,10 @@ export function openCli(): { command: string; base: string[] } {
   return existsSync(entry) ? { command: process.execPath, base: [entry] } : { command: "opencli", base: [] };
 }
 
-// A normal browser command remains exclusive. Two X searches may run together because opencli
-// gives each search an ephemeral session; commands queued behind them still run before later searches.
+// A browser command is exclusive: one tab at a time, so two reads never fight over the same page.
 let queue: Promise<unknown> = Promise.resolve();
-const searches: Promise<unknown>[] = [Promise.resolve(), Promise.resolve()];
-let nextSearch = 0;
 
-export async function runOpenCli(args: string[], timeoutMs: number, opts: { parallelXSearch?: boolean } = {}): Promise<string> {
+export async function runOpenCli(args: string[], timeoutMs: number): Promise<string> {
   const { command, base } = openCli();
   // Raise opencli's own command timeout for searches that must wait on the browser bridge.
   const runOne = async () => {
@@ -51,14 +48,7 @@ export async function runOpenCli(args: string[], timeoutMs: number, opts: { para
       throw new Error(`opencli failed: ${(detail || e.message || "unknown error").replace(/\s+/g, " ").slice(0, 600)}`);
     }
   };
-  if (opts.parallelXSearch) {
-    const slot = nextSearch;
-    nextSearch = (nextSearch + 1) % searches.length;
-    const next = Promise.all([queue, searches[slot]]).then(runOne);
-    searches[slot] = next.then(() => undefined, () => undefined);
-    return next;
-  }
-  const next = Promise.all([queue, ...searches]).then(runOne);
+  const next = queue.then(runOne);
   queue = next.then(() => undefined, () => undefined);
   return next;
 }

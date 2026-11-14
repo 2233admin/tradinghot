@@ -7,6 +7,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, test } from "node:test";
+import net from "node:net";
 import { config } from "@aihot/backend/config";
 import { closeDb, sql } from "@aihot/backend/db";
 import { stopBoss } from "@aihot/backend/jobs/queue";
@@ -16,6 +17,33 @@ import { refreshSourceIcons } from "@aihot/backend/sources/icons";
 import { planXShards, shardQuery, selfThreadHandle, fetchXSearch } from "@aihot/backend/sources/x";
 
 const T = tag();
+/** A bridge that answers the X searches with the rows it was told to answer, or refuses them. */
+async function fakeBridge(rows: (query: string) => unknown[], refusal?: { ok: false; reason: string }): Promise<{ socketPath: string; calls: string[]; close: () => Promise<void> }> {
+  const dir = mkdtempSync(path.join(tmpdir(), "aihot-x-bridge-"));
+  const socketPath = path.join(dir, "bridge.sock");
+  const calls: string[] = [];
+  const server = net.createServer((socket) => {
+    socket.setEncoding("utf8");
+    socket.on("data", (chunk) => {
+      const request = JSON.parse(String(chunk).trim());
+      calls.push(request.query);
+      socket.end(JSON.stringify(refusal ?? { ok: true, rows: rows(request.query).slice(0, request.limit) }) + "\n");
+    });
+  });
+  const { promise, resolve } = Promise.withResolvers<void>();
+  server.listen(socketPath, resolve);
+  await promise;
+  return {
+    socketPath,
+    calls,
+    close: () => {
+      const { promise, resolve } = Promise.withResolvers<void>();
+      server.close(() => { rmSync(dir, { recursive: true, force: true }); resolve(); });
+      return promise;
+    },
+  };
+}
+
 const HANDLES = [`sa${T}`, `sb${T}`, `sc${T}`];
 const IDS = HANDLES.map((h) => `test-xs-${h}`);
 const BASE = BigInt(Date.now()) * 1000n;
@@ -369,37 +397,29 @@ test("an account takes the avatar on its own latest post, whatever its name show
 
 test("browser searches each account and preserves unverified coverage while caching observed posts", async () => {
   const dir = mkdtempSync(path.join(tmpdir(), "aihot-x-coverage-"));
-  const bin = path.join(dir, "opencli.mjs");
-  const log = path.join(dir, "calls");
-  writeFileSync(bin, `import { appendFileSync } from "node:fs";
-const args = process.argv.slice(2);
-const query = args[args.indexOf("search") + 1];
-appendFileSync(process.env.X_TEST_LOG, JSON.stringify(query) + "\\n");
-console.log(JSON.stringify((JSON.parse(process.env.X_TEST_ROWS)[query] ?? []).slice(0, 60)));
-`);
-  const keys = ["SOCIALDATA_API_KEY", "OPENCLI_BIN", "X_OPENCLI_PROFILE", "X_TEST_LOG", "X_TEST_ROWS"] as const;
-  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
   const handles = [`ba${T}`, `bb${T}`];
   const ids = handles.map((handle) => `test-browser-${handle}`);
   const queries = handles.map((handle) => `from:${handle} -filter:replies`);
   const lastOkAt = new Date(Date.now() - 60 * 60_000).toISOString();
   const cursors = handles.map((_, i) => ({ initializedAt: lastOkAt, lastTweetId: String(WATERMARK), lastOkAt,
     ...(i === 0 ? { xBacklog: [{ query: "paid query", next: "paid-page-2" }] } : {}) }));
+  const row = (n: number, author: string) => ({ id: String(BASE + BigInt(n)), author, text: `Browser post ${n}`, created_at: new Date().toISOString() });
+  let rows: Record<string, unknown[]> = {};
+  const bridge = await fakeBridge((query: string) => rows[query] ?? []);
+  const keys = ["SOCIALDATA_API_KEY", "BROWSERMCP_BRIDGE_SOCKET"] as const;
+  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
   try {
     delete process.env.SOCIALDATA_API_KEY;
-    delete process.env.X_OPENCLI_PROFILE;
-    process.env.OPENCLI_BIN = bin;
-    process.env.X_TEST_LOG = log;
-    const row = (n: number, author: string) => ({ id: String(BASE + BigInt(n)), author, text: `Browser post ${n}`, created_at: new Date().toISOString() });
-    process.env.X_TEST_ROWS = JSON.stringify({ [queries[0]!]: [row(120, handles[0]!)],
-      [queries[1]!]: Array.from({ length: 65 }, (_, i) => row(200 - i, handles[1]!)) });
+    process.env.BROWSERMCP_BRIDGE_SOCKET = bridge.socketPath;
+    rows = { [queries[0]!]: [row(120, handles[0]!)],
+      [queries[1]!]: Array.from({ length: 65 }, (_, i) => row(200 - i, handles[1]!)) };
     for (const [i, id] of ids.entries()) await sql`INSERT INTO sources (id, name, kind, config, tier, participation_mode, cursor)
       VALUES (${id}, ${handles[i]!}, 'x_search', ${sql.json({ query: queries[i]!, searchType: "Latest" })}, 'T1', 'editorial', ${sql.json(cursors[i]!)})`;
     const result = await collectXShard(`browser-${T}`, ids);
     // The browser read its accounts; what it cannot prove is that it read the whole window, so the
     // round succeeds with a note instead of failing.
     assert.deepEqual([result.status, result.found, result.created], ["ok", 61, 61]);
-    assert.deepEqual(readFileSync(log, "utf8").trim().split("\n").map((line) => JSON.parse(line)).sort(), [...queries].sort());
+    assert.deepEqual([...bridge.calls].sort(), [...queries].sort());
     const sources = await sql<{ cursor: unknown }[]>`SELECT cursor FROM sources WHERE id IN ${sql(ids)} ORDER BY id`;
     assert.deepEqual(sources.map((source) => source.cursor), cursors);
     const stored = await sql<{ source_id: string; n: number }[]>`SELECT source_id, count(*)::int AS n FROM articles WHERE source_id IN ${sql(ids)} GROUP BY source_id ORDER BY source_id`;
@@ -411,11 +431,11 @@ console.log(JSON.stringify((JSON.parse(process.env.X_TEST_ROWS)[query] ?? []).sl
       VALUES (${id}, ${handle}, 'x_search', ${sql.json({ query, _aihot: { fast: true } })}, 'T1', 'editorial', NULL)`;
     const initial = Array.from({ length: 40 }, (_, i) => row(301 + i, handle));
     const second = row(400, handle);
-    process.env.X_TEST_ROWS = JSON.stringify({ [query]: initial });
+    rows = { [query]: initial };
     const firstResult = await collectSource(id);
     assert.deepEqual([firstResult.status, firstResult.created], ["ok", 40]);
     assert.match(firstResult.note ?? "", /coverage is unverified/);
-    process.env.X_TEST_ROWS = JSON.stringify({ [query]: [second, ...initial] });
+    rows = { [query]: [second, ...initial] };
     assert.equal((await collectSource(id)).status, "ok");
     const articles = await sql<{ identity_key: string; backfill: boolean }[]>`
       SELECT identity_key, backfill FROM articles WHERE source_id = ${id} ORDER BY identity_key`;
@@ -432,47 +452,39 @@ console.log(JSON.stringify((JSON.parse(process.env.X_TEST_ROWS)[query] ?? []).sl
       if (previous[key] === undefined) delete process.env[key];
       else process.env[key] = previous[key];
     }
+    await bridge.close();
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test("a browser 429 stops starting further account searches in the shard", async () => {
+test("a rate limit stops starting further account searches in the shard", async () => {
   const dir = mkdtempSync(path.join(tmpdir(), "aihot-x-throttle-"));
-  const bin = path.join(dir, "opencli.mjs");
-  const log = path.join(dir, "calls");
-  writeFileSync(bin, `import { appendFileSync } from "node:fs";
-const args = process.argv.slice(2);
-const query = args[args.indexOf("search") + 1];
-appendFileSync(process.env.X_TEST_LOG, JSON.stringify(query) + "\\n");
-process.stderr.write("ok: false\\nerror:\\n  code: UNKNOWN\\n  message: >-\\n    HTTP 429: SearchTimeline fetch failed\\n  exitCode: 1\\n");
-process.exitCode = 1;
-`);
-  const keys = ["SOCIALDATA_API_KEY", "OPENCLI_BIN", "X_OPENCLI_PROFILE", "X_TEST_LOG"] as const;
+  const bridge = await fakeBridge(() => [], { ok: false, reason: "HTTP 429: SearchTimeline fetch failed — rate-limited by Twitter (session quota)" });
+  const keys = ["SOCIALDATA_API_KEY", "BROWSERMCP_BRIDGE_SOCKET"] as const;
   const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
   const handles = ["qa", "qb", "qc", "qd"].map((part) => `${part}${T}`);
   const ids = handles.map((handle) => `test-browser-${handle}`);
   try {
     delete process.env.SOCIALDATA_API_KEY;
-    delete process.env.X_OPENCLI_PROFILE;
-    process.env.OPENCLI_BIN = bin;
-    process.env.X_TEST_LOG = log;
+    process.env.BROWSERMCP_BRIDGE_SOCKET = bridge.socketPath;
     for (const [i, id] of ids.entries()) await sql`INSERT INTO sources (id, name, kind, config, tier, participation_mode, cursor)
       VALUES (${id}, ${handles[i]!}, 'x_search', ${sql.json({ query: `from:${handles[i]} -filter:replies`, _aihot: { fast: true } })},
         'T1', 'editorial', ${sql.json({ initializedAt: new Date().toISOString(), lastTweetId: String(WATERMARK) })})`;
     const result = await collectXShard(`browser-rate-${T}`, ids);
-    assert.equal(result.status, "failed");
-    assert.match(result.error ?? "", /rate limit/);
-    const calls = readFileSync(log, "utf8").trim().split("\n").map((line) => JSON.parse(line) as string);
-    assert.ok(calls.includes(`from:${handles[0]} -filter:replies`));
-    assert.ok(calls.length <= 2, "no third account starts after the rate limit");
+    // The session's quota is spent: the accounts rest, and they are not at fault.
+    assert.equal(result.status, "ok");
+    assert.ok(bridge.calls.length <= 2, "no third account starts after the rate limit");
     const [state] = await sql<{ minutes: number }[]>`
       SELECT round(extract(epoch FROM next_fetch_at - last_fetch_at) / 60)::int AS minutes FROM sources WHERE id = ${ids[0]!}`;
     assert.equal(state!.minutes, 10);
+    const runs = await sql<{ status: string }[]>`SELECT status FROM fetch_runs WHERE source_id = ${ids[0]!} ORDER BY id DESC LIMIT 1`;
+    assert.equal(runs[0]!.status, "skipped", "a throttled account is skipped, not failed");
   } finally {
     for (const key of keys) {
       if (previous[key] === undefined) delete process.env[key];
       else process.env[key] = previous[key];
     }
+    await bridge.close();
     rmSync(dir, { recursive: true, force: true });
   }
 });

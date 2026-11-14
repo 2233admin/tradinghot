@@ -4,6 +4,7 @@ import { languageHeaders, requireOk } from "../lib/http-fetch.ts";
 import { JINA_PREFIX, jinaRead } from "../providers/jina.ts";
 import { fetchListing } from "./listing-fetch.ts";
 import { browserJson } from "../providers/browser.ts";
+import { browserListing } from "../providers/browsermcp.ts";
 import { collapseWhitespace, stripTags } from "../lib/text.ts";
 import { readPublicationDate, type PublicationDate } from "./dates.ts";
 import { fetchTruthSocialStatuses } from "./truthsocial.ts";
@@ -161,7 +162,12 @@ async function fetchJsonPage(source: SourceRow, url: string): Promise<Candidate[
   // needs its own logged-in browser (雪球) is read through opencli instead.
   const jinaTarget = url.startsWith(JINA_PREFIX) ? url.slice(JINA_PREFIX.length) : null;
   let text: string;
-  if (c.via === "opencli") {
+  if (c.via === "browsermcp") {
+    // The endpoint answers to a browser session only: it is read in a tab of its own.
+    const page = await browserListing(source.id, url);
+    if (!page?.text) throw new FetchError("the browser reader found no listing");
+    text = page.text;
+  } else if (c.via === "opencli") {
     text = await browserJson(url, { profile: typeof c.profile === "string" ? c.profile : null, session: typeof c.session === "string" ? c.session : source.id });
   } else if (jinaTarget) {
     const read = await jinaRead(jinaTarget, { purpose: "source_listing", subject: `source:${source.id}`, ...(embedded ? { format: "html" as const } : {}), perRead: true });

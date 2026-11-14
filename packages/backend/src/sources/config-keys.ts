@@ -102,6 +102,7 @@ export function unsupportedConfig(kind: SourceRow["kind"], config: Record<string
       // The Truth Social adapter reads the platform's posts itself; the generic mapping would be ignored.
       for (const name of GENERIC_JSON_KEYS) if (name in config) out.push(name);
     }
+    else if (key === "via" && kind === "x_search" && !["kaze", "browsermcp"].includes(String(value))) out.push(`via=${String(value)}`);
     else if (VALUES[key] && !VALUES[key]!.includes(String(value))) out.push(`${key}=${String(value)}`);
     else if (NESTED[key] && value && typeof value === "object") {
       if (key === "_aihot" && "fast" in value && typeof value.fast !== "boolean") out.push("_aihot.fast");

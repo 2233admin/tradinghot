@@ -10,6 +10,7 @@ import { isSignInRedirect, isSignInUrl, pagePublicationDate, pageRules, readable
 import { sanitizeBody } from "../content/sanitize.ts";
 import { JINA_PREFIX, jinaRead } from "../providers/jina.ts";
 import { browserHtml } from "../providers/browser.ts";
+import { browserListing } from "../providers/browsermcp.ts";
 import { articleUtcOffset, readPublicationDate, readRelativeDate, type PublicationDate } from "./dates.ts";
 import { FetchError, type Candidate, type SourceRow } from "./types.ts";
 
@@ -84,7 +85,13 @@ async function fetchListingText(source: SourceRow): Promise<{ text: string; viaJ
     return { text: page.markdown, viaJina: true, base: source.config.baseUrl ?? target };
   }
   // A listing behind a JavaScript challenge (a WAF's slider, a page the site only fills in after loading)
-  // is read in the source's own browser tab, where that challenge has already been answered.
+  // is read in a browser tab of its own, where that challenge has already been answered.
+  if (source.config.via === "browsermcp") {
+    const page = await browserListing(source.id, url);
+    if (!page?.html) throw new FetchError("the browser reader found no listing");
+    contentDocument(page.html);
+    return { text: page.html, viaJina: false, base: source.config.baseUrl ?? url };
+  }
   if (source.config.via === "opencli") {
     const html = await browserHtml(url, {
       profile: typeof source.config.profile === "string" ? source.config.profile : null,

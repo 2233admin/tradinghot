@@ -2,7 +2,6 @@
 import { credential } from "../config.ts";
 import { guardedFetch } from "../lib/http-fetch.ts";
 import { assertAccepted, paidRequest, ProviderRejectedError, type CallOutcome, type ReceiptRequest, type ReceiptResult } from "./receipts.ts";
-import { searchTweetsInBrowser } from "./x-browser.ts";
 import { searchTweetsInKaze } from "./kaze.ts";
 import { searchTweetsInBrowserMcp } from "./x-adapter.ts";
 
@@ -94,17 +93,15 @@ export function usesBrowserXSearch(): boolean {
  * Searches recent tweets. `window` makes the receipt identity time-bucketed so a retry in the same
  * bucket reuses the stored response instead of paying again.
  */
-export async function searchTweets(query: string, opts: { purpose: string; subject: string; window: string; type?: "Latest" | "Top"; cursor?: string | null; via?: "opencli" | "kaze" | "browsermcp" }): Promise<SearchResult> {
+export async function searchTweets(query: string, opts: { purpose: string; subject: string; window: string; type?: "Latest" | "Top"; cursor?: string | null; via?: "kaze" | "browsermcp" }): Promise<SearchResult> {
   // No paid key: read the same query through the logged-in X browser session.
   if (usesBrowserXSearch()) {
     if (opts.cursor) throw new Error("the browser X search cannot resume a SocialData cursor");
-    // The source asks for a reader: opencli's twitter adapter, Kaze's own browser and X adapter,
-    // or BrowserMCP's X adapter in the session the user is signed into.
+    // The source asks for a reader: BrowserMCP's X adapter in the session the user is signed into,
+    // or Kaze's own browser and X adapter.
     const tweets = await (opts.via === "kaze"
       ? searchTweetsInKaze({ query, limit: 60 })
-      : opts.via === "browsermcp"
-        ? searchTweetsInBrowserMcp({ query, limit: 60 })
-        : searchTweetsInBrowser({ query, limit: 60 }));
+      : searchTweetsInBrowserMcp({ query, limit: 60 }));
     return { tweets, nextCursor: null, receiptId: null, reused: false };
   }
   const type = opts.type ?? "Latest";

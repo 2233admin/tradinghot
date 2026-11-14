@@ -60,6 +60,13 @@ export class BrowserXUnavailable extends Error {
   }
 }
 
+/**
+ * The adapter's own words when the search page showed no posts at all: an account that has nothing
+ * new answers with an empty timeline. The reader waits for posts that never come, so this is an
+ * empty result and not a failure — the watermark stays where it was and the next round reads on.
+ */
+const EMPTY_TIMELINE = "Timed out waiting for the X search page to load more results";
+
 /** The X session refused the search: its quota is spent, so the whole session rests. */
 function refusedByX(reason: string): BrowserXThrottleError {
   restBrowserXSession();
@@ -91,6 +98,13 @@ async function browserXSearch(query: string, limit: number): Promise<XAdapterRow
         const reason = typeof value.reason === "string" ? value.reason : "the browser reader refused the search";
         // A refusal by X is the session's quota, so the whole session rests.
         if (/rate|quota|429/i.test(reason)) return fail(refusedByX(reason));
+        // A timeline with nothing in it is an empty answer, not a failure.
+        if (reason.includes(EMPTY_TIMELINE)) {
+          done = true;
+          socket.destroy();
+          resolve([]);
+          return;
+        }
         return fail(new BrowserXUnavailable(reason));
       }
       done = true;

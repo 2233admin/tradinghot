@@ -13,6 +13,11 @@ const sources = {
   'newsnow-linuxdo-latest': { host: 'linux.do', path: /^\/latest$/, search: '?order=created', kind: 'linux-list', selector: 'tr.topic-list-item' },
   'newsnow-linuxdo-hot': { host: 'linux.do', path: /^\/top$/, search: '?period=daily', kind: 'linux-list', selector: 'tr.topic-list-item' },
   'truthsocial-donald-trump': { host: 'truthsocial.com', path: /^\/api\/v1\/accounts\/107780257626128497\/statuses$/, kind: 'truth-api', navigate: 'https://truthsocial.com/@realDonaldTrump' },
+  // Listings that answer only to a browser (a WAF, a JavaScript challenge): the bridge reads the page
+  // in a tab of its own and hands the markup back.
+  'cn-csrc-news': { host: 'www.csrc.gov.cn', path: /^\/csrc\/c106311\/common_list\.shtml$/i, kind: 'listing' },
+  'cn-gacc-news': { host: 'www.customs.gov.cn', path: /^\/$/i, kind: 'listing', allowHttp: true },
+  'cn-xueqiu-hot': { host: 'xueqiu.com', path: /^\/statuses\/hot\/listV2\.json$/i, search: '?since_id=-1&max_id=-1&size=20', kind: 'listing' },
 };
 const maxActive = 3;
 const maxQueued = 12;
@@ -45,7 +50,9 @@ function accepted(request) {
   if (!rule || typeof request.url !== 'string' || request.url.length > 2048) return null;
   try {
     const u = new URL(request.url);
-    if (u.protocol !== 'https:' || u.hostname !== rule.host || u.port || u.username || u.password || u.hash || !rule.path.test(u.pathname)) return null;
+    // A site that answers only to http (a WAF in front of it) is read in the browser, like the others.
+    const schemeOk = u.protocol === 'https:' || (u.protocol === 'http:' && rule.allowHttp === true);
+    if (!schemeOk || u.hostname !== rule.host || u.port || u.username || u.password || u.hash || !rule.path.test(u.pathname)) return null;
     if (rule.kind === 'truth-api') {
       if ([...u.searchParams.keys()].some(key => key !== 'max_id') || u.searchParams.getAll('max_id').length > 1 || (u.searchParams.has('max_id') && !/^\d{1,24}$/.test(u.searchParams.get('max_id')))) return null;
     } else if (u.search !== (rule.search || '')) return null;
@@ -192,11 +199,50 @@ function xSearchScript(target) {
     answer`;
 }
 
+// A listing that answers only to a browser: the page is opened in a tab of its own, the markup and
+// the text are handed back, and the tab is closed again.
+function listingScript(target) {
+  return `
+    const target = ${JSON.stringify(target)};
+    const t = await browser.tabs.new();
+    let answer;
+    try {
+      await browser.chrome.call('tabs.update', [Number(t.id), { url: target.url }]);
+      let page = null;
+      for (let end = Date.now() + 30000; Date.now() < end;) {
+        page = await t.evaluate(() => {
+          // The scripts and the styles are the bulk of a government page and the parser wants neither.
+          const copy = document.documentElement ? document.documentElement.cloneNode(true) : null;
+          if (copy) for (const el of copy.querySelectorAll('script,style,noscript,link,svg')) el.remove();
+          return {
+            url: location.href,
+            html: copy ? copy.outerHTML : '',
+            text: document.body ? document.body.innerText : '',
+          };
+        }).catch(() => null);
+        // A challenge page fills in after a moment; the listing is there when the body has text.
+        if (page && page.text && page.text.trim().length > 20) break;
+        await new Promise(r => setTimeout(r, 500));
+      }
+      if (!page || !page.text || !page.text.trim()) answer = { ok: false, code: 'no_content' };
+      else if (/\\.json(\\?|$)/.test(target.url)) answer = { ok: true, url: page.url, text: page.text.slice(0, 110000) };
+      else answer = { ok: true, url: page.url, html: page.html.slice(0, 110000) };
+    } catch (e) {
+      answer = { ok: false, code: 'unavailable', reason: String((e && e.message) || e).slice(0, 200) };
+    } finally {
+      try { await t.close(); } catch {}
+    }
+    answer`;
+}
+
 function readPage(target, signal) {
   return new Promise((resolve) => {
-    // The X search waits for the browser's own search page, which takes longer than a body read.
+    // The X search waits for the browser's own search page, which takes longer than a body read;
+    // a listing is a whole page of markup, which is larger than one article's body.
     const isSearch = target.kind === 'x-search';
-    const code = isSearch ? xSearchScript(target) : browserScript(target);
+    const isListing = target.kind === 'listing';
+    const code = isSearch ? xSearchScript(target) : isListing ? listingScript(target) : browserScript(target);
+    const limit = isListing ? 120_000 : responseLimit;
     const child = spawn(launcher, ['stdio'], { stdio: ['pipe', 'pipe', 'ignore'], env: { HOME: os.homedir(), PATH: process.env.PATH || '/usr/bin:/bin', XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR || '', LANG: process.env.LANG || 'C.UTF-8' } });
     let pending = '';
     let settled = false;
@@ -209,14 +255,14 @@ function readPage(target, signal) {
       resolve(value);
     };
     const abort = () => finish({ ok: false, code: 'unavailable' });
-    const timer = setTimeout(abort, isSearch ? 60_000 : timeoutMs);
+    const timer = setTimeout(abort, isSearch || isListing ? 60_000 : timeoutMs);
     signal.addEventListener('abort', abort, { once: true });
     child.on('error', abort);
     child.on('exit', () => finish({ ok: false, code: 'unavailable' }));
     child.stdout.setEncoding('utf8');
     child.stdout.on('data', chunk => {
       pending += chunk;
-      if (pending.length > responseLimit * 2) return abort();
+      if (pending.length > limit * 2) return abort();
       let end;
       while ((end = pending.indexOf('\n')) !== -1) {
         const line = pending.slice(0, end);
@@ -225,7 +271,7 @@ function readPage(target, signal) {
         try { message = JSON.parse(line); } catch { return abort(); }
         if (message.id === 1 && message.result) {
           child.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
-          child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'js', arguments: { code, timeoutMs: isSearch ? 45_000 : 25000, maxChars: responseLimit } } }) + '\n');
+          child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'js', arguments: { code, timeoutMs: isSearch || isListing ? 45_000 : 25000, maxChars: limit } } }) + '\n');
         } else if (message.id === 2) {
           try {
             const text = message.result?.content?.find((x) => x.type === 'text')?.text ?? '';

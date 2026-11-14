@@ -81,6 +81,45 @@ export async function browserLinuxDo(mode: "latest" | "hot"): Promise<Array<{ id
   return promise;
 }
 
+/** A listing that answers only to a browser: read in a tab of its own, in the session the user is signed into. */
+export async function browserListing(source: string, url: string): Promise<{ html: string; text: string } | null> {
+  const socketPath = credential("collectors", "BROWSERMCP_BRIDGE_SOCKET");
+  if (!socketPath) return null;
+  const { promise, resolve, reject } = Promise.withResolvers<{ html: string; text: string } | null>();
+  const socket = net.createConnection(socketPath);
+  let buffer = "";
+  let done = false;
+  const fail = () => { if (!done) { done = true; socket.destroy(); reject(new BrowserMcpUnavailable()); } };
+  socket.setEncoding("utf8");
+  socket.setTimeout(75_000, fail);
+  socket.on("error", fail);
+  socket.on("close", fail);
+  socket.on("connect", () => socket.write(JSON.stringify({ source, url }) + "\n"));
+  socket.on("data", (chunk) => {
+    buffer += chunk;
+    if (buffer.length > 300_000) return fail();
+    const end = buffer.indexOf("\n");
+    if (end < 0) return;
+    try {
+      const value = JSON.parse(buffer.slice(0, end));
+      if (value.ok === false && ["invalid", "no_content"].includes(value.code)) {
+        done = true;
+        socket.destroy();
+        resolve(null);
+        return;
+      }
+      // The bridge answers with the markup of an HTML listing, or with the text of a JSON one.
+      const html = typeof value.html === "string" ? value.html : "";
+      const text = typeof value.text === "string" ? value.text : "";
+      if (value.ok !== true || (!html && !text)) return fail();
+      done = true;
+      socket.destroy();
+      resolve({ html, text });
+    } catch { fail(); }
+  });
+  return promise;
+}
+
 /** The approved Truth Social account's official API, read in the local browser session. */
 export async function browserTruthSocial(url: string): Promise<unknown[] | null> {
   const socketPath = credential("collectors", "BROWSERMCP_BRIDGE_SOCKET");

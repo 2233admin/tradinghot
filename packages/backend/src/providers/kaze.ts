@@ -2,6 +2,7 @@
 // (sites.twitter.search), which reads the same search the signed-in web UI makes. Kaze's BrowserMCP
 // server answers over a unix socket; the bridge it writes next to it speaks MCP over stdio, so an
 // outside agent (this collector) reaches it the same way Claude Code or Codex would.
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/client";
@@ -16,7 +17,7 @@ const DEFAULT_MCP = "~/.config/Kite/bin/kaze-mcp";
 
 function mcpLauncher(): string {
   const configured = credential("collectors", "KAZE_MCP");
-  return (configured ?? DEFAULT_MCP).replace(/^~/, process.env.HOME ?? "~");
+  return (configured ?? DEFAULT_MCP).replace(/^~/, os.homedir());
 }
 
 /**
@@ -29,7 +30,7 @@ function mcpTransport(): StdioClientTransport {
   const env = Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined));
   if (!socket) return new StdioClientTransport({ command: mcpLauncher(), args: [], env });
   const shim = path.resolve(fileURLToPath(import.meta.url), "../../../../scripts/kaze-mcp-stdio.mjs");
-  return new StdioClientTransport({ command: process.execPath, args: [shim], env: { ...env, KAZE_MCP_SOCKET: socket.replace(/^~/, process.env.HOME ?? "~") } });
+  return new StdioClientTransport({ command: process.execPath, args: [shim], env: { ...env, KAZE_MCP_SOCKET: socket.replace(/^~/, os.homedir()) } });
 }
 
 /** Kaze's own X adapter: one tweet as the adapter reads it out of the search timeline. */
